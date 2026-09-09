@@ -1,0 +1,15 @@
+{
+  "originHash" : "2fadaf66fa719d85e04d41f9a68788fb4d3071cd06501bb307a01e6be5b90056",
+  "pins" : [
+    {
+      "identity" : "swiftmusic",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/1amageek/SwiftMusic.git",
+      "state" : {
+        "revision" : "f4b8061629dbbef25a38c3fca8757140889d5092",
+        "version" : "0.3.0"
+      }
+    }
+  ],
+  "version" : 3
+}

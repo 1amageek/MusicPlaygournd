@@ -5,4 +5,5 @@
 - [x] NAV-2 Bottom status bar removed; native Liquid Glass overlay and all three layout selections verified in the signed app; overlay is owned outside the source scroll view `depends:NAV-1` `parallel:none`
 - [ ] EDITOR-1 Document frame origin and bounded scroll offset fixed; existing native tab test now checks full glyph visibility and independent buffers/undo (passed); final app packaged and launched; native verification found remaining leading-text clipping after file selection; commit pending `depends:NAV-2` `parallel:none`
 - [x] FOOTER-1 Sidebar footer and collapsed Logs aligned to 36 points; Release build and native divider alignment verified `depends:NAV-2` `parallel:none`
+- [x] MUSIC-1 Night Drive six-track starter composed; actual source compiled with live-loop policy, 16 beats/137 events rendered to finite stereo PCM, 32-second preview and app build verified `depends:none` `parallel:none`
 - [ ] TEMPLATE-INT Verify standard SwiftPM package creation/opening without requiring a custom Session.swift entry, existing-path preservation, and the native navigator flow `depends:TEMPLATE-1,NAV-1,NAV-2,EDITOR-1` `parallel:none`

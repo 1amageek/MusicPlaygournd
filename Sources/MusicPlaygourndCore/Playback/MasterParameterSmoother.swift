@@ -9,6 +9,8 @@ internal final class MasterParameterSmoother {
         case lowPass
         case delay
         case reverb
+        case eqLowFrequency, eqMidFrequency, eqHighFrequency
+        case eqLowGain, eqMidGain, eqHighGain
     }
 
     internal typealias Sleep = @MainActor @Sendable (Duration) async throws(CancellationError) -> Void

@@ -7,6 +7,8 @@ struct OutputMonitorView: View {
     let isPlaying: Bool
     let performance: PlaybackPerformanceSnapshot?
     let resetDiagnostics: () -> Void
+    let equalizerBands: [MasterEqualizerBand]
+    let onEqualizerChange: (Int, MasterEqualizerBand) -> Void
 
     private enum Monitor: String, CaseIterable, Identifiable {
         case wave = "Wave", spectrum = "Spectrum", vectorscope = "Vectorscope"
@@ -42,7 +44,12 @@ struct OutputMonitorView: View {
                             Button { presented = nil } label: { Image(systemName: "xmark") }
                                 .buttonStyle(.plain).accessibilityLabel("Close " + monitor.rawValue)
                         }
-                        plot(monitor)
+                        Group {
+                            if monitor == .spectrum {
+                                SpectrumEqualizerView(spectrum: bands, isPlaying: isPlaying,
+                                    bands: equalizerBands, onChange: onEqualizerChange)
+                            } else { plot(monitor) }
+                        }
                             .frame(height: monitor == .vectorscope ? 360 : 220)
                             .background(.black.opacity(0.6), in: RoundedRectangle(cornerRadius: 8))
                         if monitor == .wave { meters }

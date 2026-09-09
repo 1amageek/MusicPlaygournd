@@ -38,3 +38,7 @@
 - [x] TREE-INT Real checkout metadata for both templates and read-only save rejection passed; Release build and native folder expansion/source tabs verified `depends:TREE-1` `parallel:none`
 
 - [x] COMMENT-1 Command-/ toggles focused source lines; AppKit Unicode, CRLF, selection, undo/redo, read-only and IME checks passed; Release app built `depends:none` `parallel:none`
+
+- [x] EQ-1 Three native master EQ bands: filtered PCM, invalid-value retention and independent low-pass verified `depends:none` `parallel:none`
+- [x] EQ-2 Spectrum overlay presents three selectable accessible controls and routes accepted targets through SessionModel `depends:EQ-1` `parallel:none`
+- [x] EQ-INT Release build and native Spectrum overlay/selection verified; native audio test passed; automated dragging interrupted by concurrent user interaction `depends:EQ-2` `parallel:none`

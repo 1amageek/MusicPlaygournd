@@ -37,6 +37,16 @@ final class SessionModel {
         get { activeDocument.source }
         set { guard !activeDocument.isReadOnly else { return }; activeDocument.source = newValue; diagnosticRange = nil }
     }
+    private(set) var equalizerBands = MasterEqualizerBand.defaults
+
+    func setEqualizerBand(_ index: Int, value: MasterEqualizerBand) {
+        do {
+            guard let engine else { throw PlaybackError.audioSetupFailed(audioError) }
+            try engine.setEqualizerBand(index, value: value)
+            equalizerBands = engine.equalizerBands
+        } catch { hostDiagnostic = error.localizedDescription }
+    }
+
     private var outputVolume = 1.0
     var masterVolume: Double {
         get { outputVolume }

@@ -9,6 +9,7 @@ public final class AudioLoopEngine: AudioUnitHosting, MasterRecording {
     private let sourceNode: AVAudioSourceNode
     private let timePitch: AVAudioUnitTimePitch
     private let equalizer: AVAudioUnitEQ
+    public private(set) var equalizerBands = MasterEqualizerBand.defaults
     private let delay: AVAudioUnitDelay
     private let reverb: AVAudioUnitReverb
     private let transport: AudioTransport
@@ -49,7 +50,7 @@ public final class AudioLoopEngine: AudioUnitHosting, MasterRecording {
 
         let transport = AudioTransport()
         let timePitch = AVAudioUnitTimePitch()
-        let equalizer = AVAudioUnitEQ(numberOfBands: 1)
+        let equalizer = AVAudioUnitEQ(numberOfBands: 4)
         let delay = AVAudioUnitDelay()
         let reverb = AVAudioUnitReverb()
         let meterStore = OutputMeterStore()
@@ -58,6 +59,14 @@ public final class AudioLoopEngine: AudioUnitHosting, MasterRecording {
         filter.filterType = .lowPass
         filter.frequency = 1_000
         filter.bypass = true
+        for (index, value) in MasterEqualizerBand.defaults.enumerated() {
+            let band = equalizer.bands[index + 1]
+            band.filterType = .parametric
+            band.frequency = value.frequency
+            band.gain = value.gain
+            band.bandwidth = 1
+            band.bypass = false
+        }
         timePitch.rate = 1
         delay.delayTime = 0.25
         delay.feedback = 30
@@ -348,6 +357,21 @@ public final class AudioLoopEngine: AudioUnitHosting, MasterRecording {
             filter.frequency = value
             filter.bypass = disabling && final
         }
+    }
+
+    public func setEqualizerBand(_ index: Int, value: MasterEqualizerBand) throws {
+        guard equalizerBands.indices.contains(index), value.frequency.isFinite,
+              (20...20_000).contains(value.frequency), value.gain.isFinite,
+              (-12...12).contains(value.gain) else { throw PlaybackError.invalidEqualizerBand }
+        let band = equalizer.bands[index + 1]
+        let frequencyKeys: [MasterParameterSmoother.Parameter] = [.eqLowFrequency, .eqMidFrequency, .eqHighFrequency]
+        let gainKeys: [MasterParameterSmoother.Parameter] = [.eqLowGain, .eqMidGain, .eqHighGain]
+        let immediate = !transport.snapshot().isPlaying
+        equalizerBands[index] = value
+        parameterSmoother.set(frequencyKeys[index], from: band.frequency, to: value.frequency,
+                              immediate: immediate) { value, _ in band.frequency = value }
+        parameterSmoother.set(gainKeys[index], from: band.gain, to: value.gain,
+                              immediate: immediate) { value, _ in band.gain = value }
     }
 
     public func setDelay(mix: Float) throws {

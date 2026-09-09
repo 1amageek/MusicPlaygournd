@@ -48,7 +48,8 @@ struct MusicHeaderView: View {
             Rectangle().fill(.white.opacity(0.08)).frame(width: 1, height: 32)
             OutputMonitorView(bands: model.spectrum, samples: model.outputSamples, isPlaying: model.isPlaying,
                 performance: model.performance,
-                resetDiagnostics: model.resetPerformanceDiagnostics)
+                resetDiagnostics: model.resetPerformanceDiagnostics,
+                equalizerBands: model.equalizerBands, onEqualizerChange: model.setEqualizerBand)
                 .frame(minWidth: 120, idealWidth: 220, maxWidth: .infinity)
             VStack(spacing: 5) {
                 HStack {

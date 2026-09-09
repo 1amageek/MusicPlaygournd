@@ -137,6 +137,8 @@ struct CodeEditor: NSViewRepresentable {
         if context.coordinator.documentID != documentID {
             context.coordinator.switchDocument(to: documentID, text: text, editor: editor, scroll: scroll, state: editorState)
         }
+        // AppKit owns marked text until the input method commits it.
+        guard !editor.hasMarkedText() else { return }
         if editor.string != text {
             context.coordinator.cancelCompletion()
             context.coordinator.cancelFormat()
@@ -278,9 +280,13 @@ struct CodeEditor: NSViewRepresentable {
         }
 
         func replaceText(_ text: String, in editor: NSTextView) {
+            let selection = editor.selectedRange()
             let undo = editor.undoManager
             undo?.disableUndoRegistration()
             editor.string = text
+            let count = (text as NSString).length
+            let location = min(selection.location, count)
+            editor.setSelectedRange(NSRange(location: location, length: min(selection.length, count - location)))
             undo?.enableUndoRegistration()
         }
 
@@ -352,7 +358,7 @@ struct CodeEditor: NSViewRepresentable {
         }
         init(_ parent: CodeEditor) { self.parent = parent }
         func textDidChange(_ notification: Notification) {
-            guard let editor = notification.object as? NSTextView, parent.text != editor.string else { return }
+            guard let editor = notification.object as? NSTextView, !editor.hasMarkedText(), parent.text != editor.string else { return }
             cancelFormat()
             parent.text = editor.string
             highlight(editor)

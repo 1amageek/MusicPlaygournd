@@ -42,6 +42,17 @@ struct CodeEditorDocumentTests {
     }
 
     @Test(.timeLimit(.minutes(1)))
+    func modelRefreshPreservesInsertionPoint() {
+        let view = makeCodeEditor(documentID: UUID(), completions: { _, _ in [] }, onCompletionStatus: { _ in })
+        let coordinator = view.makeCoordinator()
+        let editor = CompletionTextView()
+        editor.string = "import PackageDescription\n// version 0.3.0\n"
+        editor.setSelectedRange(NSRange(location: 7, length: 0))
+        coordinator.replaceText(editor.string.replacingOccurrences(of: "0.3.0", with: "0.4.0"), in: editor)
+        #expect(editor.selectedRange() == NSRange(location: 7, length: 0))
+    }
+
+    @Test(.timeLimit(.minutes(1)))
     func switchingRestoresBothScrollAxes() {
         let first = UUID(), second = UUID()
         let view = makeCodeEditor(documentID: first, completions: { _, _ in [] }, onCompletionStatus: { _ in })

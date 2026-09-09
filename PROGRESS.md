@@ -18,3 +18,5 @@
 - [ ] TEMPLATE-INT Verify standard SwiftPM package creation/opening without requiring a custom Session.swift entry, existing-path preservation, and the native navigator flow `depends:TEMPLATE-1,NAV-1,NAV-2,EDITOR-1` `parallel:none`
 
 - [x] COMPACT-1 Gutter gap reduced to 8 points; navigator glyphs use 12-point font in 14-point slots; Release build and native source/sidebar appearance verified `depends:none` `parallel:none`
+
+- [x] CARET-1 Preserve selection and Japanese marked text; pre-fix reproduction fails, focused AppKit composition/commit and document/undo checks pass; packaged Release build passed `depends:none` `parallel:none`

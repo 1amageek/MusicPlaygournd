@@ -50,7 +50,7 @@ final class SessionModel {
     }
     func formatSource(_ source: String) async throws -> String { try await evaluator.format(source: source) }
 
-    private var masterBPM = 120.0
+    private var masterBPM = 140.0
     var bpm: Double {
         get { performanceBPMControlID.flatMap { performanceNumber($0) } ?? masterBPM }
         set {
@@ -1981,7 +1981,7 @@ final class SessionModel {
     static let initialSource = """
     import SwiftMusic
 
-    // Deep Current — C minor, 120 BPM. Open the acid cutoff while playing.
+    // Deep Current — C minor, 140 BPM. Open the acid cutoff while playing.
     struct Session: Music {
         private let acidAmplitude = try! Envelope(
             attack: .milliseconds(2), decay: .milliseconds(95),

@@ -224,3 +224,5 @@ The detail column owns document tabs, editor/results and the collapsible log pan
 Global music controls are hosted in the window toolbar on NavigationSplitView. The window uses a unified toolbar with a hidden title, so there is no separate title/header band above the document tabs. The native sidebar toggle remains in the toolbar.
 
 Rhythm layout selection is an icon-only Menu overlaid at the editor viewport top trailing corner. It uses native Liquid Glass on macOS 26 or later and material on the supported macOS 15 baseline. The overlay does not add a document row or scroll with source text. No bottom status bar is rendered. Verify all three layout choices, overlay position and editor scrolling in the native app.
+
+The Deep Current starter uses nonthrowing scalar parameter modifiers; construction cannot trap on edited envelope, unison or duck arguments. Invalid edits follow SwiftMusic located compilation failures and retain adopted playback. Local builds currently use an edited SwiftMusic dependency until these APIs are released.

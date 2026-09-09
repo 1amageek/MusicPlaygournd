@@ -24,7 +24,7 @@ public struct WorkerCompilerDiagnostic: Codable, Sendable, Equatable {
         }
         self.revision = revision
         self.domain = Self.domain(for: error.underlying)
-        self.message = String(describing: error.underlying)
+        self.message = error.patternText == nil ? error.description : String(describing: error.underlying)
         self.fileID = error.anchor.fileID
         self.line = error.anchor.line
         self.column = error.anchor.column

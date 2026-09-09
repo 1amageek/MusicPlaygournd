@@ -1983,30 +1983,13 @@ final class SessionModel {
 
     // Deep Current — C minor, 140 BPM. Open the acid cutoff while playing.
     struct Session: Music {
-        private let acidAmplitude = try! Envelope(
-            attack: .milliseconds(2), decay: .milliseconds(95),
-            sustainLevel: 0.35, release: .milliseconds(30)
-        )
-        private let acidFilter = try! Envelope(
-            attack: .milliseconds(1), decay: .milliseconds(140),
-            sustainLevel: 0.05, release: .milliseconds(40),
-            decayCurve: .exponential(exponent: 3)
-        )
-        private let hornAmplitude = try! Envelope(
-            attack: .milliseconds(30), decay: .milliseconds(300),
-            sustainLevel: 0.7, release: .milliseconds(1800)
-        )
-        private let filterDepth = try! Semitones(value: 36)
-        private let duckDepth = try! Decibels(value: -14)
-        private let hornUnison = try! Unison(voices: 5, detuneCents: 32)
-
         var body: some Sound {
             Track("Kick") {
                 Sample("kick")
                     .rhythm("x*4")
                     .gain(1.5)
                     .effect(.saturation(drive: 0.25))
-                    .duck(targetBus: "synths", depth: duckDepth,
+                    .duck(targetBus: "synths", depth: -14,
                           attack: .milliseconds(200), recovery: .milliseconds(230))
             }
 
@@ -2014,9 +1997,16 @@ final class SessionModel {
                 Synthesizer(.bandLimitedSaw)
                     .notes("C2 Eb2 G1 Bb1 C2 G2 Eb2 F2 C2 Bb1 G1 Eb2 F2 G2 Bb1 D2")
                     .gate(0.78)
-                    .envelope(acidAmplitude)
+                    .envelope(
+                        attack: .milliseconds(2), decay: .milliseconds(95),
+                        sustainLevel: 0.35, release: .milliseconds(30)
+                    )
                     .lowPass(CutoffPattern("200 260 380 650").slow(4), resonanceQ: 8)
-                    .filterEnvelope(acidFilter, depth: filterDepth)
+                    .filterEnvelope(
+                        attack: .milliseconds(1), decay: .milliseconds(140),
+                        sustainLevel: 0.05, release: .milliseconds(40),
+                        depth: 36, decayCurve: .exponential(exponent: 3)
+                    )
                     .gain("0.85 0.62 0.72 0.65")
                     .effect(.distortion(drive: 0.32))
             }
@@ -2027,8 +2017,11 @@ final class SessionModel {
                 Synthesizer(.bandLimitedSaw)
                     .notes("~ C2 ~ ~")
                     .slow(4)
-                    .unison(hornUnison)
-                    .envelope(hornAmplitude)
+                    .unison(voices: 5, detuneCents: 32)
+                    .envelope(
+                        attack: .milliseconds(30), decay: .milliseconds(300),
+                        sustainLevel: 0.7, release: .milliseconds(1800)
+                    )
                     .highPass("140")
                     .lowPass("1200")
                     .gain(0.32)

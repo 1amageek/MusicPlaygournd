@@ -39,8 +39,6 @@ struct ContentView: View {
                     }
                     Divider()
                     logs
-                    Divider()
-                    statusBar
                 }
             }
             .navigationSplitViewStyle(.balanced)
@@ -60,23 +58,37 @@ struct ContentView: View {
         }
     }
 
-    private var statusBar: some View {
-        HStack(spacing: 10) {
-            if model.isPreparing { ProgressView().controlSize(.mini) }
-            else { Circle().fill(diagnosticCount == 0 ? Color.mint : .orange).frame(width: 6, height: 6) }
-            Text(model.status).font(.system(size: 11))
-            Spacer()
-            if let revision = model.currentRevision {
-                Text("\(model.audibleDocumentID == model.activeDocumentID ? "LOOP" : "OTHER TAB") r\(revision) / EDIT r\(model.revision)").font(.system(size: 10, design: .monospaced)).foregroundStyle(.secondary)
-            }
-            Menu {
-                Button("Inline Results") { model.inlineLayout = true }
-                Button("Side Timeline") { model.inlineLayout = false; model.bottomLayout = false }
-                Button("Bottom Overview") { model.inlineLayout = false; model.bottomLayout = true }
-            } label: {
-                Label(model.inlineLayout ? "Inline Results" : (model.bottomLayout ? "Bottom Overview" : "Side Timeline"), systemImage: "rectangle.3.group")
-            }.menuStyle(.borderlessButton).fixedSize().help("Rhythm display layout")
-        }.padding(.horizontal, 18).padding(.vertical, 10)
+    @ViewBuilder
+    private var layoutMenu: some View {
+        let menu = Menu {
+            Picker("Rhythm display", selection: Binding(
+                get: { model.inlineLayout ? 0 : (model.bottomLayout ? 2 : 1) },
+                set: { layout in
+                    model.inlineLayout = layout == 0
+                    model.bottomLayout = layout == 2
+                }
+            )) {
+                Text("Inline Results").tag(0)
+                Text("Side Timeline").tag(1)
+                Text("Bottom Overview").tag(2)
+            }.pickerStyle(.inline)
+        } label: {
+            Image(systemName: "rectangle.3.group")
+                .font(.system(size: 13, weight: .medium))
+                .frame(width: 36, height: 30)
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .accessibilityLabel("Rhythm display layout")
+        .accessibilityIdentifier("editor-layout-menu")
+        .help("Rhythm display layout")
+
+        if #available(macOS 26.0, *) {
+            menu.glassEffect(.regular.interactive(), in: Capsule())
+        } else {
+            menu.background(.regularMaterial, in: Capsule())
+        }
     }
 
     private var header: some View {
@@ -183,6 +195,7 @@ struct ContentView: View {
                 documentID: model.activeDocumentID, editorState: model.activeDocument.editorState, openDocumentIDs: Set(model.documents.map(\.id)),
                 onEditorStateChange: { id, state in model.documents.first { $0.id == id }?.editorState = state })
         }.frame(minWidth: 350, minHeight: 220)
+            .overlay(alignment: .topTrailing) { layoutMenu.padding(10) }
     }
 
     @ViewBuilder

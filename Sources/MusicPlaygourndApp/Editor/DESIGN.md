@@ -219,6 +219,8 @@ The startup scratch buffer is not an open document: it has no editor, tab or eva
 
 ContentView owns NavigationSplitView column visibility; SwiftUI provides the sidebar toggle and split-column layout. FileSidebarView owns List selection, synchronized with the active document, and filters the visible tree while retaining ancestor rows. FileTreeRow composes recursive DisclosureGroup rows using SessionFileBrowser expansion state. Folder selection does not open a document; file selection uses the existing document/asset opening path. Native selection decoration, focus and keyboard navigation replace custom row buttons and indentation. Validate selection with arrow keys, expansion, tab synchronization and sidebar toggling in the running app.
 
-The detail column owns document tabs, editor/results, the collapsible log pane and status bar. Logs never extend beneath the sidebar; sidebar height and its bottom controls remain independent of log visibility.
+The detail column owns document tabs, editor/results and the collapsible log pane. Logs never extend beneath the sidebar; sidebar height and its bottom controls remain independent of log visibility.
 
 Global music controls are hosted in the window toolbar on NavigationSplitView. The window uses a unified toolbar with a hidden title, so there is no separate title/header band above the document tabs. The native sidebar toggle remains in the toolbar.
+
+Rhythm layout selection is an icon-only Menu overlaid at the editor viewport top trailing corner. It uses native Liquid Glass on macOS 26 or later and material on the supported macOS 15 baseline. The overlay does not add a document row or scroll with source text. No bottom status bar is rendered. Verify all three layout choices, overlay position and editor scrolling in the native app.

@@ -109,6 +109,8 @@ The build script disables a development-compiler debug-type round-trip assertion
 
 ### Inline sliders
 
+The default session demonstrates nested reusable sounds (`Session → RhythmSection / SynthSection → AcidBass / Foghorn`) and two inline sliders: an automatic filter-envelope control and an explicit `@State` synth-level control. Read the component bodies to explore patterns, envelopes, effects, and track sends.
+
 Import `MusicPlayground` in a session to place native sliders beside the declaring source lines. The editor supplies this host library; SwiftMusic itself remains independent of Playground and SwiftUI.
 
 ```swift
@@ -132,4 +134,4 @@ struct Session: Music {
 
 Automatic identities survive preceding line insertions and indentation changes. Changing the declaration creates a new control; use `id: "acid"` to retain identity through arbitrary edits or distinguish identical declarations. Controls currently require `Music.body` on MainActor and cannot be combined with a pre-rendered switch bank. The host reports that combination rather than playing stale variants. The `acidEnvelope` convenience is a MusicPlayground extension over SwiftMusic's filter envelope; amount 1 sweeps six octaves.
 
-Open [InlineControls.swift](Examples/InlineControls.swift) for both forms. In a standalone SwiftPM consumer, add the `MusicPlayground` library product from this repository explicitly.
+Open [InlineControls.swift](Examples/InlineControls.swift) for both forms. In a standalone SwiftPM consumer, add the `MusicPlayground` library product from this repository explicitly. Project SourceKit completion uses the original package manifest, so host-only declarations also require that explicit dependency for semantic completion.

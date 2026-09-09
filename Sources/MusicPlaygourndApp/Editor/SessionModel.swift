@@ -2095,11 +2095,27 @@ final class SessionModel {
 
     static let initialSource = """
     import SwiftMusic
+    import MusicPlayground
 
-    // Deep Current — C minor, 140 BPM. Open the acid cutoff while playing.
-    // Inspired by Switch Angel’s live-coding performance, with respect and thanks.
-    // Watch the original: https://www.youtube.com/watch?v=HkgV_-nJOuE
+    // Deep Current — C minor, 140 BPM.
+    // Inspired by Switch Angel, with respect: https://www.youtube.com/watch?v=HkgV_-nJOuE
     struct Session: Music {
+        @State private var synthLevel = 0.8
+
+        var body: some Sound {
+            // Sibling sounds play together. Each Sound can contain other Sounds.
+            RhythmSection()
+
+            // Playground owns this slider's state. Drag it to change the filter sweep.
+            SynthSection(acidAmount: slider(0.5, in: 0...1))
+
+            // Control the shared synth return through the State declared above.
+            BusReturn("synths")
+                .gain(slider($synthLevel, in: 0...1))
+        }
+    }
+
+    struct RhythmSection: Sound {
         var body: some Sound {
             Track("Kick") {
                 Sample("kick")
@@ -2110,6 +2126,29 @@ final class SessionModel {
                           attack: .milliseconds(200), recovery: .milliseconds(230))
             }
 
+            Track("Hats") {
+                Sample("closedHat")
+                    // Brackets subdivide a step; ~ is a rest.
+                    .rhythm("[~ x] [~ x] [~ x] [~ [x x]]")
+                    .gain("0.32 0.25 0.29 0.18")
+                    .pan(0.22)
+            }
+        }
+    }
+
+    struct SynthSection: Sound {
+        var acidAmount: Double
+
+        var body: some Sound {
+            AcidBass(amount: acidAmount)
+            Foghorn()
+        }
+    }
+
+    struct AcidBass: Sound {
+        var amount: Double
+
+        var body: some Sound {
             Track("Acid") {
                 Synthesizer(.bandLimitedSaw)
                     .notes("C2 Eb2 G1 Bb1 C2 G2 Eb2 F2 C2 Bb1 G1 Eb2 F2 G2 Bb1 D2")
@@ -2119,19 +2158,18 @@ final class SessionModel {
                         sustainLevel: 0.35, release: .milliseconds(30)
                     )
                     .lowPass(CutoffPattern("200 260 380 650").slow(4), resonanceQ: 8)
-                    .filterEnvelope(
-                        attack: .milliseconds(1), decay: .milliseconds(140),
-                        sustainLevel: 0.05, release: .milliseconds(40),
-                        depth: 36, decayCurve: .exponential(exponent: 3)
-                    )
+                    .acidEnvelope(amount, decay: .milliseconds(140))
                     .gain("0.85 0.62 0.72 0.65")
                     .effect(.distortion(drive: 0.32))
-                    .effect(.chorus(rateHz: 0.5, depth: 0.6, wet: 0.4))
                     .effect(.stereoWidth(1.5))
             }
             .send(to: "synths", level: 1, placement: .preFader)
             .trackLevel(0)
+        }
+    }
 
+    struct Foghorn: Sound {
+        var body: some Sound {
             Track("Foghorn") {
                 Synthesizer(.bandLimitedSaw)
                     .notes("~ C2 ~ ~")
@@ -2144,20 +2182,10 @@ final class SessionModel {
                     .highPass("140")
                     .lowPass("1200")
                     .gain(0.32)
-                    .effect(.chorus(rateHz: 0.5, depth: 0.65, wet: 0.4))
                     .effect(.reverb(roomSize: 0.7, wet: 0.32))
             }
             .send(to: "synths", level: 1, placement: .preFader)
             .trackLevel(0)
-
-            Track("Hats") {
-                Sample("closedHat")
-                    .rhythm("[~ x] [~ x] [~ x] [~ [x x]]")
-                    .gain("0.32 0.25 0.29 0.18")
-                    .pan(0.22)
-            }
-
-            BusReturn("synths")
         }
     }
     """

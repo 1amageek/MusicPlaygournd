@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+import SwiftMusic
 @testable import MusicPlaygourndCore
 @testable import MusicPlaygourndApp
 
@@ -30,6 +31,29 @@ extension NativeHostTests {
                 #expect(target.name == "Evening Set")
                 #expect(target.path == "Sources/Evening Set")
                 #expect(loaded.entryURL(for: target).path == entry.path)
+                let request = try ProjectEvaluationRequest(project: loaded, target: target,
+                    buffers: [entry: SessionModel.initialSource])
+                let initial = try await evaluator.evaluateRetained(source: SessionModel.initialSource,
+                    bpm: 140, beatsPerBar: 4, revision: 1, project: request)
+                #expect(initial.loop.rows.count == 4)
+                #expect(initial.metadata.sliders.count == 2)
+                #expect(initial.loop.samples.contains { abs($0) > 0.001 })
+                #expect(await evaluator.adopt(revision: 1))
+                var values = Dictionary(uniqueKeysWithValues: initial.performanceControls.map { ($0.controlID, $0.value) })
+                let acid = try #require(initial.metadata.sliders.first)
+                let level = try #require(initial.metadata.sliders.last)
+                values[acid.id] = .double(0.1)
+                let changed = try await evaluator.renderPerformance(values: values, revision: 1, generation: 1)
+                let filterChangedPCM = changed.loop.samples != initial.loop.samples
+                #expect(filterChangedPCM)
+                await evaluator.discardPerformance(revision: 1, generation: 1)
+                values[level.id] = .double(0)
+                let muted = try await evaluator.renderPerformance(values: values, revision: 1, generation: 2)
+                let levelChangedPCM = muted.loop.samples != changed.loop.samples
+                #expect(levelChangedPCM)
+                #expect(muted.loop.samples.contains { abs($0) > 0.001 })
+                #expect(muted.metadata.sliders.last?.value == 0)
+                await evaluator.discardPerformance(revision: 1, generation: 2)
                 try await evaluator.shutdown()
             } catch { try await evaluator.shutdown(); throw error }
         }

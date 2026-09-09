@@ -74,3 +74,6 @@
 
 - [x] CREATE-1 Removed template selection and presentation state; New Project uses native naming and the existing transactional default generator; creation errors use a native alert `depends:none` `parallel:none`
 - [x] CREATE-INT Existing package generation/protection test and release build passed; native QuickStart creation directly opened Sources/QuickStart/Session.swift without a template chooser `depends:CREATE-1` `parallel:none`
+
+- [x] STARTER-1 Default session teaches nested Sounds and both slider forms; synth return owns its gain, nonperiodic chorus removed; generated project rendering and slider PCM changes verified `depends:none` `parallel:none`
+- [x] STARTER-INT Generated SwiftPM project and live slider PCM checks passed (76.8s); release build passed; final source displayed with two sliders, four inline tracks and active playback in the native editor `depends:STARTER-1` `parallel:none`

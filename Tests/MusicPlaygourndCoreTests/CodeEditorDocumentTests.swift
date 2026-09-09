@@ -9,16 +9,25 @@ extension NativeHostTests {
 struct CodeEditorDocumentTests {
     @Test(.timeLimit(.minutes(1)))
     func stringsKeepCommentDelimitersLiteral() throws {
-        let view = makeCodeEditor(documentID: UUID(), completions: { _, _ in [] }, onCompletionStatus: { _ in })
-        let editor = CompletionTextView()
-        editor.string = #"let url = "https://github.com/1amageek/SwiftMusic.git" // "comment""#
-        view.makeCoordinator().highlight(editor)
-        let storage = try #require(editor.textStorage)
-        let source = editor.string as NSString
-        for token in ["https:", "//github.com", "SwiftMusic.git"] {
-            #expect(storage.attribute(.foregroundColor, at: source.range(of: token).location, effectiveRange: nil) as? NSColor == .systemOrange)
+        let defaults = UserDefaults.standard
+        let previous = defaults.object(forKey: "editor.theme")
+        defer {
+            if let previous { defaults.set(previous, forKey: "editor.theme") }
+            else { defaults.removeObject(forKey: "editor.theme") }
         }
-        #expect(storage.attribute(.foregroundColor, at: source.range(of: "comment").location, effectiveRange: nil) as? NSColor == .secondaryLabelColor)
+        for theme in EditorTheme.allCases {
+            defaults.set(theme.rawValue, forKey: "editor.theme")
+            let view = makeCodeEditor(documentID: UUID(), completions: { _, _ in [] }, onCompletionStatus: { _ in })
+            let editor = CompletionTextView()
+            editor.string = #"let url = "https://github.com/1amageek/SwiftMusic.git" // "comment""#
+            view.makeCoordinator().highlight(editor)
+            let storage = try #require(editor.textStorage)
+            let source = editor.string as NSString
+            for token in ["https:", "//github.com", "SwiftMusic.git"] {
+                #expect(storage.attribute(.foregroundColor, at: source.range(of: token).location, effectiveRange: nil) as? NSColor == theme.palette.string)
+            }
+            #expect(storage.attribute(.foregroundColor, at: source.range(of: "comment").location, effectiveRange: nil) as? NSColor == theme.palette.comment)
+        }
     }
 
     @Test(.timeLimit(.minutes(1)))

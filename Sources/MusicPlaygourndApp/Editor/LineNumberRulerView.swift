@@ -3,10 +3,10 @@ import AppKit
 /// Draws source line numbers from the editor's native text layout.
 @MainActor
 final class LineNumberRulerView: NSRulerView {
+    var labelColor = NSColor.secondaryLabelColor
     private let labelFont = NSFont.monospacedSystemFont(ofSize: 10, weight: .regular)
-    private let backgroundColor = NSColor(calibratedRed: 0.045, green: 0.055, blue: 0.065, alpha: 1)
+    var backgroundColor = NSColor(calibratedRed: 0.045, green: 0.055, blue: 0.065, alpha: 1)
     private let separatorColor = NSColor(calibratedWhite: 1, alpha: 0.08)
-    private let labelColor = NSColor.secondaryLabelColor
 
     override init(scrollView: NSScrollView?, orientation: NSRulerView.Orientation) {
         super.init(scrollView: scrollView, orientation: orientation)

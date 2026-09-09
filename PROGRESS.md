@@ -42,3 +42,6 @@
 - [x] EQ-1 Three native master EQ bands: filtered PCM, invalid-value retention and independent low-pass verified `depends:none` `parallel:none`
 - [x] EQ-2 Spectrum overlay presents three selectable accessible controls and routes accepted targets through SessionModel `depends:EQ-1` `parallel:none`
 - [x] EQ-INT Release build and native Spectrum overlay/selection verified; native audio test passed; automated dragging interrupted by concurrent user interaction `depends:EQ-2` `parallel:none`
+
+- [x] PREFS-1 Native Settings provides persisted 12pt default, 10–24pt sizing and five editor palettes; source and IME ownership preserved `depends:none` `parallel:none`
+- [x] PREFS-INT Release build and two focused palette/undo checks passed; native Settings changed Midnight 12pt to Dracula 13pt with immediate preview; reviewed for main commit `depends:PREFS-1` `parallel:none`

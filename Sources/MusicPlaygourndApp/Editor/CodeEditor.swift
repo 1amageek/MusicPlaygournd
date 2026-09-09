@@ -9,6 +9,8 @@ struct EditorDocumentState: Equatable {
 }
 
 struct CodeEditor: NSViewRepresentable {
+    @AppStorage("editor.fontSize") private var fontSize = 12.0
+    @AppStorage("editor.theme") private var theme: EditorTheme = .midnight
     @Binding var text: String
     let inlineLoop: PreparedLoop?
     let inlineEnabled: Bool
@@ -78,17 +80,7 @@ struct CodeEditor: NSViewRepresentable {
         editor.minSize = NSSize(width: 0, height: 0)
         editor.maxSize = NSSize(width: 100_000, height: 100_000)
         editor.textContainerInset = NSSize(width: 3, height: 20)
-        let font = NSFont.monospacedSystemFont(ofSize: 14, weight: .regular)
-        editor.font = font
-        let paragraph = NSMutableParagraphStyle()
-        paragraph.lineSpacing = 5
-        paragraph.tabStops = []
-        paragraph.defaultTabInterval = ("    " as NSString).size(withAttributes: [.font: font]).width
-        editor.defaultParagraphStyle = paragraph
-        editor.textColor = NSColor(calibratedWhite: 0.88, alpha: 1)
-        editor.backgroundColor = NSColor(calibratedRed: 0.065, green: 0.075, blue: 0.09, alpha: 1)
-        editor.insertionPointColor = .systemMint
-        editor.selectedTextAttributes = [.backgroundColor: NSColor.systemMint.withAlphaComponent(0.25)]
+        context.coordinator.applyAppearance(editor)
         context.coordinator.installDocument(documentID, editor: editor, state: editorState)
         editor.string = text
         context.coordinator.restoreSelection(editorState.selection, in: editor)
@@ -104,6 +96,8 @@ struct CodeEditor: NSViewRepresentable {
         scroll.rulersVisible = true
         context.coordinator.scroll = scroll
         context.coordinator.lineNumberRuler = ruler
+        ruler.backgroundColor = theme.palette.background
+        ruler.labelColor = theme.palette.comment
         scroll.contentView.postsBoundsChangedNotifications = true
         NotificationCenter.default.addObserver(context.coordinator, selector: #selector(Coordinator.scrolled), name: NSView.boundsDidChangeNotification, object: scroll.contentView)
         editor.onLayout = { [weak coordinator = context.coordinator] in
@@ -142,6 +136,7 @@ struct CodeEditor: NSViewRepresentable {
         }
         // AppKit owns marked text until the input method commits it.
         guard !editor.hasMarkedText() else { return }
+        context.coordinator.applyAppearance(editor)
         if editor.string != text {
             context.coordinator.cancelCompletion()
             context.coordinator.cancelFormat()
@@ -225,15 +220,15 @@ struct CodeEditor: NSViewRepresentable {
             previousSwitchRanges = parent.activeSwitchRanges
             for range in previousSwitchRanges where range.location >= 0 && NSMaxRange(range) <= text.length {
                 layout.addTemporaryAttribute(.backgroundColor,
-                    value: NSColor.systemMint.withAlphaComponent(0.08), forCharacterRange: range)
+                    value: parent.theme.palette.accent.withAlphaComponent(0.08), forCharacterRange: range)
             }
             previousActive = parent.activeTokens
             for (id, ranges) in literalRanges {
                 for (index, range) in ranges.enumerated() {
                     let active = parent.activeTokens[id]?.contains(index) == true
                     layout.addTemporaryAttributes([
-                        .backgroundColor: NSColor.systemMint.withAlphaComponent(active ? 0.9 : 0.04),
-                        .foregroundColor: active ? NSColor.black : NSColor.systemMint
+                        .backgroundColor: parent.theme.palette.accent.withAlphaComponent(active ? 0.9 : 0.04),
+                        .foregroundColor: active ? parent.theme.palette.background : parent.theme.palette.accent
                     ], forCharacterRange: range)
                 }
             }
@@ -497,11 +492,43 @@ struct CodeEditor: NSViewRepresentable {
             return NSRange(location: 0, length: 0)
         }
 
+        private var appliedFontSize: Double?
+        private var appliedTheme: EditorTheme?
+
+        func applyAppearance(_ editor: NSTextView) {
+            let size = parent.fontSize.isFinite ? min(24, max(10, parent.fontSize)) : 12
+            guard appliedFontSize != size || appliedTheme != parent.theme else { return }
+            appliedFontSize = size
+            appliedTheme = parent.theme
+            let palette = parent.theme.palette
+            let font = NSFont.monospacedSystemFont(ofSize: size, weight: .regular)
+            let paragraph = NSMutableParagraphStyle()
+            paragraph.lineSpacing = 4
+            paragraph.tabStops = []
+            paragraph.defaultTabInterval = ("    " as NSString).size(withAttributes: [.font: font]).width
+            editor.font = font
+            editor.defaultParagraphStyle = paragraph
+            let range = NSRange(location: 0, length: (editor.string as NSString).length)
+            editor.textStorage?.addAttributes([.font: font, .paragraphStyle: paragraph], range: range)
+            editor.typingAttributes = [.font: font, .paragraphStyle: paragraph, .foregroundColor: palette.foreground]
+            editor.textColor = palette.foreground
+            editor.backgroundColor = palette.background
+            editor.insertionPointColor = palette.accent
+            editor.selectedTextAttributes = [.backgroundColor: palette.accent.withAlphaComponent(0.25)]
+            if let ruler = lineNumberRuler {
+                ruler.backgroundColor = palette.background
+                ruler.labelColor = palette.comment
+                ruler.needsDisplay = true
+            }
+            rangeSource = ""
+            highlight(editor)
+        }
+
         func highlight(_ editor: NSTextView) {
             guard let storage = editor.textStorage else { return }
             let full = NSRange(location: 0, length: storage.length)
             storage.beginEditing()
-            storage.addAttribute(.foregroundColor, value: NSColor(calibratedWhite: 0.88, alpha: 1), range: full)
+            storage.addAttribute(.foregroundColor, value: parent.theme.palette.foreground, range: full)
             // These patterns color text only; SwiftMusic remains the sole owner of musical meaning.
             do {
                 // Match strings and comments together so delimiters inside strings stay literal.
@@ -510,9 +537,9 @@ struct CodeEditor: NSViewRepresentable {
                     let token = (editor.string as NSString).substring(with: match.range)
                     let color: NSColor
                     if match.range(at: 1).location != NSNotFound {
-                        color = token.hasPrefix("//") ? .secondaryLabelColor : .systemOrange
+                        color = token.hasPrefix("//") ? parent.theme.palette.comment : parent.theme.palette.string
                     } else {
-                        color = match.range(at: 2).location != NSNotFound ? .systemPink : .systemTeal
+                        color = match.range(at: 2).location != NSNotFound ? parent.theme.palette.keyword : parent.theme.palette.type
                     }
                     storage.addAttribute(.foregroundColor, value: color, range: match.range)
                 }

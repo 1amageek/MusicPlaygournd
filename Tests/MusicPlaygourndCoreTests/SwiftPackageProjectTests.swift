@@ -24,7 +24,7 @@ extension NativeHostTests {
                 let loaded = try await evaluator.openProject(at: project)
                 #expect(loaded.name == "Evening Set")
                 let dependency = try #require(loaded.dependencies.first { $0.identity == "swiftmusic" })
-                #expect(dependency.name == "SwiftMusic" && dependency.versionDescription == "0.4.0")
+                #expect(dependency.name == "SwiftMusic" && dependency.versionDescription == "0.5.0")
                 let checkout = try #require(dependency.checkoutPath)
                 #expect(FileManager.default.fileExists(atPath: checkout + "/Package.swift"))
                 let target = try #require(loaded.targets.first)
@@ -78,7 +78,7 @@ extension NativeHostTests {
             // swift-tools-version: 6.4
             import PackageDescription
             let package = Package(name: "Live", platforms: [.macOS(.v15)], dependencies: [
-                .package(url: "https://github.com/1amageek/SwiftMusic.git", exact: "0.4.0"), .package(path: "../Kit")
+                .package(url: "https://github.com/1amageek/SwiftMusic.git", exact: "0.5.0"), .package(path: "../Kit")
             ], targets: [.target(name: "LiveSet", dependencies: [.product(name: "SwiftMusic", package: "SwiftMusic"), "Kit"], resources: [.copy("Resources")], swiftSettings: [.define("LIVE_PROJECT")])])
             """
             try write(manifest, project.appending(path: "Package.swift"))

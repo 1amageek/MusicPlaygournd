@@ -99,7 +99,7 @@ SourceLineMap owns UTF-16 offsets for the union of compiler-provided Session.swi
 
 PlayingLiteral maps the adopted compiler leaf index to the exact direct-literal UTF-16 range without parsing musical semantics. ASCII `<`, `>`, `[`, `]` and whitespace delimit structure and never form a leaf. A repetition suffix such as `*3` and comma-separated simultaneous notes remain part of one lexical leaf, matching SwiftMusic's single compiler index for all occurrences or pitches from that token. The literal is first identified by the existing exact source-line rule, then UTF-8 compiler/source offsets are converted through the current source snapshot into native UTF-16 ranges. Escaped, multiline, ambiguous, edited or nonliteral text remains unmapped rather than guessed. VisualFeedbackTests own nested delimiters, repeat/chord leaf ranges, Unicode-prefix conversion and phantom-token rejection.
 
-Standalone release packaging uses public SwiftMusic 0.4.0. Generated evaluator and completion manifests use that same URL/version; no adjacent SwiftMusic directory is required. The bundled host package and runtime SDK retain matching source/object/compiler identity. Verify from an independent checkout with real evaluation and SourceKit-LSP.
+Standalone release packaging uses public SwiftMusic 0.5.0. Generated evaluator and completion manifests use that same URL/version; no adjacent SwiftMusic directory is required. The bundled host package and runtime SDK retain matching source/object/compiler identity. Verify from an independent checkout with real evaluation and SourceKit-LSP.
 
 ### SwiftPM project evaluation
 

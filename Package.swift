@@ -10,7 +10,7 @@ let package = Package(
         .library(name: "MusicPlayground", targets: ["MusicPlayground"])
     ],
     dependencies: [
-        .package(url: "https://github.com/1amageek/SwiftMusic.git", exact: "0.4.0")
+        .package(url: "https://github.com/1amageek/SwiftMusic.git", exact: "0.5.0")
     ],
     targets: [
         .target(name: "MusicPlayground", dependencies: [.product(name: "SwiftMusic", package: "SwiftMusic")], exclude: ["DESIGN.md"]),

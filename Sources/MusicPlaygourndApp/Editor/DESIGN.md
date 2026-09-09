@@ -228,7 +228,7 @@ Global music controls are hosted in the window toolbar on NavigationSplitView. T
 
 Rhythm layout selection is an icon-only Menu fixed at the trailing end of the document tab row, outside the horizontal tabs ScrollView and the source editor. It uses native Liquid Glass on macOS 26 or later and material on the supported macOS 15 baseline. No bottom status bar is rendered. Verify all three layout choices, tab scrolling, and the reserved editor area in the native app.
 
-The Deep Current starter uses nonthrowing scalar parameter modifiers; construction cannot trap on edited envelope, unison or duck arguments. Invalid edits follow SwiftMusic located compilation failures and retain adopted playback. The starter and runtime use public SwiftMusic 0.4.0.
+The Deep Current starter uses nonthrowing scalar parameter modifiers; construction cannot trap on edited envelope, unison or duck arguments. Invalid edits follow SwiftMusic located compilation failures and retain adopted playback. The starter and runtime use public SwiftMusic 0.5.0.
 
 ### Independent master monitors
 

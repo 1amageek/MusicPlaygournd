@@ -17,7 +17,7 @@ cd MusicPlaygournd
 open .build/MusicPlaygournd.app
 ```
 
-The build script fetches SwiftMusic and creates a locally signed app with the runtime modules needed to evaluate your music. Build on the Mac where you will use the app and keep its compiler and SDK installed. This is a source distribution; a notarized app download is not currently provided.
+The build script fetches **SwiftMusic 0.5.0** and creates a locally signed app with the runtime modules needed to evaluate your music. Build on the Mac where you will use the app and keep its compiler and SDK installed. This is a source distribution; a notarized app download is not currently provided.
 
 Choose **Create a new project**, enter its name and location, and start from the generated `Session.swift`. There is no template-selection step. Press **Play** when preparation finishes. Initial package resolution and compilation can take longer; progress and dependencies appear in the sidebar.
 
@@ -150,6 +150,12 @@ Click the header's Wave, Spectrum, or Vectorscope display to open its dedicated 
 Code edits prepare replacement audio and adopt it at a musical boundary. Live master controls operate independently of code preparation. Rendering uses bounded PCM loops; unsupported combinations report errors instead of replacing valid audio.
 
 ## Work in Swift package projects
+
+New projects pin SwiftMusic **0.5.0** in `Package.swift`:
+
+```swift
+.package(url: "https://github.com/1amageek/SwiftMusic.git", exact: "0.5.0")
+```
 
 Projects use a folder-based SwiftPM structure:
 

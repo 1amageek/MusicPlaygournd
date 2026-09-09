@@ -7,6 +7,44 @@ import Testing
 extension NativeHostTests {
     @MainActor
     struct CompletionEditorTests {
+        @Test(.timeLimit(.minutes(1)))
+        func commentShortcutPreservesLinesAndSupportsUndo() throws {
+            let editor = CompletionTextView(frame: NSRect(x: 0, y: 0, width: 500, height: 300))
+            editor.isRichText = false
+            editor.allowsUndo = true
+            let event = try #require(NSEvent.keyEvent(with: .keyDown, location: .zero,
+                modifierFlags: .command, timestamp: 0, windowNumber: 0, context: nil,
+                characters: "/", charactersIgnoringModifiers: "/", isARepeat: false, keyCode: 44))
+            for (source, selection, expected) in [
+                ("    音🎵()\nnext()", NSRange(location: 5, length: 0), "    // 音🎵()\nnext()"),
+                ("  a()\r\n\tb()\r\nc()", NSRange(location: 0, length: 13), "  // a()\r\n\t// b()\r\nc()"),
+                ("// a\n// b", NSRange(location: 0, length: 9), "a\nb"),
+                ("a\n\nb", NSRange(location: 0, length: 4), "// a\n\n// b"),
+                ("", NSRange(location: 0, length: 0), "// ")
+            ] {
+                editor.string = source
+                editor.setSelectedRange(selection)
+                editor.undoManager?.removeAllActions()
+                #expect(editor.performKeyEquivalent(with: event))
+                #expect(editor.string == expected)
+                let selected = editor.selectedRange()
+                #expect(NSMaxRange(selected) <= (editor.string as NSString).length)
+                editor.undo(nil)
+                #expect(editor.string == source)
+                editor.redo(nil)
+                #expect(editor.string == expected)
+            }
+            editor.isEditable = false
+            let before = editor.string
+            editor.toggleComment(nil)
+            #expect(editor.string == before)
+            editor.isEditable = true
+            editor.setMarkedText("に", selectedRange: NSRange(location: 1, length: 0), replacementRange: editor.selectedRange())
+            let marked = editor.string
+            editor.toggleComment(nil)
+            #expect(editor.string == marked && editor.hasMarkedText())
+        }
+
         @Test(.timeLimit(.minutes(3)))
         func testCompletionPreviewIsReadOnlyAndAcceptanceIsOneUndoableEdit() throws {
             let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 500, height: 300),

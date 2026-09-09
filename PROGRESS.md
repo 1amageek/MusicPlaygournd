@@ -36,3 +36,5 @@
 
 - [x] TREE-1 Resolve dependency checkout locations through SwiftPM and expose expandable package files in existing read-only editor tabs; preserve playback and project buffers `depends:none` `parallel:none`
 - [x] TREE-INT Real checkout metadata for both templates and read-only save rejection passed; Release build and native folder expansion/source tabs verified `depends:TREE-1` `parallel:none`
+
+- [x] COMMENT-1 Command-/ toggles focused source lines; AppKit Unicode, CRLF, selection, undo/redo, read-only and IME checks passed; Release app built `depends:none` `parallel:none`

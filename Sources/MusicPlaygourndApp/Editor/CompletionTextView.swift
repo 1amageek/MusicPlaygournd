@@ -36,6 +36,7 @@ final class CompletionTextView: NSTextView, NSTableViewDataSource, NSTableViewDe
 
     override func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
         switch menuItem.action {
+        case #selector(toggleComment(_:)): return isEditable && !hasMarkedText()
         case #selector(undo(_:)): return documentUndoManager.canUndo
         case #selector(redo(_:)): return documentUndoManager.canRedo
         default: return super.validateMenuItem(menuItem)
@@ -76,6 +77,61 @@ final class CompletionTextView: NSTextView, NSTableViewDataSource, NSTableViewDe
             setSelectedRange(NSRange(location: selection.location + 1 + nextIndent.utf16.count, length: 0))
         }
         breakUndoCoalescing()
+    }
+
+    @objc func toggleComment(_ sender: Any?) {
+        guard isEditable, !hasMarkedText() else { return }
+        let source = string as NSString
+        let selection = selectedRange()
+        guard selection.location <= source.length, selection.length <= source.length - selection.location else { return }
+        let first = source.lineRange(for: NSRange(location: selection.location, length: 0))
+        let last = source.lineRange(for: NSRange(location: selection.location + max(0, selection.length - 1), length: 0))
+        let range = NSUnionRange(first, last)
+        var lines: [(offset: Int, content: String)] = []
+        var position = range.location
+        repeat {
+            var end = 0
+            var contentsEnd = 0
+            source.getLineStart(nil, end: &end, contentsEnd: &contentsEnd, for: NSRange(location: position, length: 0))
+            let text = source.substring(with: NSRange(location: position, length: contentsEnd - position))
+            let indent = text.prefix { $0 == " " || $0 == "\t" }
+            lines.append((position + indent.utf16.count, String(text.dropFirst(indent.count))))
+            guard end > position else { break }
+            position = end
+        } while position < NSMaxRange(range)
+        let nonempty = lines.filter { !$0.content.isEmpty }
+        let uncomment = !nonempty.isEmpty && nonempty.allSatisfy { $0.content.hasPrefix("//") }
+        let replacement = NSMutableString(string: source.substring(with: range))
+        var edits: [(offset: Int, removed: Int, added: Int)] = []
+        for line in lines.reversed() where !line.content.isEmpty || lines.count == 1 {
+            let removed = uncomment ? (line.content.hasPrefix("// ") ? 3 : 2) : 0
+            let inserted = uncomment ? "" : "// "
+            replacement.replaceCharacters(in: NSRange(location: line.offset - range.location, length: removed), with: inserted)
+            edits.append((line.offset, removed, inserted.utf16.count))
+        }
+        func adjusted(_ offset: Int) -> Int {
+            var result = offset
+            for edit in edits where edit.offset <= offset {
+                result += edit.added - min(edit.removed, offset - edit.offset)
+            }
+            return result
+        }
+        let start = adjusted(selection.location)
+        let end = adjusted(NSMaxRange(selection))
+        dismissCompletions()
+        breakUndoCoalescing()
+        insertText(replacement as String, replacementRange: range)
+        setSelectedRange(NSRange(location: start, length: end - start))
+        breakUndoCoalescing()
+    }
+
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        if event.modifierFlags.intersection([.command, .control, .option, .shift]) == .command,
+           event.charactersIgnoringModifiers == "/" {
+            toggleComment(nil)
+            return true
+        }
+        return super.performKeyEquivalent(with: event)
     }
 
     override func complete(_ sender: Any?) { onCompletionRequest?() }

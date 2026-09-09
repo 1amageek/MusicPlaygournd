@@ -25,6 +25,12 @@ struct MusicPlaygourndApp: App {
             CommandGroup(replacing: .saveItem) {
                 Button("Save Session") { model.saveDocument() }.keyboardShortcut("s").disabled(!model.hasOpenDocument)
             }
+            CommandGroup(after: .textEditing) {
+                Button("Toggle Comment") {
+                    NSApp.sendAction(#selector(CompletionTextView.toggleComment(_:)), to: nil, from: nil)
+                }.keyboardShortcut("/", modifiers: .command)
+                    .disabled(!model.hasOpenDocument || model.activeDocument.isReadOnly)
+            }
             CommandMenu("Session") {
                 Button("Apply Edit") { model.scheduleEvaluation(immediate: true) }.keyboardShortcut("r").disabled(!model.hasOpenDocument)
                 Button("Play / Pause", action: model.togglePlayback).disabled(!model.hasOpenDocument && !model.isPlaying)

@@ -8,6 +8,31 @@ extension NativeHostTests {
 @MainActor
 struct CodeEditorDocumentTests {
     @Test(.timeLimit(.minutes(1)))
+    func spacePlaybackRespectsNativeTextFocus() throws {
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 300, height: 200),
+            styleMask: [.titled], backing: .buffered, defer: false)
+        window.identifier = .init("editor")
+        let editor = CompletionTextView(frame: window.contentView!.bounds)
+        window.contentView = editor
+        func space(_ modifiers: NSEvent.ModifierFlags = []) throws -> NSEvent {
+            try #require(NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: modifiers,
+                timestamp: 0, windowNumber: window.windowNumber, context: nil,
+                characters: " ", charactersIgnoringModifiers: " ", isARepeat: false, keyCode: 49))
+        }
+        window.makeFirstResponder(editor)
+        #expect(!ApplicationDelegate.handlesPlaybackSpace(try space()))
+        editor.keyDown(with: try space())
+        #expect(editor.string == " ")
+        window.makeFirstResponder(nil)
+        #expect(ApplicationDelegate.handlesPlaybackSpace(try space()))
+        for modifier: NSEvent.ModifierFlags in [.command, .control, .option, .shift] {
+            #expect(!ApplicationDelegate.handlesPlaybackSpace(try space(modifier)))
+        }
+        window.identifier = .init("settings")
+        #expect(!ApplicationDelegate.handlesPlaybackSpace(try space()))
+    }
+
+    @Test(.timeLimit(.minutes(1)))
     func stringsKeepCommentDelimitersLiteral() throws {
         let defaults = UserDefaults.standard
         let previous = defaults.object(forKey: "editor.theme")

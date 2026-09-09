@@ -10,7 +10,7 @@ struct ContentView: View {
 
     var body: some View {
         Group {
-            if !model.hasOpenDocument {
+            if model.project == nil && !model.hasOpenDocument {
                 WelcomeView(model: model)
             } else {
                 editorWorkspace

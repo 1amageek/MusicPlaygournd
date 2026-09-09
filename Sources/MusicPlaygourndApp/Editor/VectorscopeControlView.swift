@@ -48,12 +48,12 @@ struct VectorscopeControlView: View {
         Spacer()
         Button("Reset") {
           onBalanceChange(0)
-          onSpaceChange(0.5)
+          onSpaceChange(0)
         }
-        .buttonStyle(.plain).accessibilityLabel("Reset balance and distance to center")
+        .buttonStyle(.plain).accessibilityLabel("Reset balance and reverb")
       }.font(.system(size: 10, design: .monospaced)).padding(12)
         .help(
-          "Drag left/right for stereo balance, up/down for reverb distance. Reset centers balance and sets reverb to 50%."
+          "Drag left/right for stereo balance, up/down for reverb distance. Reset centers balance and sets reverb to 0%."
         )
     }
   }

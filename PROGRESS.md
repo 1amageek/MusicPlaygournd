@@ -48,3 +48,18 @@
 
 - [x] LIVE-1 EQ handle gestures, adjustable Q/native response curves and reset; vectorscope XY balance/reverb and isolated center reset implemented and reviewed `depends:none` `parallel:none`
 - [x] LIVE-INT Native PCM/response/Q/invalid-value checks passed; Release built; native changed EQ/Q and curves observed, EQ reset and scope 0/50% center reset verified; main commit `depends:LIVE-1` `parallel:none`
+
+- [x] SPACE-1 Route unmodified Space outside text editing to transport; preserve text input, dialogs and modified keys, suppress key repeat `depends:none` `parallel:none`
+- [x] SPACE-INT Verify native focus routing and playback toggle, build and push main `depends:SPACE-1` `parallel:none`
+
+- [x] TABS-1 Keep the loaded project visible after closing its last tab; verify native close and reopen `depends:none` `parallel:none`
+- [x] TABS-INT Build and verify the workspace remains navigable, then commit to main `depends:TABS-1` `parallel:none`
+
+- [x] RESET-1 Reset vectorscope balance to zero and shared reverb to 0%; verify native values `depends:none` `parallel:none`
+- [x] RESET-INT Build and confirm reset through the native popover before main commit `depends:RESET-1` `parallel:none`
+
+- [ ] STEREO-1 Give Deep Current's synths stereo chorus while retaining mono kick, notes, tempo and attribution; update active LivePlayback source and initial template `depends:none` `parallel:none`
+- [ ] STEREO-INT Verify template-generated PCM stereo energy and native playback, build and commit only template changes `depends:STEREO-1` `parallel:none`
+
+- [ ] MUTE-1 Reduce measured render and PCM transfer latency without changing shared bus processing or accepted control ordering `depends:none` `parallel:none`
+- [ ] MUTE-INT Verify mute response through the actual worker and audio replacement path before commit `depends:MUTE-1` `parallel:none`

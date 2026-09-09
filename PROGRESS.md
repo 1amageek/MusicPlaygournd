@@ -77,3 +77,6 @@
 
 - [x] STARTER-1 Default session teaches nested Sounds and both slider forms; synth return owns its gain, nonperiodic chorus removed; generated project rendering and slider PCM changes verified `depends:none` `parallel:none`
 - [x] STARTER-INT Generated SwiftPM project and live slider PCM checks passed (76.8s); release build passed; final source displayed with two sliders, four inline tracks and active playback in the native editor `depends:STARTER-1` `parallel:none`
+
+- [x] README-1 Rewrote the user guide for Swift 6.4, composition, performance controls and projects; embedded the supplied screenshot unchanged `depends:none` `parallel:none`
+- [x] README-INT Checked current editor/control entry points, all relative links and exact screenshot bytes; documentation-only diff reviewed `depends:README-1` `parallel:none`

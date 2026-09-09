@@ -20,3 +20,6 @@
 - [x] COMPACT-1 Gutter gap reduced to 8 points; navigator glyphs use 12-point font in 14-point slots; Release build and native source/sidebar appearance verified `depends:none` `parallel:none`
 
 - [x] CARET-1 Preserve selection and Japanese marked text; pre-fix reproduction fails, focused AppKit composition/commit and document/undo checks pass; packaged Release build passed `depends:none` `parallel:none`
+
+- [x] EDIT-2 Fix URL/comment coloring, resolve saved manifests with stale evaluation cancellation, preserve dirty documents and selection, and move layout menu to tab row; focused behavioral checks passed `depends:none` `parallel:none`
+- [x] EDIT-INT Syntax/IME checks passed; real manifest save reload passed in 2.639 seconds; Release build and native tab-row layout verified `depends:EDIT-2` `parallel:none`

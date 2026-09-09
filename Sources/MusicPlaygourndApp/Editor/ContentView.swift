@@ -40,8 +40,11 @@ struct ContentView: View {
     private var workspace: some View {
         VStack(spacing: 0) {
             if model.hasOpenDocument {
-                FileTabsView(model: model)
-                    .fixedSize(horizontal: false, vertical: true)
+                HStack(spacing: 0) {
+                    FileTabsView(model: model)
+                    layoutMenu.padding(.horizontal, 6)
+                }
+                .frame(height: 30)
                 Divider()
             }
             Group {
@@ -118,7 +121,7 @@ struct ContentView: View {
                 documentID: model.activeDocumentID, editorState: model.activeDocument.editorState, openDocumentIDs: Set(model.documents.map(\.id)),
                 onEditorStateChange: { id, state in model.documents.first { $0.id == id }?.editorState = state })
         }.frame(minWidth: 350, minHeight: 220)
-            .overlay(alignment: .topTrailing) { layoutMenu.padding(10) }
+
     }
 
     @ViewBuilder

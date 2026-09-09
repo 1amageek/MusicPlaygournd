@@ -8,6 +8,20 @@ extension NativeHostTests {
 @MainActor
 struct CodeEditorDocumentTests {
     @Test(.timeLimit(.minutes(1)))
+    func stringsKeepCommentDelimitersLiteral() throws {
+        let view = makeCodeEditor(documentID: UUID(), completions: { _, _ in [] }, onCompletionStatus: { _ in })
+        let editor = CompletionTextView()
+        editor.string = #"let url = "https://github.com/1amageek/SwiftMusic.git" // "comment""#
+        view.makeCoordinator().highlight(editor)
+        let storage = try #require(editor.textStorage)
+        let source = editor.string as NSString
+        for token in ["https:", "//github.com", "SwiftMusic.git"] {
+            #expect(storage.attribute(.foregroundColor, at: source.range(of: token).location, effectiveRange: nil) as? NSColor == .systemOrange)
+        }
+        #expect(storage.attribute(.foregroundColor, at: source.range(of: "comment").location, effectiveRange: nil) as? NSColor == .secondaryLabelColor)
+    }
+
+    @Test(.timeLimit(.minutes(1)))
     func editsAndUndoRemainIsolatedAcrossDocuments() throws {
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 500, height: 300),
             styleMask: [.titled], backing: .buffered, defer: false)

@@ -91,6 +91,37 @@ extension NativeHostTests {
             }
         }
 
+        @Test(.timeLimit(.minutes(2)))
+        func savingManifestReloadsPackageWithoutReplacingDirtyDocuments() async throws {
+            let root = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+            try SessionModel.createProject(at: root)
+            let model = SessionModel()
+            do {
+                model.openProject(at: root)
+                let deadline = ContinuousClock.now.advanced(by: .seconds(40))
+                while model.project == nil, ContinuousClock.now < deadline { try await Task.sleep(for: .milliseconds(50)) }
+                _ = try #require(model.project)
+                let session = model.activeDocument
+                session.source += "\n// Keep this unsaved edit\n"
+                session.isDirty = true
+                try model.openDocument(at: root.appending(path: "Package.swift"))
+                let manifest = model.activeDocument
+                manifest.source = manifest.source.replacingOccurrences(of: "name: \"\(root.lastPathComponent)\"", with: "name: \"Renamed\"", range: manifest.source.range(of: "name: \"\(root.lastPathComponent)\""))
+                #expect(model.saveDocument())
+                let reloadDeadline = ContinuousClock.now.advanced(by: .seconds(40))
+                while model.project?.name != "Renamed", ContinuousClock.now < reloadDeadline { try await Task.sleep(for: .milliseconds(50)) }
+                #expect(model.project?.name == "Renamed")
+                #expect(model.activeDocumentID == manifest.id)
+                #expect(session.isDirty && session.source.hasSuffix("// Keep this unsaved edit\n"))
+                try await model.shutdown()
+                try FileManager.default.removeItem(at: root)
+            } catch {
+                try await model.shutdown()
+                try FileManager.default.removeItem(at: root)
+                throw error
+            }
+        }
+
         private func expectVisibleText(_ editor: CompletionTextView) throws {
             let manager = try #require(editor.layoutManager)
             let container = try #require(editor.textContainer)

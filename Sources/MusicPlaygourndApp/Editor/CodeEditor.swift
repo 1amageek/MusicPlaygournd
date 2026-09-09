@@ -499,20 +499,20 @@ struct CodeEditor: NSViewRepresentable {
             storage.beginEditing()
             storage.addAttribute(.foregroundColor, value: NSColor(calibratedWhite: 0.88, alpha: 1), range: full)
             // These patterns color text only; SwiftMusic remains the sole owner of musical meaning.
-            let rules: [(String, NSColor)] = [
-                (#"\b(import|struct|var|some|let|if|else|for|in|try|func|return)\b"#, .systemPink),
-                (#"\b(Music|Sound|Track|Sample|Synthesizer|Session)\b"#, .systemTeal),
-                (#"\"(?:\\.|[^\"\\])*\""#, .systemOrange),
-                (#"//[^\n]*"#, .secondaryLabelColor)
-            ]
-            for (pattern, color) in rules {
-                do {
-                    let regex = try NSRegularExpression(pattern: pattern)
-                    for match in regex.matches(in: editor.string, range: full) {
-                        storage.addAttribute(.foregroundColor, value: color, range: match.range)
+            do {
+                // Match strings and comments together so delimiters inside strings stay literal.
+                let regex = try NSRegularExpression(pattern: #"("(?:\\.|[^"\\])*"|//[^\n]*)|\b(import|struct|var|some|let|if|else|for|in|try|func|return)\b|\b(Music|Sound|Track|Sample|Synthesizer|Session)\b"#)
+                for match in regex.matches(in: editor.string, range: full) {
+                    let token = (editor.string as NSString).substring(with: match.range)
+                    let color: NSColor
+                    if match.range(at: 1).location != NSNotFound {
+                        color = token.hasPrefix("//") ? .secondaryLabelColor : .systemOrange
+                    } else {
+                        color = match.range(at: 2).location != NSNotFound ? .systemPink : .systemTeal
                     }
-                } catch { assertionFailure("Invalid static syntax-coloring expression: \(error)") }
-            }
+                    storage.addAttribute(.foregroundColor, value: color, range: match.range)
+                }
+            } catch { assertionFailure("Invalid static syntax-coloring expression: \(error)") }
             storage.endEditing()
         }
     }

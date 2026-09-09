@@ -1122,14 +1122,16 @@ final class SessionModel {
         openProject(at: url)
     }
 
-    func openProject(at root: URL) {
+    func openProject(at root: URL, resolveDependencies: Bool = false) {
+        if resolveDependencies { evaluationTask?.cancel() }
+        let retainedTarget = project?.root == root ? projectTarget?.name : nil
         projectTask?.cancel()
         let request = UUID()
         projectRequestID = request
         status = "Opening package…"
         projectTask = Task {
             do {
-                let loaded = try await evaluator.openProject(at: root)
+                let loaded = try await evaluator.openProject(at: root, resolveDependencies: resolveDependencies)
                 try Task.checkCancellation()
                 guard projectRequestID == request else { return }
                 let listing = SessionFileBrowser()
@@ -1163,7 +1165,7 @@ final class SessionModel {
                 rememberProjectNavigation()
                 projectCompletion = nextCompletion
                 project = loaded
-                projectTarget = loaded.targets.first
+                projectTarget = loaded.targets.first(where: { $0.name == retainedTarget }) ?? loaded.targets.first
                 fileBrowser = listing
                 documents.append(contentsOf: newDocuments)
                 let selected = selectedPath.flatMap { path in documents.first(where: { $0.fileURL?.path == path }) }
@@ -1397,6 +1399,10 @@ final class SessionModel {
             document.fileURL = destination
             if document.id == activeDocumentID { try saveHostSettings(for: destination) }
             document.isDirty = false
+            if let root = project?.root, destination == root.appending(path: "Package.swift") {
+                rememberProjectNavigation()
+                openProject(at: root, resolveDependencies: true)
+            }
             return true
         } catch { diagnostic = error.localizedDescription; return false }
     }

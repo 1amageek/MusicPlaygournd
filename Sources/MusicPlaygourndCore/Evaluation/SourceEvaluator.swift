@@ -177,13 +177,16 @@ public actor SourceEvaluator {
         return result.loop
     }
 
-    public func openProject(at root: URL) async throws -> SwiftPackageProject {
+    public func openProject(at root: URL, resolveDependencies: Bool = false) async throws -> SwiftPackageProject {
         while busy { try await Task.sleep(for: .milliseconds(40)) }
         busy = true
         defer { busy = false }
         try FileManager.default.createDirectory(at: workspace, withIntermediateDirectories: true)
         guard FileManager.default.fileExists(atPath: root.appending(path: "Package.swift").path) else {
             throw EvaluationError.invalidSource("Select a folder containing Package.swift.")
+        }
+        if resolveDependencies {
+            _ = try await run(swiftExecutable, ["package", "--package-path", root.path, "resolve"], timeout: 120)
         }
         let description = try await run(swiftExecutable, ["package", "--package-path", root.path, "describe", "--type", "json"], timeout: 60)
         return try SwiftPackageProject.decode(Data(description.utf8), root: root)

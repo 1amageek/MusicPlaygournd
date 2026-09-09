@@ -24,6 +24,8 @@ extension NativeHostTests {
                 #expect(loaded.name == "Evening Set")
                 let dependency = try #require(loaded.dependencies.first { $0.identity == "swiftmusic" })
                 #expect(dependency.name == "SwiftMusic" && dependency.versionDescription == "0.4.0")
+                let checkout = try #require(dependency.checkoutPath)
+                #expect(FileManager.default.fileExists(atPath: checkout + "/Package.swift"))
                 let target = try #require(loaded.targets.first)
                 #expect(target.name == "Evening Set")
                 #expect(target.path == "Sources/Evening Set")

@@ -126,6 +126,7 @@ struct ContentView: View {
                 beforeEdit: model.beforeEdit, onEdit: model.sourceChanged,
                 completions: { source, offset in try await model.completions(source: source, utf16Offset: offset) },
                 onCompletionStatus: { model.completionStatus = $0 },
+                isReadOnly: model.activeDocument.isReadOnly,
                 switches: model.switches, switchSelections: model.switchSelections,
                 switchesEnabled: model.switchesEnabled, onSelectSwitch: model.selectSwitch,
                 activeSwitchRanges: model.activeSwitchRanges,

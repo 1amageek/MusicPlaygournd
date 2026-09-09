@@ -16,14 +16,14 @@ final class SessionModel {
 
     private var projectBuffers: [URL: String] {
         Dictionary(uniqueKeysWithValues: documents.compactMap { document in
-            guard let url = document.fileURL else { return nil }
+            guard !document.isReadOnly, let url = document.fileURL else { return nil }
             return (url, document.source)
         })
     }
 
     private var isProjectDocument: Bool {
         guard let root = project?.root, let fileURL else { return false }
-        return fileURL.path.hasPrefix(root.path + "/")
+        return activeDocument.isReadOnly || fileURL.path.hasPrefix(root.path + "/")
     }
     private(set) var documents = [SessionDocument(source: SessionModel.initialSource)]
     private var activeDocumentIndex = 0
@@ -35,7 +35,7 @@ final class SessionModel {
     var editorLoop: PreparedLoop? { audibleDocumentID == activeDocumentID ? loop : nil }
     var source: String {
         get { activeDocument.source }
-        set { activeDocument.source = newValue; diagnosticRange = nil }
+        set { guard !activeDocument.isReadOnly else { return }; activeDocument.source = newValue; diagnosticRange = nil }
     }
     private var outputVolume = 1.0
     var masterVolume: Double {
@@ -363,13 +363,14 @@ final class SessionModel {
     }
 
     func sourceChanged() {
+        guard !activeDocument.isReadOnly else { return }
         hasUnsavedChanges = true
         updateRowLines()
         scheduleEvaluation()
     }
 
     func scheduleEvaluation(immediate: Bool = false) {
-        guard hasOpenDocument else { return }
+        guard hasOpenDocument, !activeDocument.isReadOnly || project != nil else { return }
         if requiresEvaluatorReset {
             deferredEvaluation = true
             deferredEvaluationImmediate = deferredEvaluationImmediate || immediate
@@ -1197,7 +1198,7 @@ final class SessionModel {
 
     private func rememberProjectNavigation() {
         guard let root = project?.root else { return }
-        let paths = documents.compactMap(\.fileURL).filter { $0.path.hasPrefix(root.path + "/") }.map(\.path)
+        let paths = documents.filter { !$0.isReadOnly }.compactMap(\.fileURL).filter { $0.path.hasPrefix(root.path + "/") }.map(\.path)
         UserDefaults.standard.set(paths, forKey: "project.tabs." + root.path)
         if isProjectDocument { UserDefaults.standard.set(fileURL?.path, forKey: "project.selected." + root.path) }
     }
@@ -1325,7 +1326,7 @@ final class SessionModel {
         }
     }
 
-    func openDocument(at url: URL) throws {
+    func openDocument(at url: URL, readOnly: Bool = false) throws {
         let identity = url.standardizedFileURL.resolvingSymlinksInPath()
         if let document = documents.first(where: { $0.fileURL == identity }) {
             selectDocument(document.id)
@@ -1334,14 +1335,14 @@ final class SessionModel {
         guard documents.count < Self.maximumOpenDocuments else { throw DocumentFailure.tabLimit }
         let text = try String(contentsOf: identity, encoding: .utf8)
         guard text.utf8.count <= 65_536 else { throw EvaluationError.invalidSource("Source exceeds 64 KiB.") }
-        let document = SessionDocument(source: text, fileURL: identity)
+        let document = SessionDocument(source: text, fileURL: identity, isReadOnly: readOnly)
         documents.append(document)
         selectDocument(document.id)
     }
 
     func selectDocument(_ id: UUID) {
         guard let index = documents.firstIndex(where: { $0.id == id }), index != activeDocumentIndex else { return }
-        let sameProject = isProjectDocument && documents[index].fileURL.map { $0.path.hasPrefix(project!.root.path + "/") } == true
+        let sameProject = isProjectDocument && (documents[index].isReadOnly || documents[index].fileURL.map { $0.path.hasPrefix(project!.root.path + "/") } == true)
         if !sameProject { abortPerformanceForDocumentChange() }
         activeDocumentIndex = index
         if !sameProject { lineMaps = [:] }
@@ -1436,6 +1437,7 @@ final class SessionModel {
 
     @discardableResult
     func saveDocument(_ document: SessionDocument, to url: URL? = nil) -> Bool {
+        guard !document.isReadOnly else { return false }
         var destination = url ?? document.fileURL
         if destination == nil {
             let panel = NSSavePanel()

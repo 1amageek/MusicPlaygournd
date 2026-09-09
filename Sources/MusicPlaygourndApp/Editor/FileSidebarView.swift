@@ -32,17 +32,8 @@ struct FileSidebarView: View {
                 if model.project != nil || model.isOpeningPackage {
                     Section("Package Dependencies") {
                         ForEach(model.project?.dependencies ?? []) { dependency in
-                            Label {
-                                HStack(spacing: 5) {
-                                    Text(dependency.name)
-                                    Text(dependency.versionDescription).foregroundStyle(.secondary)
-                                }.lineLimit(1)
-                            } icon: {
-                                Image(systemName: "shippingbox")
-                                    .font(.system(size: 12)).foregroundStyle(.brown)
-                                    .frame(width: 14, height: 14)
-                            }
-                            .help(dependency.url ?? dependency.path ?? dependency.identity)
+                            DependencyTreeRow(dependency: dependency, model: model, selection: $selection)
+                                .id((dependency.checkoutPath ?? dependency.identity) + dependency.versionDescription)
                         }
                         if model.isOpeningPackage || model.isPreparing {
                             HStack(alignment: .top, spacing: 8) {

@@ -6,6 +6,22 @@ extension NativeHostTests {
     @MainActor
     struct SessionDocumentTests {
         @Test(.timeLimit(.minutes(2)))
+        func dependencyDocumentRejectsEditingAndSaving() async throws {
+            let url = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString + ".swift")
+            try "// Dependency".write(to: url, atomically: true, encoding: .utf8)
+            defer { do { try FileManager.default.removeItem(at: url) } catch { Issue.record(error) } }
+            let model = SessionModel()
+            do {
+                try model.openDocument(at: url, readOnly: true)
+                model.source = "changed"
+                #expect(model.source == "// Dependency")
+                #expect(!model.saveDocument())
+                #expect(try String(contentsOf: url, encoding: .utf8) == "// Dependency")
+                try await model.shutdown()
+            } catch { try await model.shutdown(); throw error }
+        }
+
+        @Test(.timeLimit(.minutes(2)))
         func dirtyBuffersDuplicateOpenSaveAndCloseAreIsolated() async throws {
             let root = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
             try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false)

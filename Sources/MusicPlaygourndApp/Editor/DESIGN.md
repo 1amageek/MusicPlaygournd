@@ -250,4 +250,6 @@ When no document is open, ContentView presents WelcomeView instead of the editor
 
 The navigator shows a Package Dependencies section during preparation, using actual evaluator progress lines rather than estimated percentages. Project request IDs and evaluation revisions reject stale callbacks; operation activity controls spinner visibility. WelcomeView shows the same opening progress before a project has a navigator. Readiness and existing adopted audio remain owned by the evaluation/playback paths.
 
-Package Dependencies remains visible for the open project after preparation. Rows show declared package names and requirements from SwiftPackageProject; only the separate progress row disappears.
+Package Dependencies remains visible for the open project after preparation. Rows show package names and resolved versions from SwiftPackageProject, using the declared requirement when the resolved version is unspecified; only the separate progress row disappears.
+
+Dependency rows reuse SessionFileBrowser and FileTreeRow for lazy directory expansion. SwiftPM supplies checkout roots; selecting text opens a read-only SessionDocument in the existing editor. Dependency buffers are excluded from project overlays and saves; navigating these tabs preserves project playback. File enumeration retains the browser's entry limit and explicit errors. Verify checkout expansion, source tab selection and edit rejection.

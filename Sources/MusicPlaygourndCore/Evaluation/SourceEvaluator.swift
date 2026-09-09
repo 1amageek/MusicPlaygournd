@@ -212,11 +212,14 @@ public actor SourceEvaluator {
             throw EvaluationError.invalidSource("Select a folder containing Package.swift.")
         }
         await progress?(resolveDependencies ? "Resolving package dependencies…" : "Loading package…")
-        if resolveDependencies {
-            _ = try await run(swiftExecutable, ["package", "--package-path", root.path, "resolve"], timeout: 120, progress: progress)
-        }
+        _ = try await run(swiftExecutable, ["package", "--package-path", root.path, "resolve"], timeout: 120, progress: progress)
         let description = try await run(swiftExecutable, ["package", "--package-path", root.path, "describe", "--type", "json"], timeout: 60)
-        return try SwiftPackageProject.decode(Data(description.utf8), root: root)
+        var project = try SwiftPackageProject.decode(Data(description.utf8), root: root)
+        await progress?("Loading package dependencies…")
+        let graph = try await run(swiftExecutable, ["package", "--package-path", root.path,
+            "show-dependencies", "--format", "json"], timeout: 120, progress: progress)
+        try project.loadResolvedDependencies(Data(graph.utf8))
+        return project
     }
 
     public func evaluateRetained(source: String, bpm: Double, beatsPerBar: Int,

@@ -27,6 +27,7 @@ struct CodeEditor: NSViewRepresentable {
     let onEdit: () -> Void
     let completions: @MainActor (String, Int) async throws -> [SwiftCompletion]
     let onCompletionStatus: (String) -> Void
+    var isReadOnly = false
     var switches: [SwitchControl] = []
     var switchSelections: [Int] = []
     var switchesEnabled = false
@@ -59,6 +60,7 @@ struct CodeEditor: NSViewRepresentable {
         scroll.autohidesScrollers = true
         scroll.borderType = .noBorder
         let editor = CompletionTextView()
+        editor.isEditable = !isReadOnly
         editor.isRichText = false
         editor.allowsUndo = true
         editor.isAutomaticQuoteSubstitutionEnabled = false
@@ -134,6 +136,7 @@ struct CodeEditor: NSViewRepresentable {
         context.coordinator.parent = self
         context.coordinator.pruneUndoManagers(keeping: openDocumentIDs)
         guard let editor = scroll.documentView as? NSTextView else { return }
+        editor.isEditable = !isReadOnly
         if context.coordinator.documentID != documentID {
             context.coordinator.switchDocument(to: documentID, text: text, editor: editor, scroll: scroll, state: editorState)
         }
@@ -348,6 +351,7 @@ struct CodeEditor: NSViewRepresentable {
             }
         }
         func textView(_ textView: NSTextView, shouldChangeTextIn affectedCharRange: NSRange, replacementString: String?) -> Bool {
+            guard !parent.isReadOnly else { return false }
             if let replacementString { parent.beforeEdit(affectedCharRange, replacementString) }
             return true
         }
@@ -412,7 +416,7 @@ struct CodeEditor: NSViewRepresentable {
         }
 
         func requestFormat(_ editor: CompletionTextView) {
-            guard let format = parent.onFormat, !editor.hasMarkedText() else { return }
+            guard !parent.isReadOnly, let format = parent.onFormat, !editor.hasMarkedText() else { return }
             cancelCompletion()
             formatTask?.cancel()
             formatGeneration += 1

@@ -37,6 +37,55 @@ public struct PreparedLoop: Codable, Sendable, Equatable {
         self.meters = meters
     }
 
+    private enum CodingKeys: String, CodingKey {
+        case sampleRate, bpm, beatsPerBar, beatCount, samples, pcmFloat32LE, events, meters, rows
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        sampleRate = try values.decode(Double.self, forKey: .sampleRate)
+        bpm = try values.decode(Double.self, forKey: .bpm)
+        beatsPerBar = try values.decode(Int.self, forKey: .beatsPerBar)
+        beatCount = try values.decode(Double.self, forKey: .beatCount)
+        events = try values.decode([LoopEvent].self, forKey: .events)
+        rows = try values.decode([LoopRow].self, forKey: .rows)
+        meters = try values.decodeIfPresent([PreparedMeterEnvelope].self, forKey: .meters)
+        if values.contains(.pcmFloat32LE) {
+            let data = try values.decode(Data.self, forKey: .pcmFloat32LE)
+            let maximumBytes = Int(Self.requiredSampleRate * Self.maximumDurationSeconds) * 2 * 4
+            guard data.count.isMultiple(of: 4), data.count <= maximumBytes else {
+                throw DecodingError.dataCorruptedError(forKey: .pcmFloat32LE, in: values,
+                    debugDescription: "PCM must contain bounded, complete Float32 samples.")
+            }
+            // The Data owns this scoped borrow; each unaligned read is within its checked byte count.
+            samples = data.withUnsafeBytes { bytes in
+                (0..<(bytes.count / 4)).map { index in
+                    Float(bitPattern: UInt32(littleEndian: bytes.loadUnaligned(fromByteOffset: index * 4, as: UInt32.self)))
+                }
+            }
+        } else {
+            samples = try values.decode([Float].self, forKey: .samples)
+        }
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var values = encoder.container(keyedBy: CodingKeys.self)
+        try values.encode(sampleRate, forKey: .sampleRate)
+        try values.encode(bpm, forKey: .bpm)
+        try values.encode(beatsPerBar, forKey: .beatsPerBar)
+        try values.encode(beatCount, forKey: .beatCount)
+        try values.encode(events, forKey: .events)
+        try values.encode(rows, forKey: .rows)
+        try values.encodeIfPresent(meters, forKey: .meters)
+        // Serialization needs owned bytes beyond this Array borrow; Data performs that boundary copy.
+        #if _endian(little)
+        let data = samples.withUnsafeBytes { Data($0) }
+        #else
+        let data = samples.map { $0.bitPattern.littleEndian }.withUnsafeBytes { Data($0) }
+        #endif
+        try values.encode(data, forKey: .pcmFloat32LE)
+    }
+
     public func validate() throws {
         guard sampleRate == Self.requiredSampleRate else {
             throw PreparedLoopValidationError.invalidSampleRate(sampleRate)

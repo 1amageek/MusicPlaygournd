@@ -61,5 +61,5 @@
 - [x] STEREO-1 Add stereo chorus to Deep Current and save the same source in active LivePlayback; retain mono kick, notes, tempo and attribution `depends:none` `parallel:none`
 - [x] STEREO-INT Generated source matches active project; PCM Side/Mid 29.2%, native output 26.4%, peak 0.632; Release build passed `depends:STEREO-1` `parallel:none`
 
-- [ ] MUTE-1 Reduce measured render and PCM transfer latency without changing shared bus processing or accepted control ordering `depends:none` `parallel:none`
-- [ ] MUTE-INT Verify mute response through the actual worker and audio replacement path before commit `depends:MUTE-1` `parallel:none`
+- [x] MUTE-1 Pack PCM as Float32 bytes; serialization reduced from 600–750ms to 8ms, exact and legacy decoding verified; bus processing and generation ordering unchanged `depends:none` `parallel:none`
+- [x] MUTE-INT Release built; real worker and native audio adoption measured at 312–318ms across four track mutes; unmute restores exact baseline PCM; remaining latency is full rendering `depends:MUTE-1` `parallel:none`

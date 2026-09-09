@@ -1,7 +1,31 @@
+import Foundation
 import Testing
 @testable import MusicPlaygourndCore
 
 struct PreparedLoopTests {
+    @Test(.timeLimit(.minutes(1)))
+    func packedPCMIsExactAndRejectsMalformedBytes() throws {
+        let samples: [Float] = [0, -0.0, 1, -1, 0.125, Float.leastNonzeroMagnitude]
+        let loop = PreparedLoop(sampleRate: 44_100, bpm: 120, beatsPerBar: 4,
+                                beatCount: 4, samples: samples, events: [])
+        let encoder = PropertyListEncoder()
+        encoder.outputFormat = .binary
+        let encoded = try encoder.encode(loop)
+        let decoded = try PropertyListDecoder().decode(PreparedLoop.self, from: encoded)
+        #expect(decoded.samples.map(\.bitPattern) == samples.map(\.bitPattern))
+        var payload = try #require(PropertyListSerialization.propertyList(from: encoded, format: nil) as? [String: Any])
+        let bytes = try #require(payload["pcmFloat32LE"] as? Data)
+        #expect(bytes.count == samples.count * 4)
+        #expect(Array(bytes[8..<12]) == [0, 0, 128, 63])
+        payload["pcmFloat32LE"] = Data([1, 2, 3])
+        let malformed = try PropertyListSerialization.data(fromPropertyList: payload, format: .binary, options: 0)
+        #expect(throws: DecodingError.self) { try PropertyListDecoder().decode(PreparedLoop.self, from: malformed) }
+        payload.removeValue(forKey: "pcmFloat32LE")
+        payload["samples"] = samples
+        let legacy = try PropertyListSerialization.data(fromPropertyList: payload, format: .binary, options: 0)
+        #expect(try PropertyListDecoder().decode(PreparedLoop.self, from: legacy).samples == samples)
+    }
+
     @Test(.timeLimit(.minutes(3)))
     func testDecodedLoopValidationRejectsNonFiniteAndMismatchedSamples() throws {
         let invalidSamples = PreparedLoop(

@@ -16,9 +16,6 @@ struct ContentView: View {
                 editorWorkspace
             }
         }
-        .sheet(isPresented: $model.isChoosingTemplate) {
-            ProjectTemplateView(model: model)
-        }
         .preferredColorScheme(.dark)
         .frame(minWidth: 850, minHeight: 540)
     }

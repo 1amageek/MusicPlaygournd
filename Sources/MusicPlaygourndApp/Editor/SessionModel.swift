@@ -1260,11 +1260,7 @@ final class SessionModel {
         if isProjectDocument { UserDefaults.standard.set(fileURL?.path, forKey: "project.selected." + root.path) }
     }
 
-    var isChoosingTemplate = false
-
-    func newProject() { isChoosingTemplate = true }
-
-    func createNewProject(template: ProjectTemplate) {
+    func newProject() {
         let panel = NSSavePanel()
         panel.title = "New Project"
         panel.nameFieldLabel = "Name:"
@@ -1272,13 +1268,15 @@ final class SessionModel {
         panel.prompt = "Create"
         guard panel.runModal() == .OK, let root = panel.url else { return }
         do {
-            try Self.createProject(at: root, template: template)
-            isChoosingTemplate = false
+            try Self.createProject(at: root)
             openProject(at: root)
-        } catch { fileBrowser.errorMessage = error.localizedDescription }
+        } catch {
+            fileBrowser.errorMessage = error.localizedDescription
+            NSAlert(error: error).runModal()
+        }
     }
 
-    static func createProject(at root: URL, template: ProjectTemplate = .deepCurrent) throws {
+    static func createProject(at root: URL) throws {
         let manager = FileManager.default
         guard !manager.fileExists(atPath: root.path) else { throw SessionFileBrowser.Failure.fileExists }
         try manager.createDirectory(at: root, withIntermediateDirectories: false)
@@ -1327,7 +1325,7 @@ final class SessionModel {
 
             """
             try manifest.write(to: root.appending(path: "Package.swift"), atomically: true, encoding: .utf8)
-            try template.source.write(to: sources.appending(path: "Session.swift"), atomically: true, encoding: .utf8)
+            try initialSource.write(to: sources.appending(path: "Session.swift"), atomically: true, encoding: .utf8)
             try "Place sample files here. Access them with Bundle.module.\n".write(to: sources.appending(path: "Resources/README.txt"), atomically: true, encoding: .utf8)
             try ".build/\n.swiftpm/\n.DS_Store\nRecordings/\n".write(to: root.appending(path: ".gitignore"), atomically: true, encoding: .utf8)
         } catch {

@@ -71,3 +71,6 @@
 - [x] SLIDER-2 Retained worker updates both forms without Swift recompilation; source-line insertion preserves values and rejected updates retain PCM; SDK probe measured 43ms for the short fixture; fixed switch-bank combinations fail explicitly `depends:SLIDER-1` `parallel:none`
 - [x] SLIDER-3 Native sliders follow code glyphs without text/selection/undo changes; continuous changes adopt an in-flight value and then the latest value through AVAudioEngine `depends:SLIDER-2` `parallel:none`
 - [x] SLIDER-INT Focused Swift Testing, bundled worker probe, native AppKit actions and AVAudioEngine adoption passed; release app built; manual screen inspection unavailable while Mac is locked `depends:SLIDER-1,SLIDER-2,SLIDER-3` `parallel:none`
+
+- [x] CREATE-1 Removed template selection and presentation state; New Project uses native naming and the existing transactional default generator; creation errors use a native alert `depends:none` `parallel:none`
+- [x] CREATE-INT Existing package generation/protection test and release build passed; native QuickStart creation directly opened Sources/QuickStart/Session.swift without a template chooser `depends:CREATE-1` `parallel:none`

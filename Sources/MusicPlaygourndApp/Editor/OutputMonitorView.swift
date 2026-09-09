@@ -20,7 +20,7 @@ struct OutputMonitorView: View {
             ForEach(Monitor.allCases) { monitor in
                 Button { presented = monitor } label: {
                     VStack(alignment: .leading, spacing: 5) {
-                        plot(monitor).frame(height: 30)
+                        plot(monitor).frame(height: 22)
                         Text(monitor.rawValue.uppercased())
                             .font(.system(size: 7, design: .monospaced))
                             .foregroundStyle(.secondary)
@@ -50,7 +50,7 @@ struct OutputMonitorView: View {
                     .padding(20).frame(width: 480)
                 }
             }
-        }.frame(height: 44)
+        }.frame(height: 36)
     }
 
     @ViewBuilder

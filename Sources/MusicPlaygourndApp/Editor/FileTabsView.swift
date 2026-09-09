@@ -26,7 +26,7 @@ struct FileTabsView: View {
                     .help(document.fileURL?.path ?? "Unsaved session")
                 }
             }
-        }.scrollIndicators(.hidden).frame(height: 30)
+        }.scrollIndicators(.hidden).frame(height: 30).clipped()
             .background(.black.opacity(0.12)).accessibilityIdentifier("document-tabs")
     }
 }

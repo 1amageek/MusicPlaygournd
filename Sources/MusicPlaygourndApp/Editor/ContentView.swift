@@ -1,14 +1,11 @@
 import AppKit
 import SwiftUI
-import UniformTypeIdentifiers
 
 struct ContentView: View {
     @Bindable var model: SessionModel
     @State private var lineRects: [Int: CGRect] = [:]
     @State private var timelineScroll: CGFloat = 0
     @State private var logsExpanded = false
-    @State private var controlsPresented = false
-    @State private var maximumTakeMinutes = 10
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
 
     var body: some View {
@@ -18,32 +15,14 @@ struct ContentView: View {
                     .navigationSplitViewColumnWidth(min: 160, ideal: 220, max: 320)
             } detail: {
                 VStack(spacing: 0) {
-                    if model.hasOpenDocument {
-                        VStack(spacing: 0) {
-                            FileTabsView(model: model)
-                            Divider()
-                            VSplitView {
-                                HSplitView {
-                                    editor
-                                    if !model.inlineLayout && !model.bottomLayout {
-                                        TimelineView(loop: model.editorLoop, rowLines: model.rowLines, lineRects: lineRects, beatPosition: model.beatPosition, isPlaying: model.isPlaying, onScroll: { timelineScroll += $0 }, mutedTracks: model.rowMuteStates, onToggleTrackMute: model.toggleTrackMute)
-                                            .frame(minWidth: 340)
-                                    }
-                                }
-                                if !model.inlineLayout && model.bottomLayout { rhythm }
-                            }
-                        }
-                    } else {
-                        Text("No Selection").font(.system(size: 20)).foregroundStyle(.tertiary)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    }
+                    workspace
                     Divider()
                     logs
                 }
             }
             .navigationSplitViewStyle(.balanced)
             .toolbar {
-                ToolbarItem(placement: .principal) { header }
+                ToolbarItem(placement: .principal) { MusicHeaderView(model: model) }
             }
         }
         .background(Color(red: 0.06, green: 0.07, blue: 0.08))
@@ -54,6 +33,33 @@ struct ContentView: View {
                 model.refresh()
                 do { try await Task.sleep(for: .milliseconds(33)) }
                 catch { break }
+            }
+        }
+    }
+
+    private var workspace: some View {
+        VStack(spacing: 0) {
+            if model.hasOpenDocument {
+                FileTabsView(model: model)
+                    .fixedSize(horizontal: false, vertical: true)
+                Divider()
+            }
+            Group {
+                if model.hasOpenDocument {
+                    VSplitView {
+                        HSplitView {
+                            editor
+                            if !model.inlineLayout && !model.bottomLayout {
+                                TimelineView(loop: model.editorLoop, rowLines: model.rowLines, lineRects: lineRects, beatPosition: model.beatPosition, isPlaying: model.isPlaying, onScroll: { timelineScroll += $0 }, mutedTracks: model.rowMuteStates, onToggleTrackMute: model.toggleTrackMute)
+                                    .frame(minWidth: 340)
+                            }
+                        }
+                        if !model.inlineLayout && model.bottomLayout { rhythm }
+                    }
+                } else {
+                    Text("No Selection").font(.system(size: 20)).foregroundStyle(.tertiary)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
             }
         }
     }
@@ -89,89 +95,6 @@ struct ContentView: View {
         } else {
             menu.background(.regularMaterial, in: Capsule())
         }
-    }
-
-    private var header: some View {
-        HStack(spacing: 12) {
-            HStack(spacing: 14) {
-                Button { model.togglePlayback() } label: {
-                    Image(systemName: model.isPlaying ? "pause.fill" : "play.fill")
-                        .font(.system(size: 15, weight: .bold))
-                        .frame(width: 38, height: 38)
-                        .foregroundStyle(.primary)
-                        .background(.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 8))
-                }.buttonStyle(.plain)
-                    .keyboardShortcut(.return, modifiers: [.command])
-                    .accessibilityLabel(model.isPlaying ? "Pause" : "Play")
-                    .accessibilityIdentifier("play-toggle")
-                    .disabled(!model.hasOpenDocument && !model.isPlaying)
-                Button(action: record) {
-                    Image(systemName: model.isRecording ? "stop.circle" : "record.circle")
-                        .font(.system(size: 18)).foregroundStyle(model.isRecording ? Color.red : .secondary)
-                }.buttonStyle(.plain).disabled(!model.isPlaying && !model.isRecording)
-                    .accessibilityLabel(model.isRecording ? "Stop and save recording" : "Record")
-                    .accessibilityIdentifier("record-toggle")
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("BPM").font(.system(size: 8, weight: .medium, design: .monospaced)).tracking(1)
-                        .foregroundStyle(.secondary)
-                    TextField("BPM", value: Binding(get: { model.displayedBPM }, set: { model.bpm = $0 }), format: .number.precision(.fractionLength(0)))
-                        .font(.system(size: 24, weight: .medium, design: .monospaced))
-                        .textFieldStyle(.plain).frame(width: 60)
-                        .accessibilityLabel("Tempo in BPM").accessibilityIdentifier("tempo-field")
-                }
-                VStack(alignment: .leading, spacing: 5) {
-                    Text("TIME").fixedSize().font(.system(size: 8, weight: .medium, design: .monospaced)).tracking(1)
-                        .foregroundStyle(.secondary)
-                    Picker("Meter", selection: $model.beatsPerBar) {
-                        ForEach(2...7, id: \.self) { Text("\($0)/4").tag($0) }
-                    }.labelsHidden().controlSize(.small).frame(width: 62)
-                        .onChange(of: model.beatsPerBar) { _, _ in model.scheduleEvaluation() }
-                }
-            }
-            Rectangle().fill(.white.opacity(0.08)).frame(width: 1, height: 32)
-            OutputMonitorView(bands: model.spectrum, samples: model.outputSamples, isPlaying: model.isPlaying,
-                performance: model.performance,
-                resetDiagnostics: model.resetPerformanceDiagnostics)
-                .frame(minWidth: 190, maxWidth: .infinity)
-            VStack(spacing: 5) {
-                HStack {
-                    Text("MASTER")
-                    Spacer()
-                    Text(model.masterVolume == 0 ? "−∞ dB" : String(format: "%.0f dB", 20 * log10(model.masterVolume)))
-                }.font(.system(size: 8, design: .monospaced)).foregroundStyle(.secondary)
-                Slider(value: $model.masterVolume, in: 0...1)
-                    .controlSize(.small).tint(.gray)
-                    .accessibilityLabel("Master volume")
-                    .accessibilityIdentifier("master-volume")
-            }.frame(width: 90)
-            HeaderXYPad(model: model).frame(width: 160, height: 52)
-            Button { controlsPresented = true } label: {
-                Image(systemName: "slider.horizontal.3").font(.system(size: 17))
-                    .frame(width: 32, height: 38)
-                    .background(.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 7))
-            }.buttonStyle(.plain).accessibilityLabel("Controls")
-                .accessibilityIdentifier("editor-controls")
-                .popover(isPresented: $controlsPresented, arrowEdge: .bottom) {
-                    LiveControlsView(model: model, maximumTakeMinutes: $maximumTakeMinutes)
-                        .frame(width: 780, height: 420)
-                }
-        }.frame(minWidth: 680, idealWidth: 880, maxWidth: 1100).frame(height: 52)
-    }
-
-    private func record() {
-        if model.isRecording {
-            Task { @MainActor in
-                do { _ = try await model.stopRecording() }
-                catch { model.hostDiagnostic = error.localizedDescription }
-            }
-            return
-        }
-        let panel = NSSavePanel()
-        panel.allowedContentTypes = [.wav]
-        panel.nameFieldStringValue = "Take.wav"
-        guard panel.runModal() == .OK, let destination = panel.url else { return }
-        do { try model.startRecording(to: destination, maximumDuration: .seconds(maximumTakeMinutes * 60)) }
-        catch { model.hostDiagnostic = error.localizedDescription }
     }
 
     private var editor: some View {

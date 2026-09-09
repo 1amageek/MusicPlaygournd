@@ -13,4 +13,6 @@
 - [x] SCOPE-INT Native independent opening/closing passed; actual stereo PCM rendered through VectorscopeView; live playback UI check interrupted by user interaction, original playing app preserved `depends:SCOPE-1` `parallel:none`
 - [x] SCROLL-1 Normalize saved offsets against native ruler insets; preserve NSClipView constraints and one document sizing owner; gutter overlap regression and existing native editor test passed `depends:none` `parallel:none`
 - [x] SCROLL-INT Release build passed; native Deep Current Tribute scrolling to end and back preserves complete line starts; fixed app opened `depends:SCROLL-1` `parallel:none`
+- [x] CHROME-1 MusicHeaderView owns native toolbar controls; fixed-height sibling tabs reserve space above the editor; native screenshot confirms nonoverlap `depends:none` `parallel:none`
+- [x] CHROME-INT Release build, native source scroll and Package/Session tab switching verified; toolbar and tabs remain fixed `depends:CHROME-1` `parallel:none`
 - [ ] TEMPLATE-INT Verify standard SwiftPM package creation/opening without requiring a custom Session.swift entry, existing-path preservation, and the native navigator flow `depends:TEMPLATE-1,NAV-1,NAV-2,EDITOR-1` `parallel:none`

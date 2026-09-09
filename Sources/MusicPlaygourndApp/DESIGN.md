@@ -29,4 +29,4 @@ Failure is reported as a diagnostic or typed error; the last adopted loop surviv
 ## Verification and Change Impact
 Integration smoke test and visible native app verify the real workflow; command-line launch may use package source path, bundle launch evaluates against its precompiled runtime SDK and retains the embedded source workspace for completion.
 
-Standalone release packaging uses public SwiftMusic 0.3.0. Generated evaluator and completion manifests use that same URL/version; no adjacent SwiftMusic directory is required. The bundled host package and runtime SDK retain matching source/object/compiler identity. Verify from an independent checkout with real evaluation and SourceKit-LSP.
+Standalone release packaging uses public SwiftMusic 0.4.0. Generated evaluator and completion manifests use that same URL/version; no adjacent SwiftMusic directory is required. The bundled host package and runtime SDK retain matching source/object/compiler identity. Verify from an independent checkout with real evaluation and SourceKit-LSP.

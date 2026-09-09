@@ -15,6 +15,8 @@
 - [x] SCROLL-INT Release build passed; native Deep Current Tribute scrolling to end and back preserves complete line starts; fixed app opened `depends:SCROLL-1` `parallel:none`
 - [x] CHROME-1 MusicHeaderView owns native toolbar controls; fixed-height sibling tabs reserve space above the editor; native screenshot confirms nonoverlap `depends:none` `parallel:none`
 - [x] CHROME-INT Release build, native source scroll and Package/Session tab switching verified; toolbar and tabs remain fixed `depends:CHROME-1` `parallel:none`
+- [x] START-1 Persist SwiftPM project build products and stable augmented manifests while keeping worker/PCM process-local; focused project integration passed with public SwiftMusic 0.4.0 `depends:none` `parallel:none`
+- [x] START-INT Actual cold/warm evaluation measured 106.163/5.117 seconds; changed buffers, retained failure behavior and new-project preservation passed; packaged Release build already verified `depends:START-1` `parallel:none`
 - [ ] TEMPLATE-INT Verify standard SwiftPM package creation/opening without requiring a custom Session.swift entry, existing-path preservation, and the native navigator flow `depends:TEMPLATE-1,NAV-1,NAV-2,EDITOR-1` `parallel:none`
 
 - [x] COMPACT-1 Gutter gap reduced to 8 points; navigator glyphs use 12-point font in 14-point slots; Release build and native source/sidebar appearance verified `depends:none` `parallel:none`

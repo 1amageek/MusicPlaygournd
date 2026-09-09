@@ -216,6 +216,7 @@ SessionModel owns the selected project and its fixed root. The sidebar expands d
 
 Project creation and opening live in the bottom navigator menu and the application File menu. The navigator begins directly with an expandable package root row and file tree, with a bottom filter for currently expanded entries. Target selection for multi-target packages lives in the bottom menu. No duplicate creation buttons or decorative inactive navigator modes are shown. Filtering does not change expansion or document state.
 
+New Project takes a package name and destination through the native save panel. The directory, package, product and target share that name. Creation installs the playable Session template and reveals its source directory. Existing destinations are rejected without modification. Verify by loading the generated manifest through SwiftPM and by creating a project in the native app.
 
 The startup scratch buffer is not an open document: it has no editor, tab or evaluation. A successfully opened file enables editing and playback. Project creation must finish before its generated Session is opened; cancellation or failure leaves the empty workspace unchanged.
 
@@ -227,7 +228,7 @@ Global music controls are hosted in the window toolbar on NavigationSplitView. T
 
 Rhythm layout selection is an icon-only Menu fixed at the trailing end of the document tab row, outside the horizontal tabs ScrollView and the source editor. It uses native Liquid Glass on macOS 26 or later and material on the supported macOS 15 baseline. No bottom status bar is rendered. Verify all three layout choices, tab scrolling, and the reserved editor area in the native app.
 
-The Deep Current starter uses nonthrowing scalar parameter modifiers; construction cannot trap on edited envelope, unison or duck arguments. Invalid edits follow SwiftMusic located compilation failures and retain adopted playback. Local builds currently use an edited SwiftMusic dependency until these APIs are released.
+The Deep Current starter uses nonthrowing scalar parameter modifiers; construction cannot trap on edited envelope, unison or duck arguments. Invalid edits follow SwiftMusic located compilation failures and retain adopted playback. The starter and runtime use public SwiftMusic 0.4.0.
 
 ### Independent master monitors
 
@@ -236,6 +237,8 @@ OutputMonitorView composes WaveformView, SpectrumView and VectorscopeView as ind
 ### Window chrome boundaries
 
 MusicHeaderView owns global control presentation and recording/Controls popover state in the native toolbar. Its controls fit a 40-point height rather than exceeding the system toolbar region. FileTabsView owns a clipped, fixed-height document strip as a separate fixed-height sibling above the workspace in a zero-spacing VStack; it does not belong to the toolbar or source scroll view. ContentView composes the workspace and detail-only logs. The AppKit editor receives only the remaining explicit frame: safeAreaInset is not used to reserve tab space because native document drawing may extend underneath it. Editor scrolling cannot move either toolbar or tabs. Empty selection retains the same workspace owner without manufacturing a document. Header miniatures use the compact toolbar height; expanded monitors preserve their independent popovers. Verify top-to-bottom bounds and tab switching/scrolling in the packaged app.
+
+Project compilation uses the persistent Evaluation projectBuildCache contract in OS Caches. App startup still prepares the selected project before Play; Play uses adopted PCM immediately when available. Cached build products survive shutdown, while live worker/audio state does not. Cold compilation and invalid source remain explicit preparation/failure states.
 
 During input-method composition, AppKit owns marked text. CodeEditor does not replace the document, recolor it, or submit an evaluation while marked text exists; committed edits resume normal binding synchronization. Model-driven text replacement preserves and bounds the insertion point. EditorTabsIntegrationTests verifies marked Japanese text across SwiftUI updates and final commit; CodeEditorDocumentTests verifies selection retention during replacement.
 

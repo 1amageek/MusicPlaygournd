@@ -1,9 +1,35 @@
 import Foundation
 import Testing
 @testable import MusicPlaygourndCore
+@testable import MusicPlaygourndApp
 
 extension NativeHostTests {
     struct SwiftPackageProjectTests {
+        @Test(.timeLimit(.minutes(2))) @MainActor
+        func newProjectUsesItsNameAndPreservesExistingDirectory() async throws {
+            let host = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+            let root = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+            try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false)
+            defer { do { try FileManager.default.removeItem(at: root) } catch { Issue.record(error) } }
+            let project = root.appending(path: "Evening Set")
+            try SessionModel.createProject(at: project)
+            let entry = project.appending(path: "Sources/Evening Set/Session.swift")
+            #expect(try String(contentsOf: entry, encoding: .utf8) == SessionModel.initialSource)
+            try "Keep this edit".write(to: entry, atomically: true, encoding: .utf8)
+            #expect(throws: SessionFileBrowser.Failure.self) { try SessionModel.createProject(at: project) }
+            #expect(try String(contentsOf: entry, encoding: .utf8) == "Keep this edit")
+            let evaluator = SourceEvaluator(packageURL: host, workspace: root.appending(path: "Evaluation"), swiftExecutable: "/usr/bin/swift")
+            do {
+                let loaded = try await evaluator.openProject(at: project)
+                #expect(loaded.name == "Evening Set")
+                let target = try #require(loaded.targets.first)
+                #expect(target.name == "Evening Set")
+                #expect(target.path == "Sources/Evening Set")
+                #expect(loaded.entryURL(for: target).path == entry.path)
+                try await evaluator.shutdown()
+            } catch { try await evaluator.shutdown(); throw error }
+        }
+
         @Test(.timeLimit(.minutes(6)))
         func packageUsesSeparateFilesDependenciesResourcesAndUnsavedBuffers() async throws {
             let host = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
@@ -24,7 +50,7 @@ extension NativeHostTests {
             // swift-tools-version: 6.4
             import PackageDescription
             let package = Package(name: "Live", platforms: [.macOS(.v15)], dependencies: [
-                .package(url: "https://github.com/1amageek/SwiftMusic.git", exact: "0.3.0"), .package(path: "../Kit")
+                .package(url: "https://github.com/1amageek/SwiftMusic.git", exact: "0.4.0"), .package(path: "../Kit")
             ], targets: [.target(name: "LiveSet", dependencies: [.product(name: "SwiftMusic", package: "SwiftMusic"), "Kit"], resources: [.copy("Resources")], swiftSettings: [.define("LIVE_PROJECT")])])
             """
             try write(manifest, project.appending(path: "Package.swift"))
@@ -43,13 +69,15 @@ extension NativeHostTests {
             }
             """
             try write(source, sources.appending(path: "Session.swift"))
-            let evaluator = SourceEvaluator(packageURL: host, workspace: root.appending(path: "Evaluation"), swiftExecutable: "/usr/bin/swift")
+            let evaluator = SourceEvaluator(packageURL: host, workspace: root.appending(path: "Evaluation"), swiftExecutable: "/usr/bin/swift", projectBuildCache: root.appending(path: "Cache"))
             do {
                 let loaded = try await evaluator.openProject(at: project)
                 let target = try #require(loaded.targets.first)
                 #expect(target.sources.contains("Pitch.swift"))
+                let coldStart = ContinuousClock.now
                 let first = try await evaluator.evaluateRetained(source: source, bpm: 120, beatsPerBar: 4, revision: 1,
                     project: ProjectEvaluationRequest(project: loaded, target: target, buffers: [:]))
+                print("PROJECT COLD", coldStart.duration(to: .now))
                 #expect(!first.loop.samples.isEmpty)
                 #expect(await evaluator.adopt(revision: 1))
                 let changed = [sources.appending(path: "Pitch.swift"): "import SwiftMusic\nfunc pitch() -> NotePattern { \"G3\" }"]
@@ -80,6 +108,16 @@ extension NativeHostTests {
                     throw error
                 }
                 try await evaluator.shutdown()
+                #expect(FileManager.default.fileExists(atPath: root.appending(path: "Cache/Project/.build").path))
+                let restarted = SourceEvaluator(packageURL: host, workspace: root.appending(path: "Restarted"), swiftExecutable: "/usr/bin/swift", projectBuildCache: root.appending(path: "Cache"))
+                do {
+                    let warmStart = ContinuousClock.now
+                    let warm = try await restarted.evaluateRetained(source: source, bpm: 120, beatsPerBar: 4, revision: 1,
+                        project: ProjectEvaluationRequest(project: loaded, target: target, buffers: [:]))
+                    print("PROJECT WARM RESTART", warmStart.duration(to: .now))
+                    #expect(warm.loop == first.loop)
+                    try await restarted.shutdown()
+                } catch { try await restarted.shutdown(); throw error }
                 try FileManager.default.removeItem(at: root)
             } catch {
                 do { try await evaluator.shutdown() } catch { Issue.record(error) }

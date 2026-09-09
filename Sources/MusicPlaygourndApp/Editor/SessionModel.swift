@@ -316,12 +316,14 @@ final class SessionModel {
             .deletingLastPathComponent().deletingLastPathComponent()
             .deletingLastPathComponent().deletingLastPathComponent()
         let packageURL = package.flatMap { FileManager.default.fileExists(atPath: $0.appending(path: "Package.swift").path) ? $0 : nil } ?? sourcePackage
-        // ponytail: per-process compiler cache; persist a versioned cache if cold-start cost dominates.
+        // Workers remain process-local; SwiftPM build products survive app restarts.
         let cache = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appending(path: "MusicPlaygournd/Evaluation-\(ProcessInfo.processInfo.processIdentifier)")
         let swift = bundle.object(forInfoDictionaryKey: "SwiftExecutable") as? String ?? "/usr/bin/swift"
         evaluator = SourceEvaluator(packageURL: packageURL, workspace: cache, swiftExecutable: swift,
-            runtimeSDK: bundle.object(forInfoDictionaryKey: "SwiftExecutable") == nil ? nil : bundle.resourceURL?.appending(path: "RuntimeSDK"))
+            runtimeSDK: bundle.object(forInfoDictionaryKey: "SwiftExecutable") == nil ? nil : bundle.resourceURL?.appending(path: "RuntimeSDK"),
+            projectBuildCache: FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+                .appending(path: "MusicPlaygournd/ProjectBuild"))
         completionService = SwiftCompletionService(packageURL: packageURL,
             workspace: cache.deletingLastPathComponent().appending(path: "Completion-\(ProcessInfo.processInfo.processIdentifier)"),
             sourceKitLSPExecutable: URL(fileURLWithPath: swift).deletingLastPathComponent().appending(path: "sourcekit-lsp").path)
@@ -1186,7 +1188,8 @@ final class SessionModel {
 
     func newProject() {
         let panel = NSSavePanel()
-        panel.title = "New Music Project"
+        panel.title = "New Project"
+        panel.nameFieldLabel = "Name:"
         panel.nameFieldStringValue = "MyLiveSet"
         panel.prompt = "Create"
         guard panel.runModal() == .OK, let root = panel.url else { return }
@@ -1201,20 +1204,48 @@ final class SessionModel {
         guard !manager.fileExists(atPath: root.path) else { throw SessionFileBrowser.Failure.fileExists }
         try manager.createDirectory(at: root, withIntermediateDirectories: false)
         do {
-            let sources = root.appending(path: "Sources/LiveSet")
+            let name = String(reflecting: root.lastPathComponent)
+            let sources = root.appending(path: "Sources").appending(path: root.lastPathComponent)
             try manager.createDirectory(at: sources.appending(path: "Resources"), withIntermediateDirectories: true)
             try manager.createDirectory(at: root.appending(path: "Recordings"), withIntermediateDirectories: false)
             let manifest = """
             // swift-tools-version: 6.4
+
             import PackageDescription
 
             let package = Package(
-                name: \(String(reflecting: root.lastPathComponent)),
-                platforms: [.macOS(.v15)],
-                products: [.library(name: "LiveSet", targets: ["LiveSet"])],
-                dependencies: [.package(url: "https://github.com/1amageek/SwiftMusic.git", exact: "0.3.0")],
-                targets: [.target(name: "LiveSet", dependencies: [.product(name: "SwiftMusic", package: "SwiftMusic")], resources: [.copy("Resources")])]
+                name: \(name),
+                platforms: [
+                    .macOS(.v15)
+                ],
+                products: [
+                    .library(
+                        name: \(name),
+                        targets: [\(name)]
+                    )
+                ],
+                dependencies: [
+                    .package(
+                        url: "https://github.com/1amageek/SwiftMusic.git",
+                        exact: "0.4.0"
+                    )
+                ],
+                targets: [
+                    .target(
+                        name: \(name),
+                        dependencies: [
+                            .product(
+                                name: "SwiftMusic",
+                                package: "SwiftMusic"
+                            )
+                        ],
+                        resources: [
+                            .copy("Resources")
+                        ]
+                    )
+                ]
             )
+
             """
             try manifest.write(to: root.appending(path: "Package.swift"), atomically: true, encoding: .utf8)
             try initialSource.write(to: sources.appending(path: "Session.swift"), atomically: true, encoding: .utf8)

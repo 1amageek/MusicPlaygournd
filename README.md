@@ -19,21 +19,20 @@ cd MusicPlaygournd
 open .build/MusicPlaygournd.app
 ```
 
-SwiftPM fetches the exact public SwiftMusic 0.3.0 dependency. No sibling checkout is needed. The script produces a locally ad-hoc-signed app and bundles matching runtime modules. It records the installed compiler, SDK and plugin paths: build the app on the machine where you will use it and keep that toolchain installed. No notarized binary is distributed in this preview.
+SwiftPM fetches the exact public SwiftMusic 0.4.0 dependency. No sibling checkout is needed. The script produces a locally ad-hoc-signed app and bundles matching runtime modules. It records the installed compiler, SDK and plugin paths: build the app on the machine where you will use it and keep that toolchain installed. No notarized binary is distributed in this preview.
 
 **Sessions execute trusted local Swift with your account's permissions. This is not a code sandbox.**
 
 ## Swift package projects
 
-Use **File → New Project** or **Open Project** (Shift–Command–O) to open a folder containing `Package.swift`. The sidebar keeps that folder as its root and expands folders in place.
+Use **File → New Project** or **Open Project** (Shift–Command–O) to open a folder containing `Package.swift`. New Project creates the named directory with a matching package and target, a playable Session.swift template, resources and recordings folders. It opens the generated session automatically. Existing directories are never overwritten. The sidebar keeps the package folder as its root and expands folders in place.
 
 ```text
 MyLiveSet/
 ├── Package.swift
 ├── Sources/
-│   └── LiveSet/
+│   └── MyLiveSet/
 │       ├── Session.swift
-│       ├── Drums.swift
 │       └── Resources/
 └── Recordings/
 ```

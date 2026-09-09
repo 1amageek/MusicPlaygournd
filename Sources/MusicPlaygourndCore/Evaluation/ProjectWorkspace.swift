@@ -34,6 +34,9 @@ struct ProjectWorkspace {
             paths.insert(relative)
             if values.isDirectory == true {
                 try manager.createDirectory(at: copy, withIntermediateDirectories: true)
+            } else if relative == "Package.swift" {
+                // The manifest is augmented below; preserve its timestamp until the final text changes.
+                continue
             } else if url.pathExtension == "swift" || url.lastPathComponent == "Package.resolved" {
                 let text = try request.buffers[url.standardizedFileURL.resolvingSymlinksInPath()] ?? String(contentsOf: url, encoding: .utf8)
                 guard text.utf8.count <= 65_536 else { throw EvaluationError.invalidSource("\(relative) exceeds 64 KiB.") }
@@ -58,7 +61,9 @@ struct ProjectWorkspace {
         }
         try JSONEncoder().encode(paths.sorted()).write(to: inventory, options: .atomic)
         let manifestURL = destination.appending(path: "Package.swift")
-        let original = try String(contentsOf: manifestURL, encoding: .utf8)
+        let originalManifest = origin.appending(path: "Package.swift").standardizedFileURL.resolvingSymlinksInPath()
+        let original = try request.buffers[originalManifest] ?? String(contentsOf: originalManifest, encoding: .utf8)
+        guard original.utf8.count <= 65_536 else { throw EvaluationError.invalidSource("Package.swift exceeds 64 KiB.") }
         let addition = """
 
         import Foundation

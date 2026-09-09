@@ -9,6 +9,7 @@ public actor SourceEvaluator {
     private let workspace: URL
     private let swiftExecutable: String
     private let runtimeSDK: URL?
+    private let projectBuildCache: URL?
     private struct CompilerEnvironment: Decodable {
         let artifactDigests: [String: String]
         let compilerVersion: String
@@ -48,11 +49,36 @@ public actor SourceEvaluator {
     private var retiredExportWorker: Worker?
 
 
-    public init(packageURL: URL, workspace: URL, swiftExecutable: String, runtimeSDK: URL? = nil) {
+    public init(packageURL: URL, workspace: URL, swiftExecutable: String, runtimeSDK: URL? = nil, projectBuildCache: URL? = nil) {
         self.packageURL = packageURL
         self.workspace = workspace
         self.swiftExecutable = swiftExecutable
         self.runtimeSDK = runtimeSDK?.resolvingSymlinksInPath()
+        self.projectBuildCache = projectBuildCache
+    }
+
+    private func acquireProjectCacheLock(required: Bool) async throws -> Int32? {
+        guard required, let projectBuildCache else { return nil }
+        try FileManager.default.createDirectory(at: projectBuildCache, withIntermediateDirectories: true)
+        let descriptor = open(projectBuildCache.appending(path: "build.lock").path, O_CREAT | O_RDWR | O_CLOEXEC, S_IRUSR | S_IWUSR)
+        guard descriptor >= 0 else { throw EvaluationError.processFailed("Cannot open project build cache lock: \(errno)") }
+        do {
+            let deadline = ContinuousClock.now.advanced(by: .seconds(240))
+            while flock(descriptor, LOCK_EX | LOCK_NB) != 0 {
+                guard errno == EWOULDBLOCK || errno == EAGAIN else {
+                    throw EvaluationError.processFailed("Cannot lock project build cache: \(errno)")
+                }
+                guard ContinuousClock.now < deadline else {
+                    throw EvaluationError.processFailed("Another project build is still using the compiler cache.")
+                }
+                try await Task.sleep(for: .milliseconds(40))
+            }
+            try Task.checkCancellation()
+            return descriptor
+        } catch {
+            close(descriptor)
+            throw error
+        }
     }
 
     private func resolveCompilerEnvironment() async throws -> CompilerEnvironment {
@@ -214,7 +240,10 @@ public actor SourceEvaluator {
         }
         let manager = FileManager.default
         let workerDirectory = workspace.appending(path: "Worker-" + UUID().uuidString)
-        let projectWorkspace = try project.map { try ProjectWorkspace.prepare($0, at: workspace.appending(path: "Project"), host: packageURL) }
+        let cacheLock = try await acquireProjectCacheLock(required: project != nil)
+        defer { if let cacheLock { flock(cacheLock, LOCK_UN); close(cacheLock) } }
+        let projectRoot = projectBuildCache?.appending(path: "Project") ?? workspace.appending(path: "Project")
+        let projectWorkspace = try project.map { try ProjectWorkspace.prepare($0, at: projectRoot, host: packageURL) }
         let buildRoot = projectWorkspace?.root ?? workspace
         let product = projectWorkspace == nil ? "Evaluation" : "MusicPlaygourndEvaluation"
         let sources = workspace.appending(path: "Sources/Evaluation")
@@ -227,7 +256,7 @@ public actor SourceEvaluator {
             name: "MusicPlaygourndEvaluation",
             platforms: [.macOS(.v15)],
             dependencies: [
-                .package(url: "https://github.com/1amageek/SwiftMusic.git", exact: "0.3.0"),
+                .package(url: "https://github.com/1amageek/SwiftMusic.git", exact: "0.4.0"),
                 .package(path: \(Self.swiftLiteral(packageURL.path)))
             ],
             targets: [.executableTarget(name: "Evaluation", dependencies: [

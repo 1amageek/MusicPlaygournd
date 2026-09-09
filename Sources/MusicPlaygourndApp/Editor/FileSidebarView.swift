@@ -29,18 +29,33 @@ struct FileSidebarView: View {
                     }
                     .tag(root)
                 }
-                if model.isOpeningPackage || model.isPreparing {
+                if model.project != nil || model.isOpeningPackage {
                     Section("Package Dependencies") {
-                        HStack(alignment: .top, spacing: 8) {
-                            ProgressView().controlSize(.mini)
-                            Text(model.preparationProgress)
-                                .font(.system(size: 11))
-                                .foregroundStyle(.secondary)
-                                .lineLimit(3)
-                                .help(model.preparationProgress)
+                        ForEach(model.project?.dependencies ?? []) { dependency in
+                            Label {
+                                HStack(spacing: 5) {
+                                    Text(dependency.name)
+                                    Text(dependency.versionDescription).foregroundStyle(.secondary)
+                                }.lineLimit(1)
+                            } icon: {
+                                Image(systemName: "shippingbox")
+                                    .font(.system(size: 12)).foregroundStyle(.brown)
+                                    .frame(width: 14, height: 14)
+                            }
+                            .help(dependency.url ?? dependency.path ?? dependency.identity)
                         }
-                        .padding(.vertical, 4)
-                        .accessibilityIdentifier("package-preparation-progress")
+                        if model.isOpeningPackage || model.isPreparing {
+                            HStack(alignment: .top, spacing: 8) {
+                                ProgressView().controlSize(.mini)
+                                Text(model.preparationProgress)
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(3)
+                                    .help(model.preparationProgress)
+                            }
+                            .padding(.vertical, 4)
+                            .accessibilityIdentifier("package-preparation-progress")
+                        }
                     }
                 }
             }

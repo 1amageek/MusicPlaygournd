@@ -116,3 +116,5 @@ SourceEvaluator optionally accepts a projectBuildCache directory. Only the mirro
 openProject optionally resolves the saved root manifest through SwiftPM before describing it. Resolution uses existing process cancellation and timeout behavior; failure propagates before a project description is returned.
 
 Preparation progress is an optional per-operation async callback. Existing bounded process logs are read incrementally for progress; complete lines are limited to 300 characters for presentation. The callback does not change process results or readiness. Callers reject stale operation updates and clear activity on completion, failure and cancellation.
+
+SwiftPackageProject retains declared dependencies from SwiftPM describe, including identity, location and version requirement. These describe declarations, not inferred resolved versions. Local dependencies are labeled local; ranges remain ranges.

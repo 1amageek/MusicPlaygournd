@@ -31,3 +31,5 @@
 
 - [x] PREP-1 Publish real dependency/compiler progress with operation-scoped callbacks and navigator activity; readiness and playback contracts preserved `depends:none` `parallel:none`
 - [x] PREP-INT Partial-line progress delivered before exit; success/failure and cancellation/timeout cases passed; Release build and native MyLiveSet sidebar compiler progress verified `depends:PREP-1` `parallel:none`
+
+- [x] DEPS-1 Keep declared package dependencies and requirements visible; both template metadata cases and Release build passed, native sidebar retained SwiftMusic 0.4.0 after preparation `depends:none` `parallel:none`

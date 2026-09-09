@@ -22,6 +22,8 @@ extension NativeHostTests {
             do {
                 let loaded = try await evaluator.openProject(at: project)
                 #expect(loaded.name == "Evening Set")
+                let dependency = try #require(loaded.dependencies.first { $0.identity == "swiftmusic" })
+                #expect(dependency.name == "SwiftMusic" && dependency.versionDescription == "0.4.0")
                 let target = try #require(loaded.targets.first)
                 #expect(target.name == "Evening Set")
                 #expect(target.path == "Sources/Evening Set")

@@ -1981,74 +1981,71 @@ final class SessionModel {
     static let initialSource = """
     import SwiftMusic
 
-    // Afterhours — 120 BPM, F minor. Each outer bracket is one bar.
+    // Deep Current — C minor, 120 BPM. Open the acid cutoff while playing.
     struct Session: Music {
+        private let acidAmplitude = try! Envelope(
+            attack: .milliseconds(2), decay: .milliseconds(95),
+            sustainLevel: 0.35, release: .milliseconds(30)
+        )
+        private let acidFilter = try! Envelope(
+            attack: .milliseconds(1), decay: .milliseconds(140),
+            sustainLevel: 0.05, release: .milliseconds(40),
+            decayCurve: .exponential(exponent: 3)
+        )
+        private let hornAmplitude = try! Envelope(
+            attack: .milliseconds(30), decay: .milliseconds(300),
+            sustainLevel: 0.7, release: .milliseconds(1800)
+        )
+        private let filterDepth = try! Semitones(value: 36)
+        private let duckDepth = try! Decibels(value: -14)
+        private let hornUnison = try! Unison(voices: 5, detuneCents: 32)
+
         var body: some Sound {
             Track("Kick") {
                 Sample("kick")
-                    .rhythm("[x x x x] [x x x x] [x x x x] [x x x ~]")
-                    .slow(4)
-                    .gain(1.3)
-                    .effect(.saturation(drive: 0.12))
+                    .rhythm("x*4")
+                    .gain(1.5)
+                    .effect(.saturation(drive: 0.25))
+                    .duck(targetBus: "synths", depth: duckDepth,
+                          attack: .milliseconds(200), recovery: .milliseconds(230))
             }
 
-            Track("Backbeat") {
-                Sample("snare")
-                    .rhythm("[~ x ~ x] [~ x ~ x] [~ x ~ x] [~ x ~ [x ~ ~ x]]")
-                    .slow(4)
-                    .gain(0.48)
-                    .highPass("180")
-                    .effect(.reverb(roomSize: 0.18, wet: 0.08))
-            }
-
-            Track("Offbeat") {
-                Sample("closedHat")
-                    .rhythm("[~ x] [~ x] [~ x] [~ x]")
-                    .gain("0.42 0.30 0.38 0.28")
-                    .pan(0.18)
-            }
-
-            Track("Shuffle") {
-                Sample("closedHat")
-                    .rhythm("[[~ ~ ~ x] ~ [~ ~ x ~] ~] [[~ ~ ~ x] ~ [~ ~ ~ x] [~ ~ x x]] [[~ ~ ~ x] ~ [~ ~ x ~] ~] [[~ ~ ~ x] ~ ~ [x ~ x x]]")
-                    .slow(4)
-                    .gain("0.10 0.17 0.08 0.13")
-                    .pan(-0.32)
-                    .highPass("6500")
-            }
-
-            Track("Sub Drive") {
+            Track("Acid") {
                 Synthesizer(.bandLimitedSaw)
-                    .notes("[[~ ~ F1 ~] [~ F2 ~ Eb2] [~ ~ F1 ~] [Ab1 ~ ~ F1]] [[~ ~ F1 ~] [~ F2 ~ Eb2] [~ ~ F1 Ab1] [~ ~ C2 ~]] [[~ ~ F1 ~] [~ F2 ~ Eb2] [~ ~ F1 ~] [Ab1 ~ ~ F1]] [[~ ~ F1 ~] [~ F2 ~ Eb2] [~ Ab1 ~ C2] [Eb2 ~ ~ ~]]")
-                    .slow(4)
-                    .gate(0.72)
-                    .lowPass("320 520 380 850", resonanceQ: 1.1)
-                    .gain(0.82)
-                    .effect(.saturation(drive: 0.18))
+                    .notes("C2 Eb2 G1 Bb1 C2 G2 Eb2 F2 C2 Bb1 G1 Eb2 F2 G2 Bb1 D2")
+                    .gate(0.78)
+                    .envelope(acidAmplitude)
+                    .lowPass(CutoffPattern("200 260 380 650").slow(4), resonanceQ: 8)
+                    .filterEnvelope(acidFilter, depth: filterDepth)
+                    .gain("0.85 0.62 0.72 0.65")
+                    .effect(.distortion(drive: 0.32))
             }
+            .send(to: "synths", level: 1, placement: .preFader)
+            .trackLevel(0)
 
-            Track("Stabs") {
+            Track("Foghorn") {
                 Synthesizer(.bandLimitedSaw)
-                    .notes("[~ [~ C4,Eb4,Ab4 ~ ~] ~ [~ ~ C4,Eb4,G4 ~]] [~ ~ [~ C4,Eb4,Ab4 ~ ~] ~] [~ [~ C4,Eb4,Ab4 ~ ~] ~ [~ ~ C4,Eb4,G4 ~]] [~ ~ [~ C4,Eb4,Ab4 ~ ~] ~]")
+                    .notes("~ C2 ~ ~")
                     .slow(4)
-                    .gate(0.28)
-                    .highPass("450")
-                    .lowPass("1800 1100 2400 1400")
-                    .gain(0.19)
-                    .pan(-0.12)
-                    .effect(.delay(time: .eighth, feedback: 0.36, wet: 0.24))
-                    .effect(.reverb(roomSize: 0.38, wet: 0.12))
+                    .unison(hornUnison)
+                    .envelope(hornAmplitude)
+                    .highPass("140")
+                    .lowPass("1200")
+                    .gain(0.32)
+                    .effect(.chorus(rateHz: 0.5, depth: 0.45, wet: 0.25))
+                    .effect(.reverb(roomSize: 0.7, wet: 0.32))
+            }
+            .send(to: "synths", level: 1, placement: .preFader)
+            .trackLevel(0)
+
+            Track("Hats") {
+                Sample("closedHat")
+                    .rhythm("[~ x] [~ x] [~ x] [~ [x x]]")
+                    .gain("0.32 0.25 0.29 0.18")
+                    .pan(0.22)
             }
 
-            Track("Rim Echo") {
-                Synthesizer(.triangle)
-                    .notes("[~ ~ [~ C6 ~ ~] ~] [~ [~ ~ ~ G5] ~ ~] [~ ~ [~ C6 ~ ~] ~] [~ ~ ~ [C6 ~ G5 ~]]")
-                    .slow(4)
-                    .gate(0.07)
-                    .gain(0.22)
-                    .pan(0.35)
-                    .effect(.delay(time: .eighth, feedback: 0.42, wet: 0.3))
-            }
+            BusReturn("synths")
         }
     }
     """

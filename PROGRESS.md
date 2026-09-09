@@ -7,4 +7,5 @@
 - [x] FOOTER-1 Sidebar footer and collapsed Logs aligned to 36 points; Release build and native divider alignment verified `depends:NAV-2` `parallel:none`
 - [x] MUSIC-1 Night Drive six-track starter composed; actual source compiled with live-loop policy, 16 beats/137 events rendered to finite stereo PCM, 32-second preview and app build verified `depends:none` `parallel:none`
 - [x] GROOVE-1 Afterhours replaces Night Drive: seven tracks, live compilation/render verified at 16 beats and 99 events, finite PCM peak 0.514, 32-second stereo preview; final template confirmed in built app `depends:MUSIC-1` `parallel:none`
+- [x] ACID-1 Deep Current starter follows supplied reference mechanisms: C-minor sixteenths, filter envelope, resonance and event ducking; live renderer validated 16 beats/101 events, finite stereo peak 0.713, 32-second preview; app build passed `depends:GROOVE-1` `parallel:none`
 - [ ] TEMPLATE-INT Verify standard SwiftPM package creation/opening without requiring a custom Session.swift entry, existing-path preservation, and the native navigator flow `depends:TEMPLATE-1,NAV-1,NAV-2,EDITOR-1` `parallel:none`

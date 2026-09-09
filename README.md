@@ -1,4 +1,4 @@
-# MusicPlayground
+![MusicPlayground](Assets/musicplayground-header.png)
 
 **Make music with Swift. Shape it while it plays.**
 

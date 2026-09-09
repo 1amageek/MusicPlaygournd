@@ -1981,61 +1981,73 @@ final class SessionModel {
     static let initialSource = """
     import SwiftMusic
 
-    // Night Drive — 120 BPM, 4/4. Each bracket is one bar.
-    // Harmony: Am9 / Fmaj7 / Cmaj9 / G6.
+    // Afterhours — 120 BPM, F minor. Each outer bracket is one bar.
     struct Session: Music {
         var body: some Sound {
             Track("Kick") {
                 Sample("kick")
-                    .rhythm("[x x x x] [x x x x] [x x x x] [x x x [x x]]")
+                    .rhythm("[x x x x] [x x x x] [x x x x] [x x x ~]")
                     .slow(4)
-                    .gain(0.72)
+                    .gain(1.3)
+                    .effect(.saturation(drive: 0.12))
             }
 
             Track("Backbeat") {
                 Sample("snare")
-                    .rhythm("[~ x ~ x] [~ x ~ x] [~ x ~ x] [~ x ~ [x [~ x]]]")
+                    .rhythm("[~ x ~ x] [~ x ~ x] [~ x ~ x] [~ x ~ [x ~ ~ x]]")
                     .slow(4)
-                    .gain(0.26)
-                    .effect(.reverb(roomSize: 0.25, wet: 0.12))
+                    .gain(0.48)
+                    .highPass("180")
+                    .effect(.reverb(roomSize: 0.18, wet: 0.08))
             }
 
-            Track("Hi-hat") {
+            Track("Offbeat") {
                 Sample("closedHat")
-                    .rhythm("[x x x x x x x x] [x x x x x x x [x x]] [x x x x x x x x] [x x x x x [x x] x [x x]]")
-                    .slow(4)
-                    .gain("0.10 0.24 0.12 0.20")
-                    .pan(0.24)
+                    .rhythm("[~ x] [~ x] [~ x] [~ x]")
+                    .gain("0.42 0.30 0.38 0.28")
+                    .pan(0.18)
             }
 
-            Track("Bass") {
+            Track("Shuffle") {
+                Sample("closedHat")
+                    .rhythm("[[~ ~ ~ x] ~ [~ ~ x ~] ~] [[~ ~ ~ x] ~ [~ ~ ~ x] [~ ~ x x]] [[~ ~ ~ x] ~ [~ ~ x ~] ~] [[~ ~ ~ x] ~ ~ [x ~ x x]]")
+                    .slow(4)
+                    .gain("0.10 0.17 0.08 0.13")
+                    .pan(-0.32)
+                    .highPass("6500")
+            }
+
+            Track("Sub Drive") {
                 Synthesizer(.bandLimitedSaw)
-                    .notes("[A1 ~ A2 A1 ~ E2 G2 E2] [F1 ~ F2 F1 ~ C2 E2 C2] [C2 ~ C3 C2 ~ G2 B2 G2] [G1 ~ G2 G1 D2 ~ F2 G2]")
+                    .notes("[[~ ~ F1 ~] [~ F2 ~ Eb2] [~ ~ F1 ~] [Ab1 ~ ~ F1]] [[~ ~ F1 ~] [~ F2 ~ Eb2] [~ ~ F1 Ab1] [~ ~ C2 ~]] [[~ ~ F1 ~] [~ F2 ~ Eb2] [~ ~ F1 ~] [Ab1 ~ ~ F1]] [[~ ~ F1 ~] [~ F2 ~ Eb2] [~ Ab1 ~ C2] [Eb2 ~ ~ ~]]")
                     .slow(4)
-                    .gate(0.62)
-                    .lowPass("550")
-                    .gain(0.22)
+                    .gate(0.72)
+                    .lowPass("320 520 380 850", resonanceQ: 1.1)
+                    .gain(0.82)
+                    .effect(.saturation(drive: 0.18))
             }
 
-            Track("Keys") {
+            Track("Stabs") {
+                Synthesizer(.bandLimitedSaw)
+                    .notes("[~ [~ C4,Eb4,Ab4 ~ ~] ~ [~ ~ C4,Eb4,G4 ~]] [~ ~ [~ C4,Eb4,Ab4 ~ ~] ~] [~ [~ C4,Eb4,Ab4 ~ ~] ~ [~ ~ C4,Eb4,G4 ~]] [~ ~ [~ C4,Eb4,Ab4 ~ ~] ~]")
+                    .slow(4)
+                    .gate(0.28)
+                    .highPass("450")
+                    .lowPass("1800 1100 2400 1400")
+                    .gain(0.19)
+                    .pan(-0.12)
+                    .effect(.delay(time: .eighth, feedback: 0.36, wet: 0.24))
+                    .effect(.reverb(roomSize: 0.38, wet: 0.12))
+            }
+
+            Track("Rim Echo") {
                 Synthesizer(.triangle)
-                    .notes("[~ C4,E4,G4,B4 ~ C4,E4,G4,B4] [~ C4,E4,F4,A4 ~ C4,E4,F4,A4] [~ B3,D4,E4,G4 ~ B3,D4,E4,G4] [~ B3,D4,E4,G4 ~ B3,D4,E4,A4]")
+                    .notes("[~ ~ [~ C6 ~ ~] ~] [~ [~ ~ ~ G5] ~ ~] [~ ~ [~ C6 ~ ~] ~] [~ ~ ~ [C6 ~ G5 ~]]")
                     .slow(4)
-                    .gate(0.65)
-                    .gain(0.065)
-                    .pan(-0.18)
-                    .effect(.reverb(roomSize: 0.55, wet: 0.24))
-            }
-
-            Track("Night Drive") {
-                Synthesizer(.sine)
-                    .notes("[E5 ~ B4 C5 ~ E5 ~ G5] [E5 ~ C5 A4 ~ C5 ~ ~] [D5 ~ E5 G5 ~ E5 D5 B4] [A4 ~ B4 D5 ~ E5 ~ B4]")
-                    .slow(4)
-                    .gate(0.48)
-                    .gain("0.17 0.12 0.15 0.12")
-                    .pan(0.12)
-                    .effect(.delay(time: .eighth, feedback: 0.28, wet: 0.2))
-                    .effect(.reverb(roomSize: 0.45, wet: 0.18))
+                    .gate(0.07)
+                    .gain(0.22)
+                    .pan(0.35)
+                    .effect(.delay(time: .eighth, feedback: 0.42, wet: 0.3))
             }
         }
     }

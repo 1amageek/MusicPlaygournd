@@ -24,8 +24,8 @@ struct FileTreeRow: View {
                     Text(entry.url.lastPathComponent)
                 } icon: {
                     Image(systemName: "folder")
-                        .font(.system(size: 12))
-                        .frame(width: 14, height: 14)
+                        .font(.system(size: 10))
+                        .frame(width: 12, height: 12)
                 }
             }
             .tag(entry.url)
@@ -36,8 +36,8 @@ struct FileTreeRow: View {
                     Text(entry.url.lastPathComponent)
                 } icon: {
                     Image(systemName: icon)
-                        .font(.system(size: 12))
-                        .frame(width: 14, height: 14)
+                        .font(.system(size: 10))
+                        .frame(width: 12, height: 12)
                 }
                 if dirtyFiles.contains(entry.url) {
                     Spacer(minLength: 0)

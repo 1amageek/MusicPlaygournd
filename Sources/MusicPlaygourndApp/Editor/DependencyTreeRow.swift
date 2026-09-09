@@ -36,8 +36,8 @@ struct DependencyTreeRow: View {
                     Text(dependency.versionDescription).foregroundStyle(.secondary)
                 }.lineLimit(1)
             } icon: {
-                Image(systemName: "shippingbox").font(.system(size: 12))
-                    .foregroundStyle(.brown).frame(width: 14, height: 14)
+                Image(systemName: "shippingbox").font(.system(size: 10))
+                    .foregroundStyle(.brown).frame(width: 12, height: 12)
             }
             .help(dependency.url ?? dependency.path ?? dependency.identity)
         }

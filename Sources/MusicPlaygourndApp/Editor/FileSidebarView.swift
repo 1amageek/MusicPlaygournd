@@ -23,8 +23,8 @@ struct FileSidebarView: View {
                             Text(root.lastPathComponent).fontWeight(.semibold)
                         } icon: {
                             Image(systemName: "music.note.list")
-                                .font(.system(size: 12, weight: .medium))
-                                .frame(width: 14, height: 14).foregroundStyle(.mint)
+                                .font(.system(size: 10, weight: .medium))
+                                .frame(width: 12, height: 12).foregroundStyle(.mint)
                         }
                     }
                     .tag(root)
@@ -51,6 +51,9 @@ struct FileSidebarView: View {
                 }
             }
             .listStyle(.sidebar)
+            .font(.system(size: 12))
+            .controlSize(.small)
+            .environment(\.defaultMinListRowHeight, 22)
             .onChange(of: selection) { _, url in
                 guard let url, let entry = browser.entries.first(where: { $0.url == url }), !entry.isDirectory else { return }
                 open(entry)

@@ -5,12 +5,14 @@ import Foundation
 internal final class MasterParameterSmoother {
     internal enum Parameter: CaseIterable, Hashable, Sendable {
         case volume
+        case balance
         case rate
         case lowPass
         case delay
         case reverb
         case eqLowFrequency, eqMidFrequency, eqHighFrequency
         case eqLowGain, eqMidGain, eqHighGain
+        case eqLowBandwidth, eqMidBandwidth, eqHighBandwidth
     }
 
     internal typealias Sleep = @MainActor @Sendable (Duration) async throws(CancellationError) -> Void

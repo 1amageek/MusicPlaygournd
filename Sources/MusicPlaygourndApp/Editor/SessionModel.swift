@@ -37,6 +37,17 @@ final class SessionModel {
         get { activeDocument.source }
         set { guard !activeDocument.isReadOnly else { return }; activeDocument.source = newValue; diagnosticRange = nil }
     }
+    private(set) var masterBalance: Float = 0
+
+    func setMasterBalance(_ value: Float) {
+        do {
+            guard let engine else { throw PlaybackError.audioSetupFailed(audioError) }
+            try engine.setMasterBalance(value)
+            masterBalance = engine.masterBalance
+        } catch { hostDiagnostic = error.localizedDescription }
+    }
+
+    private(set) var equalizerResponses: [MasterEqualizerResponse] = []
     private(set) var equalizerBands = MasterEqualizerBand.defaults
 
     func setEqualizerBand(_ index: Int, value: MasterEqualizerBand) {
@@ -111,6 +122,13 @@ final class SessionModel {
             catch { delayMix = oldValue; diagnostic = error.localizedDescription }
         }
     }
+    var displayedReverbMix: Double {
+        guard let descriptor = controlCatalog?.descriptors.first(where: {
+            $0.address.target == .master && $0.address.parameter == .reverbMix
+        }) else { return reverbMix }
+        return controlValue(descriptor) ?? reverbMix
+    }
+
     var reverbMix = 0.0 {
         didSet {
             do { try engine?.setReverb(mix: Float(reverbMix)); masterControlValues.removeValue(forKey: .reverbMix) }
@@ -630,6 +648,12 @@ final class SessionModel {
                     self.diagnostic = "The live render worker stopped. Audio continues; evaluate a new edit to restore controls."
                 }
             }
+        }
+        if snapshot.loop != nil, let engine {
+            do {
+                let responses = try engine.equalizerResponses()
+                if responses != equalizerResponses { equalizerResponses = responses }
+            } catch { hostDiagnostic = error.localizedDescription }
         }
         if let capture = engine?.outputMeter() {
             outputSamples = capture.interleavedSamples

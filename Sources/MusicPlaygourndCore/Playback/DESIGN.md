@@ -11,9 +11,11 @@ Use the parent/child links above. Dependencies: SwiftMusic owns event semantics;
 
 ## Architecture
 ```text
-prepared loop -> SourceNode -> TimePitch -> low-pass EQ -> Delay -> Reverb -> mainMixer
-                    |                                               |
-revision/bar adoption + live rate                         bounded stereo tap -> snapshot
+prepared loop -> SourceNode -> TimePitch -> EQ -> Delay -> Reverb -> optional hosted FX
+                    |                                                      |
+revision/bar adoption + live rate                          balanceMixer -> mainMixer
+                                                                               |
+                                                               bounded stereo tap -> snapshot
 ```
 
 ## Contracts and Invariants
@@ -122,4 +124,8 @@ The MainActor engine retains the installed bank while Mutex-protected transport 
 
 ### Interactive master equalizer
 
-The existing native EQ retains low-pass at index 0 and adds three parametric bands at indices 1–3. Each uses one-octave bandwidth, 20–20,000 Hz and -12…12 dB gain, initially flat at 180/1,000/6,000 Hz. AudioLoopEngine validates the entire request before mutation and exposes accepted targets. Frequency/gain use existing independent 30 ms master ramps, with synchronous application while stopped. No compilation, graph rebuild or extra audio tap occurs. These controls live with the engine, like existing master controls; they are not source modifiers or persisted presets. Verify native PCM attenuation at the center frequency, invalid request retention, and independent low-pass settings.
+The existing native EQ retains low-pass at index 0 and adds three parametric bands at indices 1–3. Each starts at one-octave bandwidth with adjustable Q 0.2–20, 20–20,000 Hz and -12…12 dB gain, initially flat at 180/1,000/6,000 Hz. AudioLoopEngine validates the entire request before mutation and exposes accepted targets. Frequency/gain/bandwidth use existing independent 30 ms master ramps, with synchronous application while stopped. No compilation, graph rebuild or extra audio tap occurs. These controls live with the engine, like existing master controls; they are not source modifiers or persisted presets. Verify native PCM attenuation at the center frequency, invalid request retention, and independent low-pass settings.
+
+Master balance is an engine-owned MainActor target in -1...1, initially centered. It uses a native balance mixer after the final effect, feeding the main mixer, with an independent 30 ms ramp; invalid values fail before mutation. The existing post-mixer tap observes the result. Verify left/right channel attenuation, center restoration and uninterrupted revision using native offline PCM. No new shared storage or platform branch is introduced.
+
+Before the first response query, an unallocated native graph is prepared without starting playback. EQ response snapshots read the native unit’s 20 biquad coefficients on MainActor, returning three immutable five-coefficient responses. The UI computes per-band magnitude and sums dB for the composite; no approximated bell shapes or audio-callback visualization work. Q maps to octave bandwidth with 2*asinh(1/(2Q))/ln(2). Validate native response against rendered PCM and show property-read failures explicitly. The existing UI refresh reads one bounded coefficient snapshot; unchanged values do not publish a new UI response.

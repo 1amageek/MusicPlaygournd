@@ -16,6 +16,8 @@ public enum PlaybackError: Error, Sendable, Equatable, CustomStringConvertible, 
     case invalidMasterVolume(Float)
     case invalidPlaybackRate(Float)
     case invalidLowPassCutoff(Float)
+    case invalidMasterBalance(Float)
+    case equalizerResponseFailed(Int32)
     case invalidEqualizerBand
     case invalidDelayMix(Float)
     case invalidReverbMix(Float)
@@ -36,7 +38,9 @@ public enum PlaybackError: Error, Sendable, Equatable, CustomStringConvertible, 
         case .invalidMasterVolume(let value): "Master volume \(value) is outside 0...1"
         case .invalidPlaybackRate(let rate): "Playback rate \(rate) is outside 1/32...32"
         case .invalidLowPassCutoff(let cutoff): "Low-pass cutoff \(cutoff) is outside 20...20000 Hz"
-        case .invalidEqualizerBand: "EQ requires band 0...2, frequency 20...20000 Hz and gain -12...12 dB"
+        case .invalidMasterBalance(let value): "Master balance \(value) is outside -1...1"
+        case .equalizerResponseFailed(let status): "Cannot read native EQ response: \(status)"
+        case .invalidEqualizerBand: "EQ requires band 0...2, frequency 20...20000 Hz and gain -12...12 dB and Q 0.2...20"
         case .invalidDelayMix(let mix): "Delay mix \(mix) is outside 0...1"
         case .invalidReverbMix(let mix): "Reverb mix \(mix) is outside 0...1"
         case .offlineRenderingFailed(let message): "Offline rendering failed: \(message)"

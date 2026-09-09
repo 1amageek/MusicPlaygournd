@@ -1,13 +1,15 @@
 import Foundation
 
-/// Target values for one native one-octave parametric master EQ band.
+/// Target values for one native parametric master EQ band.
 public struct MasterEqualizerBand: Sendable, Equatable {
     public var frequency: Float
     public var gain: Float
+    public var q: Float
 
-    public init(frequency: Float, gain: Float = 0) {
+    public init(frequency: Float, gain: Float = 0, q: Float = 1.41421356) {
         self.frequency = frequency
         self.gain = gain
+        self.q = q
     }
 
     public static let defaults: [Self] = [

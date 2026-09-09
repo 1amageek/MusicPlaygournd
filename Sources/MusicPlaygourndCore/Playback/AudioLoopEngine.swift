@@ -8,7 +8,9 @@ public final class AudioLoopEngine: AudioUnitHosting, MasterRecording {
     private let audioEngine: AVAudioEngine
     private let sourceNode: AVAudioSourceNode
     private let timePitch: AVAudioUnitTimePitch
+    private let balanceMixer: AVAudioMixerNode
     private let equalizer: AVAudioUnitEQ
+    public private(set) var masterBalance: Float = 0
     public private(set) var equalizerBands = MasterEqualizerBand.defaults
     private let delay: AVAudioUnitDelay
     private let reverb: AVAudioUnitReverb
@@ -50,6 +52,7 @@ public final class AudioLoopEngine: AudioUnitHosting, MasterRecording {
 
         let transport = AudioTransport()
         let timePitch = AVAudioUnitTimePitch()
+        let balanceMixer = AVAudioMixerNode()
         let equalizer = AVAudioUnitEQ(numberOfBands: 4)
         let delay = AVAudioUnitDelay()
         let reverb = AVAudioUnitReverb()
@@ -89,6 +92,7 @@ public final class AudioLoopEngine: AudioUnitHosting, MasterRecording {
         let audioEngine = AVAudioEngine()
         audioEngine.attach(sourceNode)
         audioEngine.attach(timePitch)
+        audioEngine.attach(balanceMixer)
         audioEngine.attach(equalizer)
         audioEngine.attach(delay)
         audioEngine.attach(reverb)
@@ -96,7 +100,8 @@ public final class AudioLoopEngine: AudioUnitHosting, MasterRecording {
         audioEngine.connect(timePitch, to: equalizer, format: format)
         audioEngine.connect(equalizer, to: delay, format: format)
         audioEngine.connect(delay, to: reverb, format: format)
-        audioEngine.connect(reverb, to: audioEngine.mainMixerNode, format: format)
+        audioEngine.connect(reverb, to: balanceMixer, format: format)
+        audioEngine.connect(balanceMixer, to: audioEngine.mainMixerNode, format: format)
         audioEngine.mainMixerNode.outputVolume = 1
         let recordingCapture = MasterRecordingCapture()
         self.recordingCapture = recordingCapture
@@ -111,6 +116,7 @@ public final class AudioLoopEngine: AudioUnitHosting, MasterRecording {
         self.transport = transport
         self.sourceNode = sourceNode
         self.timePitch = timePitch
+        self.balanceMixer = balanceMixer
         self.equalizer = equalizer
         self.delay = delay
         self.reverb = reverb
@@ -362,9 +368,10 @@ public final class AudioLoopEngine: AudioUnitHosting, MasterRecording {
     public func setEqualizerBand(_ index: Int, value: MasterEqualizerBand) throws {
         guard equalizerBands.indices.contains(index), value.frequency.isFinite,
               (20...20_000).contains(value.frequency), value.gain.isFinite,
-              (-12...12).contains(value.gain) else { throw PlaybackError.invalidEqualizerBand }
+              (-12...12).contains(value.gain), value.q.isFinite, (0.2...20).contains(value.q) else { throw PlaybackError.invalidEqualizerBand }
         let band = equalizer.bands[index + 1]
         let frequencyKeys: [MasterParameterSmoother.Parameter] = [.eqLowFrequency, .eqMidFrequency, .eqHighFrequency]
+        let bandwidthKeys: [MasterParameterSmoother.Parameter] = [.eqLowBandwidth, .eqMidBandwidth, .eqHighBandwidth]
         let gainKeys: [MasterParameterSmoother.Parameter] = [.eqLowGain, .eqMidGain, .eqHighGain]
         let immediate = !transport.snapshot().isPlaying
         equalizerBands[index] = value
@@ -372,6 +379,30 @@ public final class AudioLoopEngine: AudioUnitHosting, MasterRecording {
                               immediate: immediate) { value, _ in band.frequency = value }
         parameterSmoother.set(gainKeys[index], from: band.gain, to: value.gain,
                               immediate: immediate) { value, _ in band.gain = value }
+        let bandwidth = Float(2 * asinh(1 / (2 * Double(value.q))) / log(2))
+        parameterSmoother.set(bandwidthKeys[index], from: band.bandwidth, to: bandwidth,
+                              immediate: immediate) { value, _ in band.bandwidth = value }
+    }
+
+    public func equalizerResponses() throws -> [MasterEqualizerResponse] {
+        if !equalizer.auAudioUnit.renderResourcesAllocated { audioEngine.prepare() }
+        var coefficients = [Double](repeating: 0, count: 20)
+        var size = UInt32(coefficients.count * MemoryLayout<Double>.stride)
+        // The native call borrows this owned, contiguous buffer synchronously and does not retain it.
+        let status = coefficients.withUnsafeMutableBytes { bytes in
+            AudioUnitGetProperty(equalizer.audioUnit, kAUNBandEQProperty_BiquadCoefficients,
+                                 kAudioUnitScope_Global, 0, bytes.baseAddress!, &size)
+        }
+        guard status == noErr else { throw PlaybackError.equalizerResponseFailed(status) }
+        guard size == 20 * MemoryLayout<Double>.stride, coefficients.allSatisfy({ $0.isFinite }) else {
+            throw PlaybackError.equalizerResponseFailed(kAudioUnitErr_InvalidPropertyValue)
+        }
+        return (1...3).map { index in
+            let offset = index * 5
+            // AUNBandEQ returns a1, a2, b0, b1, b2 for each band.
+            return MasterEqualizerResponse(b0: coefficients[offset + 2], b1: coefficients[offset + 3],
+                b2: coefficients[offset + 4], a1: coefficients[offset], a2: coefficients[offset + 1])
+        }
     }
 
     public func setDelay(mix: Float) throws {
@@ -380,6 +411,18 @@ public final class AudioLoopEngine: AudioUnitHosting, MasterRecording {
         parameterSmoother.set(.delay, from: unit.wetDryMix / 100, to: mix,
                               immediate: !transport.snapshot().isPlaying) { value, _ in
             unit.wetDryMix = value * 100
+        }
+    }
+
+    public func setMasterBalance(_ balance: Float) throws {
+        guard balance.isFinite, (-1...1).contains(balance) else {
+            throw PlaybackError.invalidMasterBalance(balance)
+        }
+        masterBalance = balance
+        let mixer = balanceMixer
+        parameterSmoother.set(.balance, from: mixer.pan, to: balance,
+                              immediate: !transport.snapshot().isPlaying) { value, _ in
+            mixer.pan = value
         }
     }
 
@@ -597,9 +640,9 @@ public final class AudioLoopEngine: AudioUnitHosting, MasterRecording {
         // Bus formats and node ownership are admitted before these native precondition operations.
         if let unit {
             audioEngine.connect(reverb, to: unit, format: audioFormat)
-            audioEngine.connect(unit, to: audioEngine.mainMixerNode, format: audioFormat)
+            audioEngine.connect(unit, to: balanceMixer, format: audioFormat)
         } else {
-            audioEngine.connect(reverb, to: audioEngine.mainMixerNode, format: audioFormat)
+            audioEngine.connect(reverb, to: balanceMixer, format: audioFormat)
         }
     }
 

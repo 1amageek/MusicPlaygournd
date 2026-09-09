@@ -7,6 +7,11 @@ struct OutputMonitorView: View {
     let isPlaying: Bool
     let performance: PlaybackPerformanceSnapshot?
     let resetDiagnostics: () -> Void
+    let space: Double
+    let onSpaceChange: (Double) -> Void
+    let balance: Float
+    let onBalanceChange: (Float) -> Void
+    let equalizerResponses: [MasterEqualizerResponse]
     let equalizerBands: [MasterEqualizerBand]
     let onEqualizerChange: (Int, MasterEqualizerBand) -> Void
 
@@ -47,7 +52,10 @@ struct OutputMonitorView: View {
                         Group {
                             if monitor == .spectrum {
                                 SpectrumEqualizerView(spectrum: bands, isPlaying: isPlaying,
-                                    bands: equalizerBands, onChange: onEqualizerChange)
+                                    bands: equalizerBands, responses: equalizerResponses, onChange: onEqualizerChange)
+                            } else if monitor == .vectorscope {
+                                VectorscopeControlView(samples: samples, balance: balance,
+                                    space: space, onBalanceChange: onBalanceChange, onSpaceChange: onSpaceChange)
                             } else { plot(monitor) }
                         }
                             .frame(height: monitor == .vectorscope ? 360 : 220)

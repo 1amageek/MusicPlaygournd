@@ -45,3 +45,6 @@
 
 - [x] PREFS-1 Native Settings provides persisted 12pt default, 10–24pt sizing and five editor palettes; source and IME ownership preserved `depends:none` `parallel:none`
 - [x] PREFS-INT Release build and two focused palette/undo checks passed; native Settings changed Midnight 12pt to Dracula 13pt with immediate preview; reviewed for main commit `depends:PREFS-1` `parallel:none`
+
+- [x] LIVE-1 EQ handle gestures, adjustable Q/native response curves and reset; vectorscope XY balance/reverb and isolated center reset implemented and reviewed `depends:none` `parallel:none`
+- [x] LIVE-INT Native PCM/response/Q/invalid-value checks passed; Release built; native changed EQ/Q and curves observed, EQ reset and scope 0/50% center reset verified; main commit `depends:LIVE-1` `parallel:none`

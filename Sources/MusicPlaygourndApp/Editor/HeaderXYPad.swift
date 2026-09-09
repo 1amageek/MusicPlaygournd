@@ -8,10 +8,7 @@ struct HeaderXYPad: View {
         guard let descriptor = model.controlCatalog?.descriptors.first(where: { $0.address.target == .master && $0.address.parameter == .lowPassCutoff }) else { return model.lowPass }
         return model.controlValue(descriptor) ?? 20_000
     }
-    private var space: Double {
-        guard let descriptor = model.controlCatalog?.descriptors.first(where: { $0.address.target == .master && $0.address.parameter == .reverbMix }) else { return model.reverbMix }
-        return model.controlValue(descriptor) ?? 0
-    }
+    private var space: Double { model.displayedReverbMix }
     private var x: Double { min(1, max(0, log(cutoff / 20) / log(1_000))) }
     private var y: Double { min(1, max(0, space)) }
 

@@ -49,7 +49,9 @@ struct MusicHeaderView: View {
             OutputMonitorView(bands: model.spectrum, samples: model.outputSamples, isPlaying: model.isPlaying,
                 performance: model.performance,
                 resetDiagnostics: model.resetPerformanceDiagnostics,
-                equalizerBands: model.equalizerBands, onEqualizerChange: model.setEqualizerBand)
+                space: model.displayedReverbMix, onSpaceChange: { model.reverbMix = $0 },
+                balance: model.masterBalance, onBalanceChange: model.setMasterBalance,
+                equalizerResponses: model.equalizerResponses, equalizerBands: model.equalizerBands, onEqualizerChange: model.setEqualizerBand)
                 .frame(minWidth: 120, idealWidth: 220, maxWidth: .infinity)
             VStack(spacing: 5) {
                 HStack {

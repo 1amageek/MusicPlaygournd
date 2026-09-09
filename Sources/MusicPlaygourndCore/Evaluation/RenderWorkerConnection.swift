@@ -87,12 +87,13 @@ internal actor RenderWorkerConnection {
     private var stopping = false
     private var closing = false
 
-    init(executable: URL, outputURL: URL, revision: UInt64) throws {
+    init(executable: URL, outputURL: URL, revision: UInt64, workingDirectory: URL? = nil) throws {
         self.outputURL = outputURL
         self.revision = revision
         let process = Process()
         let completion = ProcessCompletion()
         let stdin = Pipe(), stdout = Pipe(), stderr = Pipe()
+        process.currentDirectoryURL = workingDirectory
         process.executableURL = URL(fileURLWithPath: "/usr/bin/python3")
         process.arguments = ["-c", "import os,sys; os.setpgid(0,0); os.execv(sys.argv[1], [sys.argv[1]])", executable.path]
         process.standardInput = stdin

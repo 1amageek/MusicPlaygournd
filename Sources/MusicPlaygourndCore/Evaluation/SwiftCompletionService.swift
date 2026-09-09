@@ -18,6 +18,10 @@ public actor SwiftCompletionService {
         executable = sourceKitLSPExecutable
     }
 
+    public func projectService(root: URL) -> ProjectCompletionService {
+        ProjectCompletionService(root: root, executable: executable)
+    }
+
     public func completions(source: String, utf16Offset: Int) async throws -> [SwiftCompletion] {
         guard !closed else { throw SwiftCompletionError.shutdown }
         guard source.utf8.count <= 65_536 else { throw SwiftCompletionError.invalidSource("Source exceeds 64 KiB.") }
@@ -144,7 +148,7 @@ public actor SwiftCompletionService {
     }
 
     // SourceKit completes at the identifier start; the editor filters the typed suffix.
-    private static func identifierStart(in source: String, cursor: Int) -> Int {
+    static func identifierStart(in source: String, cursor: Int) -> Int {
         let text = source as NSString
         var start = cursor
         while start > 0 {
@@ -155,7 +159,7 @@ public actor SwiftCompletionService {
         return start
     }
 
-    private static func position(in text: String, offset: Int) -> [String: Int] {
+    static func position(in text: String, offset: Int) -> [String: Int] {
         let text = text as NSString
         var line = 0
         var start = 0
@@ -180,7 +184,7 @@ public actor SwiftCompletionService {
         return start + character
     }
 
-    static func decode(_ data: Data, source: String, cursor: Int) throws -> [SwiftCompletion] {
+    static func decode(_ data: Data, source: String, cursor: Int, prefix: String = "import SwiftMusic\n") throws -> [SwiftCompletion] {
         let response = try JSONSerialization.jsonObject(with: data, options: [.fragmentsAllowed])
         let result: Any
         if let envelope = response as? [String: Any], envelope["jsonrpc"] != nil {

@@ -23,6 +23,27 @@ SwiftPM fetches the exact public SwiftMusic 0.3.0 dependency. No sibling checkou
 
 **Sessions execute trusted local Swift with your account's permissions. This is not a code sandbox.**
 
+## Swift package projects
+
+Use **File → New Project** or **Open Project** (Shift–Command–O) to open a folder containing `Package.swift`. The sidebar keeps that folder as its root and expands folders in place.
+
+```text
+MyLiveSet/
+├── Package.swift
+├── Sources/
+│   └── LiveSet/
+│       ├── Session.swift
+│       ├── Drums.swift
+│       └── Resources/
+└── Recordings/
+```
+
+A playable Swift library target contains one `Session.swift` defining `Session: Music`. Other Swift files in that target are compiled as separate files; declare their imports normally. When a package has multiple playable targets, select one in the sidebar. Editing another file keeps the target's Session as the playback entry. Unsaved source buffers participate in evaluation without rewriting the files on disk.
+
+SwiftPM resolves dependencies and resources from the package manifest. Access declared resources with `Bundle.module`; relative runtime file paths resolve from the project root. The host prepares its worker in a private copy, preserving the original manifest. Project evaluation uses SwiftPM, so an initial dependency build is slower than standalone single-file evaluation. Failed compilation preserves the last valid audio.
+
+Completion uses SourceKit-LSP against the project itself, including open buffers. Saved-file tabs and selection are remembered per project; unsaved contents remain in the open editor and use the normal save/discard flow. Non-code assets open in their associated macOS app. Inline results are currently anchored to the Session entry; helper files can be edited without assigning entry-file result positions to them.
+
 ## Start playing
 
 Open [Examples/LiveSwitch.swift](Examples/LiveSwitch.swift) with Command–O. The entry type is `Session: Music`.

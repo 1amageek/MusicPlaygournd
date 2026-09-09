@@ -14,6 +14,9 @@ struct MusicPlaygourndApp: App {
         .defaultSize(width: 1160, height: 760)
         .commands {
             CommandGroup(replacing: .newItem) {
+                Button("New Project…", action: model.newProject).keyboardShortcut("n", modifiers: [.command, .shift])
+                Button("Open Project…", action: model.chooseProject).keyboardShortcut("o", modifiers: [.command, .shift])
+                Divider()
                 Button("Open Session…", action: model.openDocument).keyboardShortcut("o")
                 Button("Close Tab") { model.closeDocument(model.activeDocumentID) }.keyboardShortcut("w")
             }

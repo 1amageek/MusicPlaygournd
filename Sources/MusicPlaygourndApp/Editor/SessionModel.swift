@@ -7,6 +7,24 @@ import UniformTypeIdentifiers
 @MainActor @Observable
 final class SessionModel {
     static let maximumOpenDocuments = 32
+    private(set) var fileBrowser = SessionFileBrowser()
+    private(set) var project: SwiftPackageProject?
+    var projectTarget: SwiftPackageProject.Target?
+    private var projectCompletion: ProjectCompletionService?
+    private var projectTask: Task<Void, Never>?
+    private var projectRequestID = UUID()
+
+    private var projectBuffers: [URL: String] {
+        Dictionary(uniqueKeysWithValues: documents.compactMap { document in
+            guard let url = document.fileURL else { return nil }
+            return (url, document.source)
+        })
+    }
+
+    private var isProjectDocument: Bool {
+        guard let root = project?.root, let fileURL else { return false }
+        return fileURL.path.hasPrefix(root.path + "/")
+    }
     private(set) var documents = [SessionDocument(source: SessionModel.initialSource)]
     private var activeDocumentIndex = 0
     var activeDocument: SessionDocument { documents[activeDocumentIndex] }
@@ -324,6 +342,9 @@ final class SessionModel {
     }
 
     func completions(source: String, utf16Offset: Int) async throws -> [SwiftCompletion] {
+        if isProjectDocument, let projectCompletion, let fileURL {
+            return try await projectCompletion.completions(source: source, utf16Offset: utf16Offset, file: fileURL, buffers: projectBuffers)
+        }
         if source == self.source, source == completionSource, let site = completionSites.first(where: {
             utf16Offset >= $0.contentRange.location && utf16Offset <= NSMaxRange($0.contentRange)
         }), NSMaxRange(site.contentRange) <= source.utf16.count {
@@ -368,7 +389,24 @@ final class SessionModel {
         // Reconcile adoption after atomically clearing pending audio: a bar may have
         // adopted the previous candidate between the earlier snapshot and beginUpdate.
         refresh()
-        let text = source
+        let projectRequest: ProjectEvaluationRequest?
+        let text: String
+        do {
+            if isProjectDocument, let project, let target = projectTarget {
+                let entry = project.entryURL(for: target)
+                text = try projectBuffers[entry] ?? String(contentsOf: entry, encoding: .utf8)
+                projectRequest = try ProjectEvaluationRequest(project: project, target: target, buffers: projectBuffers)
+                revisionDocuments[requested] = documents.first(where: { $0.fileURL == entry })?.id
+            } else {
+                guard fileURL == nil || fileURL?.pathExtension == "swift" else {
+                    isPreparing = false
+                    status = "Select a Swift session to play"
+                    return
+                }
+                text = source
+                projectRequest = nil
+            }
+        } catch { diagnostic = error.localizedDescription; isPreparing = false; return }
         let tempo = 120.0
         let meter = beatsPerBar
         diagnostic = ""
@@ -379,7 +417,7 @@ final class SessionModel {
             do {
                 if !immediate { try await Task.sleep(for: .milliseconds(150)) }
                 await self?.adoptionTask?.value
-                let evaluation = try await evaluator.evaluateRetained(source: text, bpm: tempo, beatsPerBar: meter, revision: requested)
+                let evaluation = try await evaluator.evaluateRetained(source: text, bpm: tempo, beatsPerBar: meter, revision: requested, project: projectRequest)
                 let candidate = evaluation.loop
                 try Task.checkCancellation()
                 guard let self, requested == self.revision else { return }
@@ -1072,6 +1110,144 @@ final class SessionModel {
         selectionToken += 1
     }
 
+    func chooseProject() {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.prompt = "Open Project"
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        openProject(at: url)
+    }
+
+    func openProject(at root: URL) {
+        projectTask?.cancel()
+        let request = UUID()
+        projectRequestID = request
+        status = "Opening package…"
+        projectTask = Task {
+            do {
+                let loaded = try await evaluator.openProject(at: root)
+                try Task.checkCancellation()
+                guard projectRequestID == request else { return }
+                let listing = SessionFileBrowser()
+                try listing.load(loaded.root)
+                let selectedPath = UserDefaults.standard.string(forKey: "project.selected." + loaded.root.path)
+                let restored = UserDefaults.standard.stringArray(forKey: "project.tabs." + loaded.root.path) ?? []
+                let entry = loaded.entryURL(for: loaded.targets[0])
+                var requestedURLs = restored.filter { $0.hasPrefix(loaded.root.path + "/") && FileManager.default.fileExists(atPath: $0) }.map { URL(fileURLWithPath: $0).resolvingSymlinksInPath() }
+                if !requestedURLs.contains(entry) { requestedURLs.append(entry) }
+                var newDocuments: [SessionDocument] = []
+                for url in requestedURLs where !documents.contains(where: { $0.fileURL == url }) {
+                    let text = try String(contentsOf: url, encoding: .utf8)
+                    guard text.utf8.count <= 65_536 else { throw EvaluationError.invalidSource("Source exceeds 64 KiB.") }
+                    newDocuments.append(SessionDocument(source: text, fileURL: url))
+                }
+                guard documents.count + newDocuments.count <= Self.maximumOpenDocuments else { throw DocumentFailure.tabLimit }
+                if let sources = listing.entries.first(where: { $0.url.lastPathComponent == "Sources" }) {
+                    try listing.toggle(sources)
+                    for target in loaded.targets {
+                        if let item = listing.entries.first(where: { $0.url == loaded.root.appending(path: target.path) }) { try listing.toggle(item) }
+                    }
+                }
+                let nextCompletion = await completionService.projectService(root: loaded.root)
+                try Task.checkCancellation()
+                guard projectRequestID == request else { try await nextCompletion.shutdown(); return }
+                if let projectCompletion { try await projectCompletion.shutdown() }
+                try Task.checkCancellation()
+                guard projectRequestID == request else { try await nextCompletion.shutdown(); return }
+                newDocuments.removeAll { candidate in documents.contains { $0.fileURL == candidate.fileURL } }
+                guard documents.count + newDocuments.count <= Self.maximumOpenDocuments else { throw DocumentFailure.tabLimit }
+                rememberProjectNavigation()
+                projectCompletion = nextCompletion
+                project = loaded
+                projectTarget = loaded.targets.first
+                fileBrowser = listing
+                documents.append(contentsOf: newDocuments)
+                let selected = documents.first(where: { $0.fileURL?.path == selectedPath }) ?? documents.first(where: { $0.fileURL == entry })
+                if let selected { selectDocument(selected.id) }
+                scheduleEvaluation(immediate: true)
+            } catch is CancellationError { }
+            catch { fileBrowser.errorMessage = error.localizedDescription; diagnostic = error.localizedDescription }
+        }
+    }
+
+    private func rememberProjectNavigation() {
+        guard let root = project?.root else { return }
+        let paths = documents.compactMap(\.fileURL).filter { $0.path.hasPrefix(root.path + "/") }.map(\.path)
+        UserDefaults.standard.set(paths, forKey: "project.tabs." + root.path)
+        if isProjectDocument { UserDefaults.standard.set(fileURL?.path, forKey: "project.selected." + root.path) }
+    }
+
+    func newProject() {
+        let panel = NSSavePanel()
+        panel.title = "New Music Project"
+        panel.nameFieldStringValue = "MyLiveSet"
+        panel.prompt = "Create"
+        guard panel.runModal() == .OK, let root = panel.url else { return }
+        do {
+            try Self.createProject(at: root)
+            openProject(at: root)
+        } catch { fileBrowser.errorMessage = error.localizedDescription }
+    }
+
+    static func createProject(at root: URL) throws {
+        let manager = FileManager.default
+        guard !manager.fileExists(atPath: root.path) else { throw SessionFileBrowser.Failure.fileExists }
+        try manager.createDirectory(at: root, withIntermediateDirectories: false)
+        do {
+            let sources = root.appending(path: "Sources/LiveSet")
+            try manager.createDirectory(at: sources.appending(path: "Resources"), withIntermediateDirectories: true)
+            try manager.createDirectory(at: root.appending(path: "Recordings"), withIntermediateDirectories: false)
+            let manifest = """
+            // swift-tools-version: 6.4
+            import PackageDescription
+
+            let package = Package(
+                name: \(String(reflecting: root.lastPathComponent)),
+                platforms: [.macOS(.v15)],
+                products: [.library(name: "LiveSet", targets: ["LiveSet"])],
+                dependencies: [.package(url: "https://github.com/1amageek/SwiftMusic.git", exact: "0.3.0")],
+                targets: [.target(name: "LiveSet", dependencies: [.product(name: "SwiftMusic", package: "SwiftMusic")], resources: [.copy("Resources")])]
+            )
+            """
+            try manifest.write(to: root.appending(path: "Package.swift"), atomically: true, encoding: .utf8)
+            try initialSource.write(to: sources.appending(path: "Session.swift"), atomically: true, encoding: .utf8)
+            try "Place sample files here. Access them with Bundle.module.\n".write(to: sources.appending(path: "Resources/README.txt"), atomically: true, encoding: .utf8)
+            try ".build/\n.swiftpm/\n.DS_Store\nRecordings/\n".write(to: root.appending(path: ".gitignore"), atomically: true, encoding: .utf8)
+        } catch {
+            let original = error
+            do { try manager.removeItem(at: root) }
+            catch { throw EvaluationError.invalidResult("Project creation failed: \(original); cleanup failed: \(error)") }
+            throw original
+        }
+    }
+
+    func selectProjectTarget(_ target: SwiftPackageProject.Target) {
+        guard let project else { return }
+        projectTarget = target
+        do {
+            try openDocument(at: project.entryURL(for: target))
+            scheduleEvaluation(immediate: true)
+        } catch { diagnostic = error.localizedDescription }
+    }
+
+    func newProjectFile() {
+        guard let project, let target = projectTarget else { return }
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [.swiftSource]
+        panel.nameFieldStringValue = "Sound.swift"
+        panel.directoryURL = project.root.appending(path: target.path)
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        do {
+            guard url.standardizedFileURL.path.hasPrefix(project.root.path + "/") else {
+                throw EvaluationError.invalidSource("Create the file inside the project.")
+            }
+            try fileBrowser.create(at: url, source: "import SwiftMusic\n")
+            try fileBrowser.refresh()
+            try openDocument(at: url)
+        } catch { fileBrowser.errorMessage = error.localizedDescription }
+    }
+
     func openDocument() {
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [.swiftSource, .plainText]
@@ -1107,9 +1283,10 @@ final class SessionModel {
 
     func selectDocument(_ id: UUID) {
         guard let index = documents.firstIndex(where: { $0.id == id }), index != activeDocumentIndex else { return }
-        abortPerformanceForDocumentChange()
+        let sameProject = isProjectDocument && documents[index].fileURL.map { $0.path.hasPrefix(project!.root.path + "/") } == true
+        if !sameProject { abortPerformanceForDocumentChange() }
         activeDocumentIndex = index
-        lineMaps = [:]
+        if !sameProject { lineMaps = [:] }
         rowLines = [:]
         resultLines = [:]
         completionSites = []
@@ -1120,8 +1297,12 @@ final class SessionModel {
         selectionLine = nil
         controlVisualization = nil
         visualizationTask?.cancel()
-        loadHostSettings(for: fileURL)
-        scheduleEvaluation(immediate: true)
+        if !sameProject {
+            loadHostSettings(for: fileURL)
+            scheduleEvaluation(immediate: true)
+        }
+        updateRowLines()
+        rememberProjectNavigation()
     }
 
     enum CloseDecision { case save, cancel, discard }
@@ -1143,6 +1324,9 @@ final class SessionModel {
     @discardableResult
     func closeDocument(_ id: UUID, decision: CloseDecision? = nil) -> Bool {
         guard let document = documents.first(where: { $0.id == id }) else { return true }
+        let affectsProject = document.isDirty && document.fileURL.map { url in
+            project.map { url.path.hasPrefix($0.root.path + "/") } ?? false
+        } == true
         if document.isDirty {
             switch decision ?? closeDecision(for: document) {
             case .save: guard saveDocument(document) else { return false }
@@ -1157,6 +1341,8 @@ final class SessionModel {
         let selectedID = wasActive ? activeDocumentID : retainedID
         documents.removeAll { $0.id == id }
         activeDocumentIndex = documents.firstIndex { $0.id == selectedID } ?? 0
+        rememberProjectNavigation()
+        if affectsProject { scheduleEvaluation(immediate: true) }
         return true
     }
 
@@ -1413,6 +1599,10 @@ final class SessionModel {
 
     func shutdown() async throws {
         isShuttingDown = true
+        projectRequestID = UUID()
+        projectTask?.cancel()
+        await projectTask?.value
+        rememberProjectNavigation()
         switchTask?.cancel()
         await switchTask?.value
         if let reservedPerformanceToken {
@@ -1473,6 +1663,8 @@ final class SessionModel {
         await controlTask?.value
         await adoptionTask?.value
         await controlHealthTask?.value
+        projectTask?.cancel()
+        if let projectCompletion { try await projectCompletion.shutdown() }
         async let completionShutdown: Void = completionService.shutdown()
         async let evaluationShutdown: Void = evaluator.shutdown()
         _ = try await (completionShutdown, evaluationShutdown)

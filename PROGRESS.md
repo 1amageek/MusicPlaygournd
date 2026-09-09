@@ -1,5 +1,4 @@
 # Progress
 
-- [x] MP-RELEASE Standalone SwiftMusic0.3.0 build passed; 16 focused behavioral checks passed including switch cleanup recheck; initial release commit `depends:none` `parallel:none`
-- [ ] MP-PUBLIC Verify clean public clone/source identity and URL-only dependency graph; publish0.1.0 preview tag/release matching origin/main `depends:MP-RELEASE` `parallel:none`
-- [ ] MP-INTEGRATION Verify public source release and SwiftMusic0.3.0 immutable dependency identity `depends:MP-RELEASE,MP-PUBLIC` `parallel:none`
+- [x] SPM-1 Deliver native SwiftPM project management; package rendering/completion and 11 editor checks passed; native creation/opening, tree navigation, tabs and playback verified with the simplified sidebar `depends:none` `parallel:none`
+- [ ] SPM-INT Verify committed integration and publish only if this branch has a configured upstream; preserve unrelated artwork and release tags `depends:SPM-1` `parallel:none`

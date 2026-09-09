@@ -16,9 +16,13 @@ struct SessionFileBrowserTests {
             try FileManager.default.createSymbolicLink(at: root.appending(path: "Link.swift"), withDestinationURL: root.appending(path: "Kick.swift"))
             let browser = SessionFileBrowser()
             try browser.load(root)
-            #expect(browser.entries.map(\.url.lastPathComponent) == ["Beats", "Kick.swift"])
-            try browser.load(folder)
-            #expect(browser.entries.map(\.url.lastPathComponent) == ["Nested.swift"])
+            #expect(browser.entries.map(\.url.lastPathComponent) == ["Beats", "Kick.swift", "Notes.txt"])
+            try browser.toggle(browser.entries[0])
+            #expect(browser.directory == root.standardizedFileURL)
+            #expect(browser.entries.map(\.url.lastPathComponent) == ["Beats", "Nested.swift", "Kick.swift", "Notes.txt"])
+            #expect(browser.entries[1].depth == 1)
+            try browser.toggle(browser.entries[0])
+            #expect(browser.entries.map(\.url.lastPathComponent) == ["Beats", "Kick.swift", "Notes.txt"])
         }
     }
 

@@ -10,7 +10,6 @@ struct ContentView: View {
     @State private var controlsPresented = false
     @State private var maximumTakeMinutes = 10
     @State private var sidebarVisible = true
-    @State private var fileBrowser = SessionFileBrowser()
 
     var body: some View {
         VStack(spacing: 0) {
@@ -18,7 +17,7 @@ struct ContentView: View {
             Divider()
             HSplitView {
                 if sidebarVisible {
-                    FileSidebarView(model: model, browser: fileBrowser)
+                    FileSidebarView(model: model, browser: model.fileBrowser)
                         .frame(minWidth: 160, idealWidth: 190, maxWidth: 260)
                 }
             VStack(spacing: 0) {

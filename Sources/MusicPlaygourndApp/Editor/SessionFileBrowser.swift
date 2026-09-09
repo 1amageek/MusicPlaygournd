@@ -6,6 +6,7 @@ final class SessionFileBrowser {
     struct Entry: Identifiable, Equatable {
         let url: URL
         let isDirectory: Bool
+        var depth: Int = 0
         var id: URL { url }
     }
 
@@ -33,6 +34,7 @@ final class SessionFileBrowser {
     private(set) var directory: URL?
     private(set) var entries: [Entry] = []
     var errorMessage: String?
+    private(set) var expanded: Set<URL> = []
 
     func load(_ url: URL) throws(Failure) {
         do {
@@ -54,7 +56,7 @@ final class SessionFileBrowser {
                 let values = try child.resourceValues(forKeys: Set(keys))
                 guard values.isSymbolicLink != true, values.isHidden != true else { continue }
                 let isDirectory = values.isDirectory == true
-                if isDirectory || (values.isRegularFile == true && child.pathExtension.lowercased() == "swift") {
+                if isDirectory || values.isRegularFile == true {
                     loaded.append(Entry(url: child, isDirectory: isDirectory))
                 }
             }
@@ -65,11 +67,40 @@ final class SessionFileBrowser {
             }
             directory = url.standardizedFileURL
             entries = loaded
+            expanded = []
             errorMessage = nil
         } catch {
             let failure = (error as? Failure) ?? .unreadableDirectory(error.localizedDescription)
             errorMessage = failure.localizedDescription
             throw failure
+        }
+    }
+
+    func toggle(_ entry: Entry) throws {
+        guard entry.isDirectory else { return }
+        guard let index = entries.firstIndex(where: { $0.id == entry.id }) else { return }
+        if expanded.contains(entry.url) {
+            var end = index + 1
+            while end < entries.count, entries[end].depth > entry.depth { end += 1 }
+            for removed in entries[(index + 1)..<end] { expanded.remove(removed.url) }
+            entries.removeSubrange((index + 1)..<end)
+            expanded.remove(entry.url)
+        } else {
+            let child = SessionFileBrowser()
+            try child.load(entry.url)
+            guard entries.count + child.entries.count <= Self.maximumEntries else { throw Failure.tooManyEntries }
+            let children = child.entries.map { Entry(url: $0.url, isDirectory: $0.isDirectory, depth: entry.depth + 1) }
+            entries.insert(contentsOf: children, at: index + 1)
+            expanded.insert(entry.url)
+        }
+    }
+
+    func refresh() throws {
+        guard let directory else { return }
+        let previous = expanded.sorted { $0.path.count < $1.path.count }
+        try load(directory)
+        for url in previous {
+            if let entry = entries.first(where: { $0.url == url }) { try toggle(entry) }
         }
     }
 

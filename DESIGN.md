@@ -22,3 +22,5 @@ Failure is reported as a diagnostic or typed error; the last adopted loop surviv
 
 ## Verification and Change Impact
 Run core behavioral tests, real compiler good/bad/recovery checks, AVAudioEngine output checks and live UI. Scripts/build-app.sh bundles source for evaluation and records the installed Swift executable. App runtime needs Swift 6.4 and Xcode command-line tools including Python3. Version 0.1.0 is a source preview release; no prebuilt notarized binary or App Store distribution is provided.
+
+SwiftPM project management is owned by the App editor and project evaluation/completion by Core Evaluation. Package.swift remains the source of target/dependency/resource membership. See the corresponding child designs for the project snapshot and last-good-audio contracts.

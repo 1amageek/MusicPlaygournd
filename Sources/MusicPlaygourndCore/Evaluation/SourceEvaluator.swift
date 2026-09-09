@@ -177,8 +177,20 @@ public actor SourceEvaluator {
         return result.loop
     }
 
+    public func openProject(at root: URL) async throws -> SwiftPackageProject {
+        while busy { try await Task.sleep(for: .milliseconds(40)) }
+        busy = true
+        defer { busy = false }
+        try FileManager.default.createDirectory(at: workspace, withIntermediateDirectories: true)
+        guard FileManager.default.fileExists(atPath: root.appending(path: "Package.swift").path) else {
+            throw EvaluationError.invalidSource("Select a folder containing Package.swift.")
+        }
+        let description = try await run(swiftExecutable, ["package", "--package-path", root.path, "describe", "--type", "json"], timeout: 60)
+        return try SwiftPackageProject.decode(Data(description.utf8), root: root)
+    }
+
     public func evaluateRetained(source: String, bpm: Double, beatsPerBar: Int,
-                                 revision: UInt64) async throws -> RetainedEvaluation {
+                                 revision: UInt64, project: ProjectEvaluationRequest? = nil) async throws -> RetainedEvaluation {
         // An actor may reenter at every await. This slot also protects the incremental workspace.
         while busy {
             try await Task.sleep(for: .milliseconds(40))
@@ -199,7 +211,11 @@ public actor SourceEvaluator {
         }
         let manager = FileManager.default
         let workerDirectory = workspace.appending(path: "Worker-" + UUID().uuidString)
+        let projectWorkspace = try project.map { try ProjectWorkspace.prepare($0, at: workspace.appending(path: "Project"), host: packageURL) }
+        let buildRoot = projectWorkspace?.root ?? workspace
+        let product = projectWorkspace == nil ? "Evaluation" : "MusicPlaygourndEvaluation"
         let sources = workspace.appending(path: "Sources/Evaluation")
+        let entryFile = projectWorkspace?.entry ?? sources.appending(path: "Session.swift")
         try manager.createDirectory(at: sources, withIntermediateDirectories: true)
         let manifest = """
         // swift-tools-version: 6.4
@@ -236,35 +252,35 @@ public actor SourceEvaluator {
             output: output,
             discovery: nil
         )
-        try wrapper.write(to: sources.appending(path: "Session.swift"), atomically: true, encoding: .utf8)
+        try wrapper.write(to: entryFile, atomically: true, encoding: .utf8)
         let environment = try await resolveCompilerEnvironment()
         let binaryPath: String
         let executable: URL
         try manager.createDirectory(at: workerDirectory, withIntermediateDirectories: true)
         do {
-        if let runtimeSDK {
+        if let runtimeSDK, projectWorkspace == nil {
             binaryPath = runtimeSDK.path
             executable = workerDirectory.appending(path: "Evaluation")
             let compiler = URL(fileURLWithPath: swiftExecutable).deletingLastPathComponent().appending(path: "swiftc")
             _ = try await run(compiler.path, ["-parse-as-library", "-O", "-target", environment.target,
                 "-sdk", environment.sdkPath, "-I", runtimeSDK.path,
-                sources.appending(path: "Session.swift").path,
+                entryFile.path,
                 runtimeSDK.appending(path: "SwiftMusic.o").path,
                 runtimeSDK.appending(path: "MusicPlaygourndCore.o").path,
                 "-o", executable.path], timeout: 60)
         } else {
-            _ = try await run(swiftExecutable, ["build", "--configuration", "release", "--build-system", "native", "-Xswiftc", "-Xfrontend", "-Xswiftc", "-disable-round-trip-debug-types", "--package-path", workspace.path, "--product", "Evaluation"], timeout: 240)
-            if let binaryDirectory { binaryPath = binaryDirectory }
+            _ = try await run(swiftExecutable, ["build", "--configuration", "release", "--build-system", "native", "-Xswiftc", "-Xfrontend", "-Xswiftc", "-disable-round-trip-debug-types", "--package-path", buildRoot.path, "--product", product], timeout: 240)
+            if let binaryDirectory, projectWorkspace == nil { binaryPath = binaryDirectory }
             else {
-                let output = try await run(swiftExecutable, ["build", "--configuration", "release", "--build-system", "native", "--package-path", workspace.path, "--show-bin-path"], timeout: 20)
+                let output = try await run(swiftExecutable, ["build", "--configuration", "release", "--build-system", "native", "--package-path", buildRoot.path, "--show-bin-path"], timeout: 20)
                 let paths = output.split(whereSeparator: \.isNewline).filter { $0.hasPrefix("/") }
                 guard paths.count == 1, let path = paths.first else {
                     throw EvaluationError.invalidResult("SwiftPM did not report one absolute binary directory.")
                 }
                 binaryPath = String(path)
-                binaryDirectory = binaryPath
+                if projectWorkspace == nil { binaryDirectory = binaryPath }
             }
-            executable = URL(fileURLWithPath: binaryPath).appending(path: "Evaluation")
+            executable = URL(fileURLWithPath: binaryPath).appending(path: product)
         }
         } catch {
             let original = error
@@ -279,7 +295,11 @@ public actor SourceEvaluator {
             "-plugin-path", environment.pluginPath, "-sdk", environment.sdkPath,
             "-I", binaryPath, "-I", URL(fileURLWithPath: binaryPath).appending(path: "Modules").path]
         if !environment.target.isEmpty { astArguments += ["-target", environment.target] }
-        astArguments.append(displaySource.path)
+        if let projectWorkspace, let project {
+            astArguments = try projectWorkspace.astArguments(binaryPath: binaryPath, module: project.target.moduleName, displaySource: displaySource)
+        } else {
+            astArguments.append(displaySource.path)
+        }
         let astOutput = try await run(swiftExecutable, astArguments, timeout: 20)
         let ast = Data(astOutput.utf8)
         let discovery = try SwitchBankDiscovery.discover(
@@ -297,20 +317,20 @@ public actor SourceEvaluator {
                 output: output,
                 discovery: discovery
             )
-            try switchedWrapper.write(to: sources.appending(path: "Session.swift"), atomically: true, encoding: .utf8)
+            try switchedWrapper.write(to: entryFile, atomically: true, encoding: .utf8)
             do {
-                if let runtimeSDK {
+                if let runtimeSDK, projectWorkspace == nil {
                     let compiler = URL(fileURLWithPath: swiftExecutable).deletingLastPathComponent().appending(path: "swiftc")
                     _ = try await run(compiler.path, ["-parse-as-library", "-O", "-target", environment.target,
                         "-sdk", environment.sdkPath, "-I", runtimeSDK.path,
-                        sources.appending(path: "Session.swift").path,
+                        entryFile.path,
                         runtimeSDK.appending(path: "SwiftMusic.o").path,
                         runtimeSDK.appending(path: "MusicPlaygourndCore.o").path,
                         "-o", executable.path], timeout: 60)
                 } else {
                     _ = try await run(swiftExecutable, ["build", "--configuration", "release", "--build-system", "native",
                         "-Xswiftc", "-Xfrontend", "-Xswiftc", "-disable-round-trip-debug-types",
-                        "--package-path", workspace.path, "--product", "Evaluation"], timeout: 240)
+                        "--package-path", buildRoot.path, "--product", product], timeout: 240)
                 }
             } catch {
                 throw EvaluationError.processFailed("Switch variant preparation failed: \(error.localizedDescription)")
@@ -318,7 +338,7 @@ public actor SourceEvaluator {
         }
         let connection = try RenderWorkerConnection(
             executable: executable,
-            outputURL: output, revision: revision)
+            outputURL: output, revision: revision, workingDirectory: project?.project.root)
         do {
         var initial = try await connection.ready()
         var performanceGenerationOffset: UInt64 = 0

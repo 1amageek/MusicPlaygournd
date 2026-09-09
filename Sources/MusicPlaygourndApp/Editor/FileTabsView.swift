@@ -10,7 +10,7 @@ struct FileTabsView: View {
                     HStack(spacing: 8) {
                         Button { model.selectDocument(document.id) } label: {
                             HStack(spacing: 7) {
-                                Image(systemName: "swift").foregroundStyle(.orange)
+                                Image(systemName: document.name == "Package.swift" ? "shippingbox" : (document.fileURL?.pathExtension == "swift" || document.fileURL == nil ? "swift" : "doc")).foregroundStyle(.orange)
                                 Text(document.name).lineLimit(1)
                                 if document.isDirty { Circle().fill(.secondary).frame(width: 5, height: 5) }
                             }.contentShape(Rectangle())

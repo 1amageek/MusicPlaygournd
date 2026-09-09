@@ -207,3 +207,9 @@ The master waveform draws both stereo channels in distinct colors around one sha
 Switch selectors use native performance pads below each switch opening line, with minimum 96-by-40-point hit targets, eight-point horizontal gaps, and a solid mint fill for the audible case. Unselected pads retain visible borders. Horizontal scrolling keeps every case reachable. No duplicate property label is shown. Layout spacing never modifies the source buffer.
 
 CompletionTextView owns the standard undo: and redo: responder actions and validates Edit-menu availability against its current document UndoManager. Text edits, menu actions and keyboard equivalents share that history. Document switching changes the same manager reference; no window-level or secondary history is introduced.
+
+### Swift package projects
+
+SessionModel owns the selected project and its fixed root. The sidebar expands directories in place and displays Package.swift, Sources, resources and recordings. Project creation writes a native SwiftPM library package with a Session.swift entry; it never replaces existing files. The manifest is the authority for target membership and dependencies, as reported by SwiftPM. Each playable target has one Session.swift defining Session: Music. Selecting another source file edits that file while evaluating the target's Session entry with the current open buffers. Standalone files retain their existing execution path. Non-source files do not become standalone musical sessions. Existing unsaved documents survive project navigation. Failed project loading or evaluation does not replace the current valid audio. Project UI state is local host state, not package source.
+
+Project creation and opening live in the sidebar header menu and the application File menu. The sidebar body is reserved for the project tree; an unopened project shows no duplicate action buttons.

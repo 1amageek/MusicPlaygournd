@@ -251,6 +251,7 @@ struct ContentView: View {
         }
         .padding(.horizontal, 18)
         .padding(.vertical, 8)
+        .frame(height: logsExpanded ? nil : 36)
         .background(diagnosticCount == 0 ? Color.white.opacity(0.025) : Color.orange.opacity(0.07))
     }
 

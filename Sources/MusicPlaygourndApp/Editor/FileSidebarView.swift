@@ -71,7 +71,7 @@ struct FileSidebarView: View {
                 .font(.system(size: 12)).padding(.horizontal, 7).frame(height: 24)
                 .background(.primary.opacity(0.07), in: Capsule())
                 .overlay(Capsule().strokeBorder(.primary.opacity(0.1)))
-            }.padding(6)
+            }.padding(.horizontal, 6).frame(height: 36)
         }
         .background(.bar)
         .onChange(of: browser.directory) { _, _ in rootExpanded = true; filter = "" }

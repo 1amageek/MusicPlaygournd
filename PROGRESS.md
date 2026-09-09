@@ -25,3 +25,6 @@
 
 - [x] EDIT-2 Fix URL/comment coloring, resolve saved manifests with stale evaluation cancellation, preserve dirty documents and selection, and move layout menu to tab row; focused behavioral checks passed `depends:none` `parallel:none`
 - [x] EDIT-INT Syntax/IME checks passed; real manifest save reload passed in 2.639 seconds; Release build and native tab-row layout verified `depends:EDIT-2` `parallel:none`
+
+- [x] WELCOME-1 Launch welcome and Deep Current/Basic Beat selection use existing project creation/opening; cancellation preserves documents `depends:none` `parallel:none`
+- [x] WELCOME-INT Both template creation cases and editor integration passed; native welcome, chooser, save panel, cancellation and generated session observed; Release build passed `depends:WELCOME-1` `parallel:none`

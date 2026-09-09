@@ -9,6 +9,21 @@ struct ContentView: View {
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
 
     var body: some View {
+        Group {
+            if !model.hasOpenDocument {
+                WelcomeView(model: model)
+            } else {
+                editorWorkspace
+            }
+        }
+        .sheet(isPresented: $model.isChoosingTemplate) {
+            ProjectTemplateView(model: model)
+        }
+        .preferredColorScheme(.dark)
+        .frame(minWidth: 850, minHeight: 540)
+    }
+
+    private var editorWorkspace: some View {
         VStack(spacing: 0) {
             NavigationSplitView(columnVisibility: $columnVisibility) {
                 FileSidebarView(model: model, browser: model.fileBrowser)

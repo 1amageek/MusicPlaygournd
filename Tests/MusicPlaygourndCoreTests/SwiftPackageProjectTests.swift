@@ -5,18 +5,18 @@ import Testing
 
 extension NativeHostTests {
     struct SwiftPackageProjectTests {
-        @Test(.timeLimit(.minutes(2))) @MainActor
-        func newProjectUsesItsNameAndPreservesExistingDirectory() async throws {
+        @Test(.timeLimit(.minutes(2)), arguments: ProjectTemplate.allCases) @MainActor
+        func newProjectUsesItsNameAndPreservesExistingDirectory(template: ProjectTemplate) async throws {
             let host = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
             let root = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
             try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false)
             defer { do { try FileManager.default.removeItem(at: root) } catch { Issue.record(error) } }
             let project = root.appending(path: "Evening Set")
-            try SessionModel.createProject(at: project)
+            try SessionModel.createProject(at: project, template: template)
             let entry = project.appending(path: "Sources/Evening Set/Session.swift")
-            #expect(try String(contentsOf: entry, encoding: .utf8) == SessionModel.initialSource)
+            #expect(try String(contentsOf: entry, encoding: .utf8) == template.source)
             try "Keep this edit".write(to: entry, atomically: true, encoding: .utf8)
-            #expect(throws: SessionFileBrowser.Failure.self) { try SessionModel.createProject(at: project) }
+            #expect(throws: SessionFileBrowser.Failure.self) { try SessionModel.createProject(at: project, template: template) }
             #expect(try String(contentsOf: entry, encoding: .utf8) == "Keep this edit")
             let evaluator = SourceEvaluator(packageURL: host, workspace: root.appending(path: "Evaluation"), swiftExecutable: "/usr/bin/swift")
             do {

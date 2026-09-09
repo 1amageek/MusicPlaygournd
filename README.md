@@ -25,7 +25,7 @@ SwiftPM fetches the exact public SwiftMusic 0.4.0 dependency. No sibling checkou
 
 ## Swift package projects
 
-Use **File → New Project** or **Open Project** (Shift–Command–O) to open a folder containing `Package.swift`. New Project creates the named directory with a matching package and target, a playable Session.swift template, resources and recordings folders. It opens the generated session automatically. Existing directories are never overwritten. The sidebar keeps the package folder as its root and expands folders in place.
+The welcome screen offers **Create a new project** and **Open an existing project**. Choose **Deep Current** or **Basic Beat**, then select a name and destination. The same chooser is available through **File → New Project**. **Open Project** (Shift–Command–O) opens a folder containing `Package.swift`. New Project creates the named directory with a matching package and target, a playable Session.swift template, resources and recordings folders. It opens the generated session automatically. Existing directories are never overwritten. The sidebar keeps the package folder as its root and expands folders in place.
 
 ```text
 MyLiveSet/

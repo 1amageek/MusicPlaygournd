@@ -129,7 +129,7 @@ struct ContentView: View {
                 }
             }
             Rectangle().fill(.white.opacity(0.08)).frame(width: 1, height: 32)
-            SpectrumView(bands: model.spectrum, samples: model.outputSamples, isPlaying: model.isPlaying,
+            OutputMonitorView(bands: model.spectrum, samples: model.outputSamples, isPlaying: model.isPlaying,
                 performance: model.performance,
                 resetDiagnostics: model.resetPerformanceDiagnostics)
                 .frame(minWidth: 190, maxWidth: .infinity)

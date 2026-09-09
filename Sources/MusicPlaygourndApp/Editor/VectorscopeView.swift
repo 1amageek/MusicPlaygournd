@@ -27,11 +27,24 @@ struct VectorscopeView: View {
                 if connected { trace.addLine(to: position) } else { trace.move(to: position) }
                 connected = true
             }
+            let gradient = GraphicsContext.Shading.linearGradient(
+                Gradient(colors: [Color(red: 0.2, green: 1, blue: 0.65), .cyan,
+                                  Color(red: 0.48, green: 0.38, blue: 1)]),
+                startPoint: CGPoint(x: center.x - radius * 0.45, y: center.y - radius * 0.65),
+                endPoint: CGPoint(x: center.x + radius * 0.45, y: center.y + radius * 0.65)
+            )
             context.drawLayer { glow in
-                glow.addFilter(.blur(radius: 5))
-                glow.stroke(trace, with: .color(.cyan.opacity(0.45)), lineWidth: 3)
+                glow.opacity = 0.35
+                glow.addFilter(.blur(radius: 9))
+                glow.stroke(trace, with: gradient, lineWidth: 5)
             }
-            context.stroke(trace, with: .color(.cyan.opacity(0.8)), lineWidth: 0.8)
+            context.drawLayer { halo in
+                halo.opacity = 0.75
+                halo.addFilter(.blur(radius: 2))
+                halo.stroke(trace, with: gradient, lineWidth: 2)
+            }
+            context.stroke(trace, with: gradient, style: StrokeStyle(lineWidth: 0.9, lineCap: .round, lineJoin: .round))
+            context.stroke(trace, with: .color(.white.opacity(0.35)), lineWidth: 0.25)
         }
         .clipped()
         .accessibilityLabel("Stereo vectorscope, vertical mono and horizontal side signal")

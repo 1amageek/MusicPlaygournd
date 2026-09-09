@@ -242,7 +242,7 @@ Project compilation uses the persistent Evaluation projectBuildCache contract in
 
 During input-method composition, AppKit owns marked text. CodeEditor does not replace the document, recolor it, or submit an evaluation while marked text exists; committed edits resume normal binding synchronization. Model-driven text replacement preserves and bounds the insertion point. EditorTabsIntegrationTests verifies marked Japanese text across SwiftUI updates and final commit; CodeEditorDocumentTests verifies selection retention during replacement.
 
-Saving the active project manifest starts dependency resolution and project reload through the existing cancellable project task. Existing document objects retain dirty buffers and selected navigation; a failed resolution reports diagnostics without adopting a new project. Rhythm layout selection occupies the fixed trailing end of the document tab row. Syntax coloring tokenizes quoted strings and line comments in one pass so their ranges cannot overlap.
+Saving the active project manifest starts dependency resolution and project reload through the existing cancellable project task. Existing document objects retain dirty buffers and selected navigation; a failed resolution reports diagnostics without adopting a new project. Rhythm layout selection occupies the fixed trailing end of the document tab row. Syntax coloring follows the SourceKit semantic highlighting contract below.
 
 ### Project entry flow
 
@@ -278,3 +278,11 @@ The default Session demonstrates SwiftMusic Music/Sound composition as Session -
 
 ## Manifest navigation and invalidation
 SessionModel retains the manifest text associated with its successfully loaded project. Selecting Package.swift changes presentation only, including navigation from a standalone session; editing its buffer waits for save. Save compares the buffer with disk to avoid redundant writes and with the loaded manifest to invalidate the project only when its contents differ. A failed reload leaves the previous manifest snapshot intact so saving again can retry. SourceKit and the loaded project graph remain retained on unchanged saves. Changed saves use the existing cancellable dependency-resolution path. Verify navigation without revision increments, unchanged saves without package preparation, and changed saves loading the updated package.
+
+### SourceKit semantic highlighting
+
+The editor requests semantic coloring after committed source edits, coalesces pending requests, and applies only results matching document identity and exact text. All five themes map semantic categories. Coloring changes foreground presentation only; character storage, selection, undo grouping, scroll position and marked text belong to AppKit. No asynchronous result applies during IME composition. Theme changes reuse the current token snapshot. Language-service failure appears in the editor diagnostics area, without interrupting audio. Closing or switching a document cancels its pending request; responses from earlier documents cannot recolor the active tab. Native checks cover undo, selection, marked text and document switching alongside real language-service token verification.
+
+The Settings preview requests the same token classification through the standalone service. Connection options and host module resolution are owned by [Evaluation](../../MusicPlaygourndCore/Evaluation/DESIGN.md#semantic-source-coloring).
+
+Syntax foreground colors live in text-storage attributes so unchanged ranges retain color during a coalesced edit request. Playback continues to own temporary foreground/background overlays, which can be cleared every beat without recoloring the document. New documents clear previous syntax attributes; applying a matching result changes attributes only and waits for IME composition to end.

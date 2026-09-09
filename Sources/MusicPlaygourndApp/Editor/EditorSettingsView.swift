@@ -1,6 +1,9 @@
 import SwiftUI
+import MusicPlaygourndCore
 
 struct EditorSettingsView: View {
+    let semanticTokens: @MainActor (String) async throws -> [SwiftSemanticToken]
+    @State private var highlightingStatus = ""
     @AppStorage("editor.fontSize") private var fontSize = 12.0
     @AppStorage("editor.theme") private var theme: EditorTheme = .midnight
 
@@ -31,6 +34,9 @@ struct EditorSettingsView: View {
                     preview
                         .clipShape(RoundedRectangle(cornerRadius: 6))
                         .overlay(RoundedRectangle(cornerRadius: 6).stroke(.separator))
+                    if !highlightingStatus.isEmpty {
+                        Text(highlightingStatus).font(.caption).foregroundStyle(.secondary)
+                    }
                     Text("Changes apply immediately to all editor tabs.")
                         .font(.caption).foregroundStyle(.secondary)
                 }.padding(20)
@@ -56,6 +62,7 @@ struct EditorSettingsView: View {
         """), inlineLoop: nil, inlineEnabled: false, resultLines: [:], beatPosition: 0,
             isPlaying: false, selectionLine: nil, selectionToken: 0, rhythmLines: [], rowLines: [:],
             patternTexts: [:], activeTokens: [:], scrollDelta: 0, onLayout: { _ in }, beforeEdit: { _, _ in },
-            onEdit: {}, completions: { _, _ in [] }, onCompletionStatus: { _ in }, isReadOnly: true)
+            onEdit: {}, completions: { _, _ in [] }, onCompletionStatus: { _ in }, semanticTokens: semanticTokens,
+            onHighlightStatus: { highlightingStatus = $0 }, isReadOnly: true)
     }
 }

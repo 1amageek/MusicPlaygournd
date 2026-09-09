@@ -30,6 +30,9 @@ struct CodeEditor: NSViewRepresentable {
     let onEdit: () -> Void
     let completions: @MainActor (String, Int) async throws -> [SwiftCompletion]
     let onCompletionStatus: (String) -> Void
+    var semanticTokens: (@MainActor (String) async throws -> [SwiftSemanticToken])? = nil
+    var syntaxContext = ""
+    var onHighlightStatus: (String) -> Void = { _ in }
     var isReadOnly = false
     var switches: [SwitchControl] = []
     var switchSelections: [Int] = []
@@ -128,6 +131,7 @@ struct CodeEditor: NSViewRepresentable {
         (scroll.documentView as? CompletionTextView)?.resetTempoSwipe()
         coordinator.cancelCompletion()
         coordinator.cancelFormat()
+        coordinator.cancelHighlight()
     }
 
     func updateNSView(_ scroll: NSScrollView, context: Context) {
@@ -141,6 +145,7 @@ struct CodeEditor: NSViewRepresentable {
         // AppKit owns marked text until the input method commits it.
         guard !editor.hasMarkedText() else { return }
         context.coordinator.applyAppearance(editor)
+        context.coordinator.updateHighlightContext(editor)
         if editor.string != text {
             context.coordinator.cancelCompletion()
             context.coordinator.cancelFormat()
@@ -197,6 +202,12 @@ struct CodeEditor: NSViewRepresentable {
         private var literalRanges: [Int: [NSRange]] = [:]
         private var completionTask: Task<Void, Never>?
         private var completionGeneration = 0
+        private var highlightTask: Task<Void, Never>?
+        private var highlightGeneration = 0
+        private var highlightedSource: String?
+        private var highlightedTokens: [SwiftSemanticToken] = []
+        private var highlightedContext = ""
+
         private var formatTask: Task<Void, Never>?
         private var formatGeneration = 0
         private var previousSwitchRanges: [NSRange] = []
@@ -256,6 +267,9 @@ struct CodeEditor: NSViewRepresentable {
 
         func switchDocument(to id: UUID?, text: String, editor: NSTextView, scroll: NSScrollView, state: EditorDocumentState) {
             publishEditorState()
+            cancelHighlight()
+            highlightedSource = nil
+            highlightedTokens = []
             cancelCompletion()
             cancelFormat()
             if let editor = editor as? CompletionTextView {
@@ -287,6 +301,8 @@ struct CodeEditor: NSViewRepresentable {
             let undo = editor.undoManager
             undo?.disableUndoRegistration()
             editor.string = text
+            editor.textStorage?.addAttribute(.foregroundColor, value: parent.theme.palette.foreground,
+                range: NSRange(location: 0, length: (text as NSString).length))
             let count = (text as NSString).length
             let location = min(selection.location, count)
             editor.setSelectedRange(NSRange(location: location, length: min(selection.length, count - location)))
@@ -409,6 +425,7 @@ struct CodeEditor: NSViewRepresentable {
         }
         func textView(_ textView: NSTextView, shouldChangeTextIn affectedCharRange: NSRange, replacementString: String?) -> Bool {
             guard !parent.isReadOnly else { return false }
+            cancelHighlight()
             if let replacementString { parent.beforeEdit(affectedCharRange, replacementString) }
             return true
         }
@@ -586,26 +603,66 @@ struct CodeEditor: NSViewRepresentable {
             highlight(editor)
         }
 
+        func cancelHighlight() {
+            highlightTask?.cancel()
+            highlightGeneration += 1
+        }
+
+        func updateHighlightContext(_ editor: NSTextView) {
+            guard highlightedContext != parent.syntaxContext else { return }
+            highlightedContext = parent.syntaxContext
+            highlightedSource = nil
+            highlightedTokens = []
+            highlight(editor)
+        }
+
         func highlight(_ editor: NSTextView) {
-            guard let storage = editor.textStorage else { return }
-            let full = NSRange(location: 0, length: storage.length)
-            storage.beginEditing()
-            storage.addAttribute(.foregroundColor, value: parent.theme.palette.foreground, range: full)
-            // These patterns color text only; SwiftMusic remains the sole owner of musical meaning.
-            do {
-                // Match strings and comments together so delimiters inside strings stay literal.
-                let regex = try NSRegularExpression(pattern: #"("(?:\\.|[^"\\])*"|//[^\n]*)|\b(import|struct|var|some|let|if|else|for|in|try|func|return)\b|\b(Music|Sound|Track|Sample|Synthesizer|Session)\b"#)
-                for match in regex.matches(in: editor.string, range: full) {
-                    let token = (editor.string as NSString).substring(with: match.range)
-                    let color: NSColor
-                    if match.range(at: 1).location != NSNotFound {
-                        color = token.hasPrefix("//") ? parent.theme.palette.comment : parent.theme.palette.string
-                    } else {
-                        color = match.range(at: 2).location != NSNotFound ? parent.theme.palette.keyword : parent.theme.palette.type
-                    }
-                    storage.addAttribute(.foregroundColor, value: color, range: match.range)
+            guard !editor.hasMarkedText() else { return }
+            if highlightedSource == editor.string {
+                applySyntaxColors(editor)
+                rangeSource = ""
+                highlightPlayback(editor)
+                return
+            }
+            cancelHighlight()
+            highlightedSource = nil
+            highlightedTokens = []
+            guard let request = parent.semanticTokens else { return }
+            let source = editor.string
+            let identity = documentID
+            let context = parent.syntaxContext
+            let generation = highlightGeneration
+            highlightTask = Task { @MainActor [weak self, weak editor] in
+                do {
+                    try await Task.sleep(for: .milliseconds(180))
+                    let tokens = try await request(source)
+                    try Task.checkCancellation()
+                    guard let self, let editor, generation == self.highlightGeneration,
+                          self.documentID == identity, self.parent.syntaxContext == context,
+                          editor.string == source, !editor.hasMarkedText() else { return }
+                    self.highlightedSource = source
+                    self.highlightedTokens = tokens
+                    self.applySyntaxColors(editor)
+                    self.rangeSource = ""
+                    self.highlightPlayback(editor)
+                    self.parent.onHighlightStatus("")
+                } catch is CancellationError {
+                    // The next committed source snapshot owns its presentation.
+                } catch {
+                    guard let self, generation == self.highlightGeneration, self.documentID == identity else { return }
+                    self.parent.onHighlightStatus("Syntax highlighting: \(error.localizedDescription)")
                 }
-            } catch { assertionFailure("Invalid static syntax-coloring expression: \(error)") }
+            }
+        }
+
+        private func applySyntaxColors(_ editor: NSTextView) {
+            guard !editor.hasMarkedText(), highlightedSource == editor.string, let storage = editor.textStorage else { return }
+            let length = storage.length
+            storage.beginEditing()
+            storage.addAttribute(.foregroundColor, value: parent.theme.palette.foreground, range: NSRange(location: 0, length: length))
+            for token in highlightedTokens where token.range.location >= 0 && NSMaxRange(token.range) <= length {
+                storage.addAttribute(.foregroundColor, value: parent.theme.palette.color(for: token), range: token.range)
+            }
             storage.endEditing()
         }
     }

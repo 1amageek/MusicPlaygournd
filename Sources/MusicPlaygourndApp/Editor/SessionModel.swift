@@ -173,6 +173,7 @@ final class SessionModel {
     var bottomLayout = false
     var audioError = ""
     var completionStatus = ""
+    var highlightingStatus = ""
     var rowLines: [Int: Int] = [:]
     var resultLines: [Int: Int] = [:]
     var spectrum = [Float](repeating: -90, count: SpectrumAnalyzer.bandCount)
@@ -359,7 +360,9 @@ final class SessionModel {
                 .appending(path: "MusicPlaygournd/ProjectBuild"))
         completionService = SwiftCompletionService(packageURL: packageURL,
             workspace: cache.deletingLastPathComponent().appending(path: "Completion-\(ProcessInfo.processInfo.processIdentifier)"),
-            sourceKitLSPExecutable: URL(fileURLWithPath: swift).deletingLastPathComponent().appending(path: "sourcekit-lsp").path)
+            sourceKitLSPExecutable: URL(fileURLWithPath: swift).deletingLastPathComponent().appending(path: "sourcekit-lsp").path,
+            hostModuleDirectory: bundle.object(forInfoDictionaryKey: "SwiftExecutable") == nil
+                ? bundle.executableURL?.deletingLastPathComponent() : bundle.resourceURL?.appending(path: "RuntimeSDK"))
         do { analyzer = try SpectrumAnalyzer() }
         catch { diagnostic = "Spectrum analyzer could not initialize: \(error)" }
         do { engine = try AudioLoopEngine() }
@@ -375,6 +378,22 @@ final class SessionModel {
         self.midiService = midiService
         do { analyzer = try SpectrumAnalyzer() }
         catch { diagnostic = "Spectrum analyzer could not initialize: \(error)" }
+    }
+
+    var syntaxContext: String {
+        "\(project?.root.path ?? ""):\(projectRequestID):\(fileURL?.path ?? "")"
+    }
+
+    func previewSemanticTokens(source: String) async throws -> [SwiftSemanticToken] {
+        try await completionService.semanticTokens(source: source)
+    }
+
+    func semanticTokens(source: String) async throws -> [SwiftSemanticToken] {
+        if let fileURL, fileURL.pathExtension != "swift" { return [] }
+        if isProjectDocument, let projectCompletion, let fileURL {
+            return try await projectCompletion.semanticTokens(source: source, file: fileURL, buffers: projectBuffers)
+        }
+        return try await completionService.semanticTokens(source: source)
     }
 
     func completions(source: String, utf16Offset: Int) async throws -> [SwiftCompletion] {

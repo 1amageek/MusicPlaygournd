@@ -30,3 +30,5 @@ Failure is reported as a diagnostic or typed error; the last adopted loop surviv
 Integration smoke test and visible native app verify the real workflow; command-line launch may use package source path, bundle launch evaluates against its precompiled runtime SDK and retains the embedded source workspace for completion.
 
 Standalone release packaging uses public SwiftMusic 0.5.0. Generated evaluator and completion manifests use that same URL/version; no adjacent SwiftMusic directory is required. The bundled host package and runtime SDK retain matching source/object/compiler identity. Verify from an independent checkout with real evaluation and SourceKit-LSP.
+
+Semantic highlighting is owned by the existing Evaluation/Editor components alongside completion. Its source-snapshot, language-service and presentation contracts are documented in their linked designs.

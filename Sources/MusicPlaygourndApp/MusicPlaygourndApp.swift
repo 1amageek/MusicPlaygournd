@@ -40,6 +40,6 @@ struct MusicPlaygourndApp: App {
                 Button("Bottom Overview") { model.inlineLayout = false; model.bottomLayout = true }
             }
         }
-        Settings { EditorSettingsView() }
+        Settings { EditorSettingsView(semanticTokens: model.previewSemanticTokens) }
     }
 }

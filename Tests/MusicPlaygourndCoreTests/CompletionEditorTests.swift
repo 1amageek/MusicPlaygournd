@@ -237,6 +237,84 @@ extension NativeHostTests {
             #expect(editor.string == original)
         }
 
+        @Test(.timeLimit(.minutes(1)))
+        func semanticColorsPreserveEditingAndRejectStaleDocuments() async throws {
+            var source = "struct Old {}"
+            let editor = CompletionTextView(frame: NSRect(x: 0, y: 0, width: 500, height: 300))
+            editor.isRichText = false
+            editor.allowsUndo = true
+            editor.string = source
+            var delivered = false
+            var requestStarted = false
+            var view = CodeEditor(text: Binding(get: { source }, set: { source = $0 }),
+                inlineLoop: nil, inlineEnabled: false, resultLines: [:], beatPosition: 0,
+                isPlaying: false, selectionLine: nil, selectionToken: 0, rhythmLines: [],
+                rowLines: [:], patternTexts: [:], activeTokens: [:], scrollDelta: 0,
+                onLayout: { _ in }, beforeEdit: { _, _ in }, onEdit: {},
+                completions: { _, _ in [] }, onCompletionStatus: { _ in },
+                semanticTokens: { snapshot in
+                    requestStarted = true
+                    if snapshot.contains("Old") {
+                        // An uncooperative response must still be rejected by document identity.
+                        await Task.detached {
+                            do { try await Task.sleep(for: .milliseconds(100)) }
+                            catch { Issue.record(error) }
+                        }.value
+                    }
+                    return [SwiftSemanticToken(range: NSRange(location: 0, length: 6), kind: "keyword")]
+                }, onHighlightStatus: { status in
+                    #expect(status.isEmpty)
+                    delivered = true
+                })
+            let coordinator = view.makeCoordinator()
+            editor.delegate = coordinator
+            coordinator.installDocument(UUID(), editor: editor, state: EditorDocumentState())
+            coordinator.highlight(editor)
+            let deadline = ContinuousClock.now + .seconds(3)
+            while !requestStarted, ContinuousClock.now < deadline { try await Task.sleep(for: .milliseconds(10)) }
+            #expect(requestStarted)
+            let scroll = NSScrollView()
+            scroll.documentView = editor
+            source = "let fresh = 1"
+            coordinator.switchDocument(to: UUID(), text: source, editor: editor, scroll: scroll, state: EditorDocumentState())
+            coordinator.cancelHighlight()
+            try await Task.sleep(for: .milliseconds(130))
+            #expect(!delivered)
+            #expect(editor.string == source)
+            editor.setSelectedRange(NSRange(location: source.utf16.count, length: 0))
+            editor.insertText("2", replacementRange: editor.selectedRange())
+            editor.breakUndoCoalescing()
+            coordinator.cancelHighlight()
+            let selection = editor.selectedRange()
+            let undo = try #require(editor.undoManager)
+            #expect(undo.canUndo)
+            view.semanticTokens = { _ in [SwiftSemanticToken(range: NSRange(location: 0, length: 3), kind: "keyword")] }
+            coordinator.parent = view
+            coordinator.highlight(editor)
+            while !delivered, ContinuousClock.now < deadline { try await Task.sleep(for: .milliseconds(10)) }
+            #expect(delivered)
+            #expect(editor.selectedRange() == selection)
+            #expect(editor.string == "let fresh = 12")
+            let theme = EditorTheme(rawValue: UserDefaults.standard.string(forKey: "editor.theme") ?? "") ?? .midnight
+            #expect(editor.textStorage?.attribute(.foregroundColor, at: 0, effectiveRange: nil) as? NSColor == theme.palette.keyword)
+            undo.undo()
+            #expect(editor.string == "let fresh = 1")
+            coordinator.cancelHighlight()
+            editor.setMarkedText("日本語", selectedRange: NSRange(location: 3, length: 0), replacementRange: editor.selectedRange())
+            let marked = editor.markedRange()
+            let markedSource = editor.string
+            coordinator.highlight(editor)
+            #expect(editor.markedRange() == marked)
+            #expect(editor.string == markedSource)
+            editor.unmarkText()
+            for theme in EditorTheme.allCases {
+                #expect(theme.palette.color(for: SwiftSemanticToken(range: NSRange(location: 0, length: 1), kind: "struct")) == theme.palette.type)
+                #expect(theme.palette.function != theme.palette.foreground)
+            }
+            coordinator.cancelHighlight()
+            coordinator.cancelCompletion()
+        }
+
         @MainActor private final class EditObserver: NSObject, NSTextViewDelegate {
             var changes = 0
             var ranges: [NSRange] = []

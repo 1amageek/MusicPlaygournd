@@ -87,3 +87,7 @@
 - [x] REL050-1 Published SwiftMusic 0.5.0 Preview at cc5d9d2; URL-only manifest and tag/main identity verified; 205 library and 7 host tests from the unchanged implementation remain valid `depends:none` `parallel:none`
 - [x] REL050-2 Updated app, evaluation/completion manifests, new-project template, tracked example, README and design versions to 0.5.0 `depends:REL050-1` `parallel:none`
 - [x] REL050-INT Public tag resolved; fresh project compilation/rendering and slider PCM changes plus real SourceKit completion passed (2 tests, 79.7s); release app build and bundled runtime digests verified `depends:REL050-1,REL050-2` `parallel:none`
+
+- [x] COLOR-1 Replace fixed-name coloring with SourceKit semantic tokens for project and standalone documents; preserve exact source/UTF-16 mapping, document isolation, completion serialization, cancellation and bounded lifecycle `depends:none` `parallel:none`
+- [x] COLOR-2 Apply token categories through all five themes without modifying characters, selection, undo or marked text; verify actual SourceKit output and native editor behavior `depends:COLOR-1` `parallel:none`
+- [x] COLOR-INT Release app and starter/Settings visually verified; real SourceKit, UTF-16, native editing and stale-response checks passed `depends:COLOR-1,COLOR-2` `parallel:none`

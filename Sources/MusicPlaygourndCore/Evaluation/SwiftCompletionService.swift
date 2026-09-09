@@ -5,24 +5,31 @@ public actor SwiftCompletionService {
     private let packageURL: URL
     private let workspace: URL
     private let executable: String
+    private let hostModuleDirectory: URL?
     private var connection: SwiftCompletionConnection?
     private var startup: Task<SwiftCompletionConnection, Error>?
     private var generation = 0
     private var version = 0
     private var closed = false
+    private var busy = false
     private static let prefix = "import SwiftMusic\n"
 
-    public init(packageURL: URL, workspace: URL, sourceKitLSPExecutable: String) {
+    public init(packageURL: URL, workspace: URL, sourceKitLSPExecutable: String, hostModuleDirectory: URL? = nil) {
+        self.hostModuleDirectory = hostModuleDirectory
         self.packageURL = packageURL
         self.workspace = workspace
         executable = sourceKitLSPExecutable
     }
 
     public func projectService(root: URL) -> ProjectCompletionService {
-        ProjectCompletionService(root: root, executable: executable)
+        ProjectCompletionService(root: root, executable: executable, hostModuleDirectory: hostModuleDirectory)
     }
 
     public func completions(source: String, utf16Offset: Int) async throws -> [SwiftCompletion] {
+        while busy { try await Task.sleep(for: .milliseconds(20)) }
+        try Task.checkCancellation()
+        busy = true
+        defer { busy = false }
         guard !closed else { throw SwiftCompletionError.shutdown }
         guard source.utf8.count <= 65_536 else { throw SwiftCompletionError.invalidSource("Source exceeds 64 KiB.") }
         guard utf16Offset >= 0, utf16Offset <= source.utf16.count,
@@ -68,12 +75,43 @@ public actor SwiftCompletionService {
         }
     }
 
+    public func semanticTokens(source: String) async throws -> [SwiftSemanticToken] {
+        while busy { try await Task.sleep(for: .milliseconds(20)) }
+        try Task.checkCancellation()
+        guard !closed else { throw SwiftCompletionError.shutdown }
+        guard source.utf8.count <= 65_536 else { throw SwiftCompletionError.invalidSource("Source exceeds 64 KiB.") }
+        busy = true
+        defer { busy = false }
+        let server = try await server(source: source)
+        try Task.checkCancellation()
+        let uri = workspace.appending(path: "Sources/CompletionSession/Session.swift").absoluteString
+        version += 1
+        try await server.notify(method: "textDocument/didChange", parameters: Self.json([
+            "textDocument": ["uri": uri, "version": version], "contentChanges": [["text": Self.prefix + source]]
+        ]))
+        return try await server.semanticTokens(uri: uri, source: source, prefix: Self.prefix)
+    }
+
     private func server(source: String) async throws -> SwiftCompletionConnection {
         if let connection { return connection }
         if let startup { return try await startup.value }
         let directory = workspace
         let executable = executable
+        let hostModuleDirectory = hostModuleDirectory
         let task = Task {
+            var options: [String: Any] = ["reportSyntacticHighlightInSemanticTokens": true]
+            if let hostModuleDirectory {
+                guard FileManager.default.fileExists(atPath: hostModuleDirectory.appending(path: "MusicPlayground.swiftmodule").path) else {
+                    throw SwiftCompletionError.workspaceFailed("The host language module is missing.")
+                }
+                guard FileManager.default.fileExists(atPath: hostModuleDirectory.appending(path: "SwiftMusic.swiftmodule").path) else {
+                    throw SwiftCompletionError.workspaceFailed("The host SwiftMusic module is missing.")
+                }
+                // Standalone documents import the already-built host modules; indexing the entire
+                // SwiftMusic dependency again delays coloring without adding document semantics.
+                options["backgroundIndexing"] = false
+                options["swiftPM"] = ["swiftCompilerFlags": ["-I", hostModuleDirectory.path]]
+            }
             let sourceDirectory = directory.appending(path: "Sources/CompletionSession")
             try FileManager.default.createDirectory(at: sourceDirectory, withIntermediateDirectories: true)
             let manifest = """
@@ -88,12 +126,14 @@ public actor SwiftCompletionService {
             let server = SwiftCompletionConnection(executable: executable, workspace: directory)
             do {
                 try await server.start()
-                _ = try await server.request(method: "initialize", parameters: Self.json([
+                let initialization = try await server.request(method: "initialize", parameters: Self.json([
                     "processId": ProcessInfo.processInfo.processIdentifier,
                     "rootUri": directory.absoluteString,
-                    "capabilities": ["textDocument": ["completion": ["completionItem": ["snippetSupport": true]]]],
+                    "capabilities": SwiftSemanticToken.capabilities,
+                    "initializationOptions": options,
                     "workspaceFolders": [["uri": directory.absoluteString, "name": "CompletionSession"]]
                 ]), timeout: .seconds(30))
+                try await server.configureSemanticTokens(initialization)
                 try await server.notify(method: "initialized", parameters: Self.json([:]))
                 let uri = sourceDirectory.appending(path: "Session.swift").absoluteString
                 try await server.notify(method: "textDocument/didOpen", parameters: Self.json([

@@ -123,6 +123,8 @@ struct ContentView: View {
                 beforeEdit: model.beforeEdit, onEdit: model.sourceChanged,
                 completions: { source, offset in try await model.completions(source: source, utf16Offset: offset) },
                 onCompletionStatus: { model.completionStatus = $0 },
+                semanticTokens: { try await model.semanticTokens(source: $0) },
+                syntaxContext: model.syntaxContext, onHighlightStatus: { model.highlightingStatus = $0 },
                 isReadOnly: model.activeDocument.isReadOnly,
                 switches: model.switches, switchSelections: model.switchSelections,
                 switchesEnabled: model.switchesEnabled, onSelectSwitch: model.selectSwitch,
@@ -166,6 +168,12 @@ struct ContentView: View {
                     Text("No diagnostics")
                         .font(.system(size: 11, design: .monospaced))
                         .foregroundStyle(.secondary)
+                }
+                if !model.highlightingStatus.isEmpty {
+                    Text(model.highlightingStatus)
+                        .font(.system(size: 11, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                        .textSelection(.enabled)
                 }
                 if !model.completionStatus.isEmpty {
                     Divider()

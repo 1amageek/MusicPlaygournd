@@ -123,3 +123,17 @@ Opening a project also reads SwiftPM show-dependencies JSON, resolving missing c
 
 ## Inline control integration
 The retained performance adapter owns a MusicPlayground control session. It evaluates declarations inside that scope, validates complete value sets, applies State and automatic values, and prepares replacement audio without invoking the Swift compiler. Editor metadata transports source positions. Existing transaction confirmation owns adoption and failed updates retain accepted audio. Both plain Music and PerformanceEntry use the same adapter; model controls retain their original model identity.
+
+### Semantic source coloring
+
+SourceKit-LSP owns Swift token classification, including lexical tokens, declarations and references. The host decodes the negotiated semantic-token legend and delta-encoded UTF-16 ranges (including compiler-ordered overlapping tokens); it never infers types from capitalization or a list of music names. Project documents use the existing real-package language-service connection and unsaved buffers. Standalone documents use the existing generated host workspace. Completion and coloring serialize document updates and requests on each connection so completion's temporarily removed identifier cannot contaminate highlighting. These services remain independent of playback.
+
+`source snapshot -> serialized didOpen/didChange -> semanticTokens/full + documentSymbol -> validated ranges -> editor`
+
+A request owns an immutable source snapshot. Invalid token data or unavailable capability throws an explicit error. Payloads retain existing 64 KiB source and 4 MiB JSON-RPC bounds. The negotiated legend is connection-owned actor state; cancellation, project replacement and shutdown use existing connection lifecycle. Real SourceKit tests verify local/imported type references, functions, properties, strings, comments, Unicode, edits and completion coexistence; decoder checks reject invalid bounds. App integration owns stale-result rejection and nonmutating presentation.
+
+SourceKit-LSP is initialized with `reportSyntacticHighlightInSemanticTokens: true`, combining SwiftParser classifications with compiler semantics. Project SwiftPM compiler flags include the running host’s matching `MusicPlayground.swiftmodule` directory (bundled RuntimeSDK or native executable products). This makes host-only slider declarations visible without modifying user manifests or creating a second package graph. Standalone analysis uses the same module search path with its existing private SwiftMusic workspace. No custom Swift lexer is used.
+
+SourceKit document symbols supply declaration selection ranges because its semantic token stream intentionally classifies declaration identifiers lexically. Declarations are applied after reference/syntax tokens. Both requests run against the same serialized document snapshot.
+
+When matching precompiled host modules are supplied, the standalone workspace disables whole-dependency background indexing. It still synchronizes build settings and type-checks each requested document against those modules. Real projects retain dependency preparation/indexing for their own libraries. This prevents Settings/standalone coloring from rebuilding and indexing the already-bundled SwiftMusic source before displaying a small document.

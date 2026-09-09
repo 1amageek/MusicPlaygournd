@@ -22,7 +22,7 @@ struct SwiftCompletionServiceTests {
             .deletingLastPathComponent().deletingLastPathComponent()
         let workspace = FileManager.default.temporaryDirectory.appending(path: "SwiftCompletionService-\(UUID().uuidString)")
         let executable = try #require(try NativeHostTests.SwiftCompletionConnectionTests.resolveSourceKitLSP())
-        let service = SwiftCompletionService(packageURL: package, workspace: workspace, sourceKitLSPExecutable: executable)
+        let service = SwiftCompletionService(packageURL: package, workspace: workspace, sourceKitLSPExecutable: executable, hostModuleDirectory: package.appending(path: ".build/debug"))
         do {
             let source = "// 🎵\nstruct Session: Music {\n var body: some Sound {\n Sample(\"kick\").ga\n }\n}"
             let cursor = NSMaxRange((source as NSString).range(of: ".ga"))
@@ -59,6 +59,34 @@ struct SwiftCompletionServiceTests {
             catch is CancellationError { }
             let recovered = try await service.completions(source: rhythmSource, utf16Offset: cursor)
             #expect(recovered.contains { $0.label.contains("rhythm") })
+            let colored = #"""
+            // 🎵 Swift semantic colors
+            import MusicPlayground
+            /* outer /* nested */ comment */
+            struct RhythmSection: Sound {
+                var body: some Sound { Sample("kick").gain(slider(0.5, in: 0...1)) }
+            }
+            struct Session: Music {
+                var body: some Sound { RhythmSection() }
+                let url = #"https://example.com/日本語"#
+                let message = "value \(1 + 2)"
+            }
+            """#
+            let tokens = try await service.semanticTokens(source: colored)
+            for (word, kind) in [("struct", "keyword"), ("RhythmSection", "struct"), ("Sound", "interface"), ("0.5", "number")] {
+                #expect(tokens.contains { (colored as NSString).substring(with: $0.range) == word && $0.kind == kind }, "Missing \(kind): \(word)")
+            }
+            let bodyKinds = tokens.filter { (colored as NSString).substring(with: $0.range) == "body" }.map(\.kind)
+            #expect(bodyKinds.contains("property") || bodyKinds.contains("variable"), "body classifications: \(bodyKinds)")
+            let call = (colored as NSString).range(of: "RhythmSection()")
+            #expect(tokens.contains { $0.range.location == call.location && ["struct", "method"].contains($0.kind) })
+            let url = (colored as NSString).range(of: "https://example.com/日本語")
+            #expect(tokens.contains { $0.kind == "string" && NSIntersectionRange($0.range, url) == url })
+            async let coloring = service.semanticTokens(source: colored)
+            async let completing = service.completions(source: rhythmSource, utf16Offset: cursor)
+            let (sameTokens, candidates) = try await (coloring, completing)
+            #expect(sameTokens == tokens)
+            #expect(candidates.contains { $0.label.contains("rhythm") })
             try await service.shutdown()
             #expect(!(FileManager.default.fileExists(atPath: workspace.path)))
         } catch {

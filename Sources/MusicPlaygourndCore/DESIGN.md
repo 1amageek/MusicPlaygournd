@@ -26,3 +26,5 @@ Failure is reported as a diagnostic or typed error; the last adopted loop surviv
 
 ## Verification and Change Impact
 Core tests own PCM behavior, limits, revision handoff and cancellation. Parent integration owns actual UI/device behavior.
+
+Semantic highlighting is owned by the existing Evaluation/Editor components alongside completion. Its source-snapshot, language-service and presentation contracts are documented in their linked designs.

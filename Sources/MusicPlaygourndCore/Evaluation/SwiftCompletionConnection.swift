@@ -12,6 +12,7 @@ actor SwiftCompletionConnection {
     private var childInput: FileHandle?
     private var output: FileHandle?
     private var readerTask: Task<Void, Never>?
+    private var semanticLegend: (types: [String], modifiers: [String])?
     private var nextRequestID = 1
     private var pending: [Int: CheckedContinuation<Data, Error>] = [:]
     private var isClosed = true
@@ -82,6 +83,22 @@ actor SwiftCompletionConnection {
         }
     }
 
+    func configureSemanticTokens(_ initialization: Data) throws {
+        semanticLegend = try SwiftSemanticToken.legend(initialization)
+    }
+
+    func semanticTokens(uri: String, source: String, prefix: String = "") async throws -> [SwiftSemanticToken] {
+        guard let semanticLegend else { throw SwiftCompletionError.protocolError("Semantic tokens were not negotiated.") }
+        let parameters = try Self.jsonData(["textDocument": ["uri": uri]])
+        async let semanticResponse = request(method: "textDocument/semanticTokens/full", parameters: parameters, timeout: .seconds(30))
+        async let declarationResponse = request(method: "textDocument/documentSymbol", parameters: parameters, timeout: .seconds(30))
+        let (data, symbols) = try await (semanticResponse, declarationResponse)
+        try Task.checkCancellation()
+        let tokens = try SwiftSemanticToken.decode(data, source: source, prefix: prefix,
+            types: semanticLegend.types, modifiers: semanticLegend.modifiers)
+        return tokens + (try SwiftSemanticToken.declarations(symbols, source: source, prefix: prefix))
+    }
+
     func request(method: String, parameters: Data, timeout: Duration) async throws -> Data {
         guard !isClosed, process != nil else {
             throw SwiftCompletionError.processExited(-1)
@@ -103,7 +120,7 @@ actor SwiftCompletionConnection {
                 }
                 group.addTask {
                     try await Task.sleep(for: timeout)
-                    throw SwiftCompletionError.timedOut("The SourceKit-LSP request exceeded its bound.")
+                    throw SwiftCompletionError.timedOut("The SourceKit-LSP \(method) request exceeded its bound.")
                 }
                 defer { group.cancelAll() }
                 guard let result = try await group.next() else {

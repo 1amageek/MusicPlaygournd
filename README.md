@@ -99,7 +99,7 @@ Dragging leaves the source unchanged and updates the retained session without re
 
 Controls are declared in `Music.body`; pass their numeric values into reusable sounds. Automatic identities survive indentation changes and inserted preceding lines. Use an explicit `id:` when a control should survive changes to its declaration or when identical declarations need distinct identities.
 
-`slider` and `acidEnvelope` belong to the editor's `MusicPlayground` library. SwiftMusic remains independent of the editor and SwiftUI. For standalone SwiftPM builds or project SourceKit completion of these host APIs, explicitly add this repository's `MusicPlayground` library product to the package dependencies.
+`slider` and `acidEnvelope` belong to the editor's `MusicPlayground` library. SwiftMusic remains independent of the editor and SwiftUI. The editor makes these host APIs available to SourceKit automatically. For standalone SwiftPM builds, explicitly add this repository's `MusicPlayground` library product to the package dependencies.
 
 See [InlineControls.swift](Examples/InlineControls.swift).
 
@@ -188,6 +188,8 @@ Unsaved session and helper-file buffers participate in evaluation without rewrit
 | Control–Space | Request completion |
 | Return / Tab | Accept completion |
 | Space, outside text input | Play / pause |
+
+SourceKit-LSP provides syntax and semantic highlighting for Swift keywords, comments, strings, types, functions and properties, including your own declarations and references.
 
 The editor provides code-only line numbers, automatic indentation, four-column tab stops, per-document undo history, and configurable font size and highlighting themes in Settings.
 

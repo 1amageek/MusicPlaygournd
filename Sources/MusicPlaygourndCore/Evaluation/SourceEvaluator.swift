@@ -90,7 +90,7 @@ public actor SourceEvaluator {
                 environment = try JSONDecoder().decode(CompilerEnvironment.self,
                     from: Data(contentsOf: runtimeSDK.appending(path: "environment.json")))
             } catch { throw EvaluationError.invalidResult("The bundled runtime SDK is unreadable: \(error)") }
-            for name in ["SwiftMusic.o", "MusicPlaygourndCore.o", "SwiftMusic.swiftmodule", "MusicPlaygourndCore.swiftmodule"] {
+            for name in ["SwiftMusic.o", "MusicPlayground.o", "MusicPlaygourndCore.o", "SwiftMusic.swiftmodule", "MusicPlayground.swiftmodule", "MusicPlaygourndCore.swiftmodule"] {
                 guard manager.fileExists(atPath: runtimeSDK.appending(path: name).path) else {
                     throw EvaluationError.invalidResult("The bundled runtime SDK is missing \(name). Rebuild the app.")
                 }
@@ -101,7 +101,7 @@ public actor SourceEvaluator {
             do {
                 let files: Set<String> = try {
                 var files = Set<String>()
-                for name in ["SwiftMusic.o", "MusicPlaygourndCore.o", "SwiftMusic.swiftmodule", "MusicPlaygourndCore.swiftmodule"] {
+                for name in ["SwiftMusic.o", "MusicPlayground.o", "MusicPlaygourndCore.o", "SwiftMusic.swiftmodule", "MusicPlayground.swiftmodule", "MusicPlaygourndCore.swiftmodule"] {
                     let root = runtimeSDK.appending(path: name)
                     let values = try root.resourceValues(forKeys: [.isDirectoryKey])
                     if values.isDirectory == true {
@@ -303,6 +303,7 @@ public actor SourceEvaluator {
                 "-sdk", environment.sdkPath, "-I", runtimeSDK.path,
                 entryFile.path,
                 runtimeSDK.appending(path: "SwiftMusic.o").path,
+                runtimeSDK.appending(path: "MusicPlayground.o").path,
                 runtimeSDK.appending(path: "MusicPlaygourndCore.o").path,
                 "-o", executable.path], timeout: 60, progress: progress)
         } else {
@@ -362,6 +363,7 @@ public actor SourceEvaluator {
                         "-sdk", environment.sdkPath, "-I", runtimeSDK.path,
                         entryFile.path,
                         runtimeSDK.appending(path: "SwiftMusic.o").path,
+                        runtimeSDK.appending(path: "MusicPlayground.o").path,
                         runtimeSDK.appending(path: "MusicPlaygourndCore.o").path,
                         "-o", executable.path], timeout: 60, progress: progress)
                 } else {
@@ -981,6 +983,12 @@ public actor SourceEvaluator {
                             session.__swiftMusicSwitchApply(initialSelection)
                             throw error
                         }
+                        // FIXME(INCOMPLETE_IMPLEMENTATION): Mutable sliders are not supported in fixed switch banks.
+                        // Generated session preparation rejects this combination until every retained variant
+                        // can update and adopt the same slider generation without replaying stale audio.
+                        guard preparations.allSatisfy({ $0.performanceControls.isEmpty }) else {
+                            throw EvaluationError.invalidResult("Inline sliders require a session without a pre-rendered switch bank.")
+                        }
                         let variants = try preparations.enumerated().map { offset, preparation in
                             guard let metadata = preparation.metadata else {
                                 throw EvaluationError.invalidResult("Switch variant metadata is unavailable.")
@@ -1047,16 +1055,10 @@ public actor SourceEvaluator {
                 source: String,
                 revision: UInt64
             ) throws -> RenderWorkerPreparation {
-                let policy = try LiveLoopPolicy(
-                    beatsPerBar: beatsPerBar,
-                    maximumBeats: MusicalTime(numerator: UInt64(maximumLiveBeats), denominator: 1)
-                )
-                let compiler = SoundCompiler(limits: bounds)
-                let sound = try compiler.compileDetailed(session, liveLoop: policy)
-                let metadata = try EditorSemanticMetadata(sound: sound, source: source, revision: revision)
-                let prepared = try LoopRenderSession(
-                    sound: sound, bpm: fallbackBPM, beatsPerBar: beatsPerBar, revision: revision)
-                return RenderWorkerPreparation(session: prepared, metadata: metadata, source: source)
+                let adapter = PerformanceWorkerAdapter(
+                    base: session, model: PlaygroundSessionModel(), compiler: SoundCompiler(limits: bounds))
+                return try adapter.prepare(revision: revision, source: source,
+                    fallbackBPM: fallbackBPM, beatsPerBar: beatsPerBar)
             }
 
             @MainActor

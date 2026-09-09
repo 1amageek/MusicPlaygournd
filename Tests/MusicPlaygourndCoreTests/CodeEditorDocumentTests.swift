@@ -1,4 +1,5 @@
 import AppKit
+import MusicPlayground
 import SwiftUI
 import MusicPlaygourndCore
 import Testing
@@ -151,6 +152,46 @@ struct CodeEditorDocumentTests {
         release = nil
         for _ in 0..<100 { await Task.yield() }
         #expect(!statuses.contains("No Swift completions"))
+    }
+
+    @Test(.timeLimit(.minutes(1)))
+    func inlineSliderUsesGlyphPositionAndLeavesSourceUntouched() throws {
+        let controls = PlaygroundControlSession()
+        _ = try controls.evaluate { slider(0.3, id: "acid", line: 2, column: 1) }
+        var view = makeCodeEditor(documentID: UUID(), completions: { _, _ in [] }, onCompletionStatus: { _ in })
+        var changed: Double?
+        view.sliders = controls.definitions
+        view.onSliderChange = { _, value in changed = value }
+        let coordinator = view.makeCoordinator()
+        let scroll = NSScrollView(frame: NSRect(x: 0, y: 0, width: 300, height: 150))
+        let editor = CompletionTextView(frame: scroll.bounds)
+        editor.textContainer?.widthTracksTextView = false
+        editor.textContainer?.containerSize = NSSize(width: 10_000, height: 10_000)
+        editor.string = "// Heading\n.acidEnvelope(slider(0.3))\n"
+        editor.setSelectedRange(NSRange(location: 3, length: 0))
+        scroll.documentView = editor
+        coordinator.scroll = scroll
+        coordinator.inlineLayout = InlineRhythmLayout(editor: editor)
+        let original = editor.string
+        coordinator.publishLayout()
+        let slider = try #require(editor.subviews.compactMap { $0 as? NSSlider }.first)
+        let manager = try #require(editor.layoutManager)
+        let glyph = manager.glyphIndexForCharacter(at: 11)
+        let rect = manager.lineFragmentUsedRect(forGlyphAt: glyph, effectiveRange: nil)
+        #expect(slider.frame.minX > editor.textContainerOrigin.x + rect.maxX)
+        #expect(slider.frame.minY == editor.textContainerOrigin.y + rect.minY)
+        coordinator.parent.sliderValues = ["acid": 0.7]
+        coordinator.publishLayout()
+        #expect(slider.doubleValue == 0.7)
+        slider.doubleValue = 0.8
+        #expect(slider.sendAction(slider.action, to: slider.target))
+        #expect(changed == 0.8)
+        #expect(editor.string == original)
+        #expect(editor.selectedRange() == NSRange(location: 3, length: 0))
+        #expect(editor.undoManager?.canUndo != true)
+        coordinator.parent.sliders = []
+        coordinator.publishLayout()
+        #expect(!editor.subviews.contains { $0 is NSSlider })
     }
 
     private func makeCodeEditor(

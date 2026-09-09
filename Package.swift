@@ -6,15 +6,17 @@ let package = Package(
     platforms: [.macOS(.v15)],
     products: [
         .executable(name: "MusicPlaygournd", targets: ["MusicPlaygourndApp"]),
-        .library(name: "MusicPlaygourndCore", targets: ["MusicPlaygourndCore"])
+        .library(name: "MusicPlaygourndCore", targets: ["MusicPlaygourndCore"]),
+        .library(name: "MusicPlayground", targets: ["MusicPlayground"])
     ],
     dependencies: [
         .package(url: "https://github.com/1amageek/SwiftMusic.git", exact: "0.4.0")
     ],
     targets: [
+        .target(name: "MusicPlayground", dependencies: [.product(name: "SwiftMusic", package: "SwiftMusic")], exclude: ["DESIGN.md"]),
         .target(
             name: "MusicPlaygourndCore",
-            dependencies: [.product(name: "SwiftMusic", package: "SwiftMusic")],
+            dependencies: ["MusicPlayground", .product(name: "SwiftMusic", package: "SwiftMusic")],
             exclude: ["DESIGN.md", "Evaluation/DESIGN.md", "Rendering/DESIGN.md", "Playback/DESIGN.md", "MIDI/DESIGN.md", "AudioUnits/DESIGN.md"]
         ),
         .executableTarget(

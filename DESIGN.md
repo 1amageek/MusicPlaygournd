@@ -1,10 +1,10 @@
 # MusicPlaygournd
 
 ## Purpose and Scope
-Standalone macOS 15+ live Swift editor; the native package owns the app and host runtime. Parent: none. Children: [Core](Sources/MusicPlaygourndCore/DESIGN.md), [App](Sources/MusicPlaygourndApp/DESIGN.md).
+Standalone macOS 15+ live Swift editor; the native package owns the app and host runtime. Parent: none. Children: [Declarations](Sources/MusicPlayground/DESIGN.md), [Core](Sources/MusicPlaygourndCore/DESIGN.md), [App](Sources/MusicPlaygourndApp/DESIGN.md).
 
 ## Responsibilities and Boundaries
-Uses the exact public SwiftMusic 0.3.0 package from GitHub. The build bundles the host source and matching runtime objects. Evaluation and completion workspaces resolve the same public SwiftMusic version rather than assuming an adjacent checkout. Editor code is trusted local Swift, evaluated in a separate process, not a security sandbox. Playback, transport, rendering, file editing, diagnostics, and visualization belong to this package.
+Uses the exact public SwiftMusic 0.4.0 package from GitHub. The build bundles the host source and matching runtime objects. Evaluation and completion workspaces resolve the same public SwiftMusic version rather than assuming an adjacent checkout. Editor code is trusted local Swift, evaluated in a separate process, not a security sandbox. Playback, transport, rendering, file editing, diagnostics, and visualization belong to this package.
 
 ## Related Designs
 Use the parent/child links above. Dependencies: SwiftMusic owns event semantics; Core owns rendering/playback/evaluation contracts; App consumes Core.
@@ -24,3 +24,5 @@ Failure is reported as a diagnostic or typed error; the last adopted loop surviv
 Run core behavioral tests, real compiler good/bad/recovery checks, AVAudioEngine output checks and live UI. Scripts/build-app.sh bundles source for evaluation and records the installed Swift executable. App runtime needs Swift 6.4 and Xcode command-line tools including Python3. Version 0.1.0 is a source preview release; no prebuilt notarized binary or App Store distribution is provided.
 
 SwiftPM project management is owned by the App editor and project evaluation/completion by Core Evaluation. Package.swift remains the source of target/dependency/resource membership. See the corresponding child designs for the project snapshot and last-good-audio contracts.
+
+The [MusicPlayground declaration library](Sources/MusicPlayground/DESIGN.md) owns host-only slider declarations and state connections. It depends on SwiftMusic and is consumed by the Core evaluation adapter and Editor.

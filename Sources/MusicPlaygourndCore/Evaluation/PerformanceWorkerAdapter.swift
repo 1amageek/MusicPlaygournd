@@ -1,11 +1,13 @@
 import Foundation
 import Observation
+import MusicPlayground
 import SwiftMusic
 
 /// Type-erased retained preparation for one generated PerformanceEntry model.
 @MainActor
 public final class PerformanceWorkerAdapter<Base: Music, Model: AnyObject & Observable & Sendable>:
     RenderWorkerPerformanceAdapter, Sendable {
+    private let sliders = PlaygroundControlSession()
     private let model: Model
     private let observation: PerformanceObservationSession<Base>
 
@@ -27,8 +29,14 @@ public final class PerformanceWorkerAdapter<Base: Music, Model: AnyObject & Obse
 
     public var controls: [PerformanceControlMetadata] {
         get throws {
-            guard let controllable = model as? any PerformanceControllable else { return [] }
-            return try controllable.performanceControlMetadata()
+            let mapped = try (model as? any PerformanceControllable)?.performanceControlMetadata() ?? []
+            let modelID = mapped.first?.modelID ?? "MusicPlayground"
+            let result = mapped + sliders.definitions.map {
+                PerformanceControlMetadata(modelID: modelID, controlID: $0.id, label: "Slider",
+                    domain: .double(range: $0.range, role: .scalar), value: .double($0.value))
+            }
+            try PerformanceControlMetadata.validate(result)
+            return result
         }
     }
 
@@ -36,24 +44,35 @@ public final class PerformanceWorkerAdapter<Base: Music, Model: AnyObject & Obse
         Dictionary(uniqueKeysWithValues: try controls.map { ($0.controlID, $0.value) })
     }
 
-    public func validate(values: [String: PerformanceControlValue]) throws {
-        guard let controllable = model as? any PerformanceControllable else {
-            guard values.isEmpty else {
-                throw PerformanceControlError.invalidMapping("The performance model declares no controls.")
+    private func sliderValues(_ values: [String: PerformanceControlValue]) throws -> [String: Double] {
+        var result: [String: Double] = [:]
+        for definition in sliders.definitions {
+            guard case .double(let value) = values[definition.id] else {
+                throw PerformanceControlError.valueTypeMismatch(definition.id)
             }
-            return
+            result[definition.id] = value
         }
-        try controllable.validatePerformanceControls(values)
+        return result
+    }
+
+    public func validate(values: [String: PerformanceControlValue]) throws {
+        guard Set(values.keys) == Set(try controls.map(\.controlID)) else {
+            throw PerformanceControlError.invalidMapping("Expected a complete control value set.")
+        }
+        let numeric = try sliderValues(values)
+        try sliders.validate(numeric)
+        if let controllable = model as? any PerformanceControllable {
+            try controllable.validatePerformanceControls(values.filter { numeric[$0.key] == nil })
+        }
     }
 
     public func apply(values: [String: PerformanceControlValue]) throws {
-        guard let controllable = model as? any PerformanceControllable else {
-            guard values.isEmpty else {
-                throw PerformanceControlError.invalidMapping("The performance model declares no controls.")
-            }
-            return
+        try validate(values: values)
+        let numeric = try sliderValues(values)
+        if let controllable = model as? any PerformanceControllable {
+            try controllable.applyPerformanceControls(values.filter { numeric[$0.key] == nil })
         }
-        try controllable.applyPerformanceControls(values)
+        try sliders.apply(numeric)
     }
 
     public func prepare(
@@ -75,11 +94,12 @@ public final class PerformanceWorkerAdapter<Base: Music, Model: AnyObject & Obse
             beatsPerBar: beatsPerBar,
             maximumBeats: MusicalTime(numerator: UInt64(maximumLiveBeats), denominator: 1)
         )
-        let sound = try observation.prepareDetailed(liveLoop: policy)
+        let sound = try sliders.evaluate(source: source) { try observation.prepareDetailed(liveLoop: policy) }
         let semanticMetadata = try EditorSemanticMetadata(
             sound: sound,
             source: source,
-            revision: revision
+            revision: revision,
+            sliders: sliders.definitions
         )
         let session = try LoopRenderSession(
             sound: sound,
@@ -91,7 +111,7 @@ public final class PerformanceWorkerAdapter<Base: Music, Model: AnyObject & Obse
             session: session,
             metadata: semanticMetadata,
             source: source,
-            performanceControls: metadata,
+            performanceControls: try controls,
             performanceAdapter: self
         )
     }

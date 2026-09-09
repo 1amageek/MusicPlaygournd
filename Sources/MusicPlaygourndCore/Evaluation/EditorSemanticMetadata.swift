@@ -1,5 +1,6 @@
 import Foundation
 import SwiftMusic
+import MusicPlayground
 
 /// Immutable, bounded semantic information retained with one adopted evaluation.
 public struct EditorSemanticMetadata: Codable, Sendable, Equatable, Hashable {
@@ -85,6 +86,7 @@ public struct EditorSemanticMetadata: Codable, Sendable, Equatable, Hashable {
         }
     }
 
+    public let sliders: [SliderDefinition]
     public let revision: UInt64
     public let sampleBanks: [SampleBank]
     public let completionSites: [SampleCompletionSite]
@@ -108,7 +110,8 @@ public struct EditorSemanticMetadata: Codable, Sendable, Equatable, Hashable {
     public init(
         revision: UInt64,
         sampleBanks: [SampleBank] = [],
-        completionSites: [SampleCompletionSite] = []
+        completionSites: [SampleCompletionSite] = [],
+        sliders: [SliderDefinition] = []
     ) throws {
         guard sampleBanks.count <= 1_024, completionSites.count <= 1_024 else {
             throw EvaluationError.invalidResult("Editor semantic metadata exceeds its bound.")
@@ -143,12 +146,18 @@ public struct EditorSemanticMetadata: Codable, Sendable, Equatable, Hashable {
         guard totalSiteValues <= 1_024 else {
             throw EvaluationError.invalidResult("Sample completion metadata exceeds its value bound.")
         }
+        guard sliders.count <= 32, Set(sliders.map(\.id)).count == sliders.count,
+              sliders.allSatisfy({ !$0.id.isEmpty && $0.line > 0 && $0.column > 0 && $0.range.lowerBound.isFinite && $0.range.upperBound.isFinite && $0.value.isFinite && $0.range.contains($0.value) }) else {
+            throw EvaluationError.invalidResult("Invalid inline slider metadata.")
+        }
+        self.sliders = sliders
         self.revision = revision
         self.sampleBanks = sampleBanks
         self.completionSites = completionSites
     }
 
     private enum CodingKeys: String, CodingKey {
+        case sliders
         case revision
         case sampleBanks
         case completionSites
@@ -159,18 +168,20 @@ public struct EditorSemanticMetadata: Codable, Sendable, Equatable, Hashable {
         try self.init(
             revision: container.decode(UInt64.self, forKey: .revision),
             sampleBanks: container.decode([SampleBank].self, forKey: .sampleBanks),
-            completionSites: container.decode([SampleCompletionSite].self, forKey: .completionSites)
+            completionSites: container.decode([SampleCompletionSite].self, forKey: .completionSites),
+            sliders: container.decodeIfPresent([SliderDefinition].self, forKey: .sliders) ?? []
         )
     }
 
     private init(uncheckedRevision revision: UInt64) {
+        self.sliders = []
         self.revision = revision
         self.sampleBanks = []
         self.completionSites = []
     }
 
     /// Builds metadata from compiler-retained descriptors and source anchors.
-    public init(sound: CompiledSound, source: String, revision: UInt64) throws {
+    public init(sound: CompiledSound, source: String, revision: UInt64, sliders: [SliderDefinition] = []) throws {
         var banks: [SampleBank] = []
         var sites: [SampleCompletionSite] = []
         for compiledSource in sound.sources {
@@ -191,7 +202,7 @@ public struct EditorSemanticMetadata: Codable, Sendable, Equatable, Hashable {
                 sites.append(try SampleCompletionSite(sourceID: compiledSource.id, contentRange: range, values: values))
             }
         }
-        try self.init(revision: revision, sampleBanks: banks, completionSites: sites)
+        try self.init(revision: revision, sampleBanks: banks, completionSites: sites, sliders: sliders)
     }
 }
 

@@ -267,3 +267,8 @@ Expanded EQ displays three color-coded native response curves and a white summed
 ApplicationDelegate owns a local key-down monitor for unmodified Space in the editor window and its child popovers. NSTextView/field-editor focus retains normal text input and IME handling; sheets and other windows retain their own keys. Eligible Space uses SessionModel.togglePlayback, consumes repeats without retriggering, and is removed on app termination. Verify native responder routing and actual playback toggling.
 
 Closing the last document keeps the loaded project and navigator visible, with No Selection in the editor. Welcome is shown only when neither a project nor a document is open. Native verification closes the last tab and reopens its file from the retained navigator.
+
+## Inline numeric controls
+CodeEditor places native NSSlider subviews beside compiler-reported source lines. Controls never modify the text storage or undo stack. SessionModel sends values through the existing performance transaction owner. Stale source positions are hidden until refreshed; document changes remove controls from unrelated files.
+
+Continuous inline drags retain at most one in-flight performance update and one latest pending value set. An in-flight drag generation may become audible before the pending generation, preventing cancellation starvation; discrete controls retain their existing latest-only cancellation behavior. Source changes still cancel stale revisions.

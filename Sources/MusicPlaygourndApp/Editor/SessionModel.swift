@@ -1,4 +1,5 @@
 import AppKit
+import MusicPlayground
 import MusicPlaygourndCore
 import Observation
 import SwiftMusic
@@ -312,6 +313,7 @@ final class SessionModel {
     private(set) var isRestoringHostState = false
 
     private struct PerformanceIntent {
+        let allowsIntermediateAdoption: Bool
         let revision: UInt64
         let generation: UInt64
         let values: [String: PerformanceControlValue]
@@ -746,12 +748,12 @@ final class SessionModel {
     }
 
     /// Applies one complete performance-model value set. The source and undo stack never change.
-    func setPerformanceValue(_ controlID: String, value: PerformanceControlValue) throws {
+    func setPerformanceValue(_ controlID: String, value: PerformanceControlValue, continuous: Bool = false) throws {
         var values = pendingPerformanceIntent?.values ?? activePerformanceIntent?.values
             ?? performanceTransaction?.values ?? performanceValues
         guard values[controlID] != nil else { throw PerformanceControlError.unknownControl(controlID) }
         values[controlID] = value
-        try requestPerformanceValues(values)
+        try requestPerformanceValues(values, continuous: continuous)
     }
 
     /// Applies both axes of one declared position control as one performance generation.
@@ -783,7 +785,7 @@ final class SessionModel {
         performanceTask != nil || performanceTransaction != nil || performanceConfirmationTask != nil
     }
 
-    private func requestPerformanceValues(_ values: [String: PerformanceControlValue]) throws {
+    private func requestPerformanceValues(_ values: [String: PerformanceControlValue], continuous: Bool = false) throws {
         guard !isShuttingDown, !requiresEvaluatorReset else { throw CancellationError() }
         guard let revision = currentRevision, revision == self.revision, !isPreparing else {
             throw EvaluationError.invalidResult("Wait for the current score to finish loading before changing performance controls.")
@@ -810,12 +812,12 @@ final class SessionModel {
             throw EvaluationError.invalidResult("Performance generation limit reached.")
         }
         requestedPerformanceGeneration += 1
-        let intent = PerformanceIntent(revision: revision, generation: requestedPerformanceGeneration, values: values)
+        let intent = PerformanceIntent(allowsIntermediateAdoption: continuous, revision: revision, generation: requestedPerformanceGeneration, values: values)
         pendingPerformanceIntent = intent
         if performanceTask == nil, performanceTransaction == nil {
             pendingPerformanceIntent = nil
             startPerformance(intent)
-        } else {
+        } else if !continuous {
             performanceTask?.cancel()
         }
     }
@@ -841,7 +843,7 @@ final class SessionModel {
                 overrides: scoreOverrides, revision: intent.revision, generation: intent.generation)
             try Task.checkCancellation()
             guard currentRevision == intent.revision, revision == intent.revision,
-                  requestedPerformanceGeneration == intent.generation else {
+                  (intent.allowsIntermediateAdoption || requestedPerformanceGeneration == intent.generation) else {
                 await evaluator.discardPerformance(revision: intent.revision, generation: intent.generation)
                 return
             }
@@ -1104,6 +1106,27 @@ final class SessionModel {
             if let index = event.patternStepIndex { tokens[event.sourceID, default: []].insert(index) }
         }
         return tokens
+    }
+
+    var inlineSliders: [SliderDefinition] {
+        guard audibleDocumentID == activeDocumentID, let currentRevision,
+              adoptedSourceDigest == DocumentHostStateStore.sourceDigest(source) else { return [] }
+        return (candidateMetadata[currentRevision]?.sliders ?? []).filter {
+            $0.fileID == "Session.swift" || $0.fileID.hasSuffix("/Session.swift")
+        }
+    }
+
+    var inlineSliderValues: [String: Double] {
+        let values = pendingPerformanceIntent?.values ?? activePerformanceIntent?.values
+            ?? performanceTransaction?.values ?? performanceValues
+        return values.reduce(into: [:]) { result, item in
+            if case .double(let value) = item.value { result[item.key] = value }
+        }
+    }
+
+    func setInlineSlider(_ id: String, value: Double) {
+        do { try setPerformanceValue(id, value: .double(value), continuous: true) }
+        catch { hostDiagnostic = error.localizedDescription }
     }
 
     func beforeEdit(range: NSRange, replacement: String) {

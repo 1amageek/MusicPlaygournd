@@ -528,6 +528,48 @@ extension NativeHostTests {
         }
 
         @MainActor
+        @Test(.timeLimit(.minutes(5)))
+        func continuousInlineChangesDoNotStarveAudioAdoption() async throws {
+            try await Self.withHarness { harness in
+                let model = harness.model
+                let file = harness.completionWorkspace.appending(path: "Session.swift")
+                try Self.performanceSource.write(to: file, atomically: true, encoding: .utf8)
+                model.fileURL = file
+                try await Self.adopt(harness, source: Self.performanceSource, revision: 1)
+                harness.engine.stop()
+                try harness.engine.prepareOfflineRenderingForTests()
+                try harness.engine.play()
+                _ = try harness.engine.renderOfflineForTests(frameCount: 4096)
+                var release: CheckedContinuation<Void, Never>?
+                model.performanceReservationDidPrepare = {
+                    await withCheckedContinuation { release = $0 }
+                }
+                defer { release?.resume(); model.performanceReservationDidPrepare = nil }
+                model.setInlineSlider("gain", value: 0.3)
+                try await Self.waitUntil("first drag reservation") { release != nil }
+                model.setInlineSlider("gain", value: 0.4)
+                model.setInlineSlider("gain", value: 0.5)
+                let first = release
+                release = nil
+                first?.resume()
+                try await Self.waitUntil("intermediate drag becomes audible") {
+                    _ = try harness.engine.renderOfflineForTests(frameCount: 256)
+                    model.refresh()
+                    return model.performanceNumber("gain") == 0.3 && release != nil
+                }
+                model.performanceReservationDidPrepare = nil
+                release?.resume()
+                release = nil
+                try await Self.waitUntil("latest drag becomes audible") {
+                    _ = try harness.engine.renderOfflineForTests(frameCount: 256)
+                    model.refresh()
+                    return model.performanceNumber("gain") == 0.5
+                }
+                #expect(model.diagnostic.isEmpty)
+            }
+        }
+
+        @MainActor
         @Test(.timeLimit(.minutes(6)))
         func performanceControlsCommitAfterAudibleFadeAndKeepEditorState() async throws {
             try await Self.withHarness { harness in

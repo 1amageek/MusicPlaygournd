@@ -23,7 +23,7 @@ if runtime.exists():
     shutil.rmtree(runtime)
 runtime.mkdir(parents=True)
 products = Path(sys.argv[4])
-for name in ('SwiftMusic.o', 'MusicPlaygourndCore.o', 'SwiftMusic.swiftmodule', 'MusicPlaygourndCore.swiftmodule'):
+for name in ('SwiftMusic.o', 'MusicPlayground.o', 'MusicPlaygourndCore.o', 'SwiftMusic.swiftmodule', 'MusicPlayground.swiftmodule', 'MusicPlaygourndCore.swiftmodule'):
     source = products / name
     if source.is_dir():
         shutil.copytree(source, runtime / name, dirs_exist_ok=True)

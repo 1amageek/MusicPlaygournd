@@ -66,3 +66,8 @@
 
 - [x] MUTE2-1 Retain mute-independent boundaries per non-mute control state; bounded 32-buffer cache with Mutex snapshot ownership, exact routing and control invalidation `depends:none` `parallel:none`
 - [x] MUTE2-INT Full-render differential and concurrent checks passed; release built; real worker/audio adoption reduced from 312–318ms to 29–41ms, unmute exact; native project mute/unmute verified with zero errors `depends:MUTE2-1` `parallel:none`
+
+- [x] SLIDER-1 MusicPlayground declarations support explicit State and retained automatic values; finite bounds and actual gain/filter PCM verified; SwiftMusic remains unchanged `depends:none` `parallel:none`
+- [x] SLIDER-2 Retained worker updates both forms without Swift recompilation; source-line insertion preserves values and rejected updates retain PCM; SDK probe measured 43ms for the short fixture; fixed switch-bank combinations fail explicitly `depends:SLIDER-1` `parallel:none`
+- [x] SLIDER-3 Native sliders follow code glyphs without text/selection/undo changes; continuous changes adopt an in-flight value and then the latest value through AVAudioEngine `depends:SLIDER-2` `parallel:none`
+- [x] SLIDER-INT Focused Swift Testing, bundled worker probe, native AppKit actions and AVAudioEngine adoption passed; release app built; manual screen inspection unavailable while Mac is locked `depends:SLIDER-1,SLIDER-2,SLIDER-3` `parallel:none`

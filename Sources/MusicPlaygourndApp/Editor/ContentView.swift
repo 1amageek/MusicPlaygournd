@@ -130,6 +130,7 @@ struct ContentView: View {
                 switches: model.switches, switchSelections: model.switchSelections,
                 switchesEnabled: model.switchesEnabled, onSelectSwitch: model.selectSwitch,
                 activeSwitchRanges: model.activeSwitchRanges,
+                sliders: model.inlineSliders, sliderValues: model.inlineSliderValues, onSliderChange: model.setInlineSlider,
                 mutedTracks: model.rowMuteStates, onToggleTrackMute: model.toggleTrackMute,
                 onTempoSwipe: { model.adjustTempo(by: $0) },
                 onFormat: { try await model.formatSource($0) },

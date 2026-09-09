@@ -106,3 +106,30 @@ The build script disables a development-compiler debug-type round-trip assertion
 ## License
 
 [MIT](LICENSE) · Copyright 2026 1amageek.
+
+### Inline sliders
+
+Import `MusicPlayground` in a session to place native sliders beside the declaring source lines. The editor supplies this host library; SwiftMusic itself remains independent of Playground and SwiftUI.
+
+```swift
+import SwiftMusic
+import MusicPlayground
+
+struct Session: Music {
+    @State private var level = 0.2
+
+    var body: some Sound {
+        Synthesizer(.bandLimitedSaw)
+            .notes("C2 Eb2 G2 Bb2")
+            .lowPass("200", resonanceQ: 4)
+            .acidEnvelope(slider(0.5, in: 0...1))
+            .gain(slider($level, in: 0...0.5))
+    }
+}
+```
+
+`slider(initialValue, in:)` keeps automatic state in the retained Playground session. `slider($state, in:)` writes your existing `SwiftMusic.State`. Dragging does not edit source or compile Swift again; the retained worker evaluates the sound and prepares an audio replacement through its existing validated performance transaction. Invalid values or preparation failures retain the accepted audio.
+
+Automatic identities survive preceding line insertions and indentation changes. Changing the declaration creates a new control; use `id: "acid"` to retain identity through arbitrary edits or distinguish identical declarations. Controls currently require `Music.body` on MainActor and cannot be combined with a pre-rendered switch bank. The host reports that combination rather than playing stale variants. The `acidEnvelope` convenience is a MusicPlayground extension over SwiftMusic's filter envelope; amount 1 sweeps six octaves.
+
+Open [InlineControls.swift](Examples/InlineControls.swift) for both forms. In a standalone SwiftPM consumer, add the `MusicPlayground` library product from this repository explicitly.

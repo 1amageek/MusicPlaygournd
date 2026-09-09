@@ -7,6 +7,7 @@ final class InlineRhythmLayout: NSObject, @MainActor NSLayoutManagerDelegate {
     private weak var editor: NSTextView?
     private var switchCards: [String: InlineSwitchView] = [:]
     private var switchLines: [String: Int] = [:]
+    var minimumContentWidth: CGFloat = 0
     private var source = ""
     private var anchors: [Int: Int] = [:]
     private var endings: [Int: CGFloat] = [:]
@@ -126,7 +127,7 @@ final class InlineRhythmLayout: NSObject, @MainActor NSLayoutManagerDelegate {
         let bottom = max(used.maxY + origin.y * 2,
                          (cardFrames.values.map(\.maxY).max() ?? 0) + origin.y)
         let frame = NSRect(x: 0, y: 0,
-                           width: max(viewport.width, used.maxX + origin.x * 2),
+                           width: max(viewport.width, used.maxX + origin.x * 2, minimumContentWidth),
                            height: max(viewport.height, bottom))
         if editor.frame != frame {
             editor.frame = frame

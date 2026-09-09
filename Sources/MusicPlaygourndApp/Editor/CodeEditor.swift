@@ -1,4 +1,5 @@
 import AppKit
+import MusicPlayground
 import MusicPlaygourndCore
 import SwiftUI
 
@@ -35,6 +36,9 @@ struct CodeEditor: NSViewRepresentable {
     var switchesEnabled = false
     var onSelectSwitch: (Int, Int) -> Void = { _, _ in }
     var activeSwitchRanges: [NSRange] = []
+    var sliders: [SliderDefinition] = []
+    var sliderValues: [String: Double] = [:]
+    var onSliderChange: (String, Double) -> Void = { _, _ in }
     var mutedTracks: [Int: Bool] = [:]
     var onToggleTrackMute: (Int) -> Void = { _ in }
     var onTempoSwipe: (Double) -> Void = { _ in }
@@ -185,6 +189,7 @@ struct CodeEditor: NSViewRepresentable {
         weak var scroll: NSScrollView?
         weak var lineNumberRuler: LineNumberRulerView?
         var inlineLayout: InlineRhythmLayout?
+        private var sliderViews: [String: NSSlider] = [:]
         private var published: [Int: CGRect] = [:]
         private var rangeSource = ""
         private var rangeLines: [Int: Int] = [:]
@@ -318,11 +323,68 @@ struct CodeEditor: NSViewRepresentable {
                 scrollOffset: max(0, clip.bounds.minY + clip.contentInsets.top),
                 horizontalScrollOffset: max(0, clip.bounds.minX + clip.contentInsets.left)))
         }
+        @objc private func sliderChanged(_ sender: NSSlider) {
+            guard let id = sender.identifier?.rawValue else { return }
+            sender.setAccessibilityValue(sender.doubleValue)
+            parent.onSliderChange(id, sender.doubleValue)
+        }
+
+        private func layoutSliders(_ editor: NSTextView) {
+            let wanted = Set(parent.sliders.map(\.id))
+            for id in Array(sliderViews.keys) where !wanted.contains(id) {
+                sliderViews.removeValue(forKey: id)?.removeFromSuperview()
+            }
+            guard let manager = editor.layoutManager, let container = editor.textContainer else { return }
+            manager.ensureLayout(for: container)
+            let text = editor.string as NSString
+            var starts = [0]
+            var offset = 0
+            while offset < text.length {
+                offset = NSMaxRange(text.lineRange(for: NSRange(location: offset, length: 0)))
+                starts.append(offset)
+            }
+            var rightEdges: [Int: CGFloat] = [:]
+            for definition in parent.sliders {
+                guard definition.line > 0, definition.line <= starts.count,
+                      starts[definition.line - 1] < text.length else { continue }
+                let slider: NSSlider
+                if let existing = sliderViews[definition.id] { slider = existing }
+                else {
+                    slider = NSSlider(value: definition.value, minValue: definition.range.lowerBound,
+                        maxValue: definition.range.upperBound, target: self, action: #selector(sliderChanged(_:)))
+                    slider.controlSize = .mini
+                    slider.isContinuous = true
+                    slider.identifier = NSUserInterfaceItemIdentifier(definition.id)
+                    slider.setAccessibilityLabel("Slider, line \(definition.line)")
+                    sliderViews[definition.id] = slider
+                    editor.addSubview(slider)
+                }
+                slider.minValue = definition.range.lowerBound
+                slider.maxValue = definition.range.upperBound
+                // AppKit owns the knob during tracking; adoption must not pull it backward.
+                if NSEvent.pressedMouseButtons == 0 { slider.doubleValue = parent.sliderValues[definition.id] ?? definition.value }
+                let glyph = manager.glyphIndexForCharacter(at: starts[definition.line - 1])
+                let rect = manager.lineFragmentUsedRect(forGlyphAt: glyph, effectiveRange: nil)
+                let x = rightEdges[definition.line] ?? (editor.textContainerOrigin.x + rect.maxX + 14)
+                slider.frame = NSRect(x: x, y: editor.textContainerOrigin.y + rect.minY,
+                                      width: 120, height: rect.height)
+                rightEdges[definition.line] = slider.frame.maxX + 14
+            }
+            let width = rightEdges.values.max() ?? 0
+            if inlineLayout?.minimumContentWidth != width {
+                inlineLayout?.minimumContentWidth = width
+                inlineLayout?.layoutCards()
+            }
+            let otherChildren = editor.subviews.filter { !($0 is NSSlider) }
+            editor.setAccessibilityChildren(otherChildren + sliderViews.values.sorted { $0.frame.minY < $1.frame.minY })
+        }
+
         func publishLayout() {
             guard let scroll, let editor = scroll.documentView as? NSTextView,
                   let layout = editor.layoutManager, let container = editor.textContainer else { return }
             layout.ensureLayout(for: container)
             lineNumberRuler?.needsDisplay = true
+            layoutSliders(editor)
             let text = editor.string as NSString
             let requested = Set(parent.rhythmLines)
             var rectangles: [Int: CGRect] = [:]

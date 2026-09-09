@@ -20,13 +20,25 @@ struct FileTreeRow: View {
                     FileTreeRow(entry: child, browser: browser, children: children, dirtyFiles: dirtyFiles)
                 }
             } label: {
-                Label(entry.url.lastPathComponent, systemImage: "folder")
+                Label {
+                    Text(entry.url.lastPathComponent)
+                } icon: {
+                    Image(systemName: "folder")
+                        .font(.system(size: 12))
+                        .frame(width: 14, height: 14)
+                }
             }
             .tag(entry.url)
             .help(entry.url.path)
         } else {
             HStack {
-                Label(entry.url.lastPathComponent, systemImage: icon)
+                Label {
+                    Text(entry.url.lastPathComponent)
+                } icon: {
+                    Image(systemName: icon)
+                        .font(.system(size: 12))
+                        .frame(width: 14, height: 14)
+                }
                 if dirtyFiles.contains(entry.url) {
                     Spacer(minLength: 0)
                     Circle().fill(.secondary).frame(width: 4, height: 4)

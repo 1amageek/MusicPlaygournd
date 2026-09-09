@@ -75,7 +75,7 @@ struct CodeEditor: NSViewRepresentable {
         editor.textContainer?.containerSize = NSSize(width: 100_000, height: 100_000)
         editor.minSize = NSSize(width: 0, height: 0)
         editor.maxSize = NSSize(width: 100_000, height: 100_000)
-        editor.textContainerInset = NSSize(width: 22, height: 20)
+        editor.textContainerInset = NSSize(width: 3, height: 20)
         let font = NSFont.monospacedSystemFont(ofSize: 14, weight: .regular)
         editor.font = font
         let paragraph = NSMutableParagraphStyle()

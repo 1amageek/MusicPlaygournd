@@ -23,8 +23,8 @@ struct FileSidebarView: View {
                             Text(root.lastPathComponent).fontWeight(.semibold)
                         } icon: {
                             Image(systemName: "music.note.list")
-                                .font(.system(size: 13, weight: .medium))
-                                .frame(width: 16, height: 16).foregroundStyle(.mint)
+                                .font(.system(size: 12, weight: .medium))
+                                .frame(width: 14, height: 14).foregroundStyle(.mint)
                         }
                     }
                     .tag(root)

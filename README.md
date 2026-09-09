@@ -167,7 +167,7 @@ MyLiveSet/
 
 A playable library target contains a `Session.swift` that defines `Session: Music`. Put reusable sounds in additional Swift files with their own imports. When multiple playable targets exist, select the target in the sidebar. Editing another file preserves the selected target's playback entry.
 
-Unsaved Swift buffers participate in evaluation without rewriting the saved project. SwiftPM resolves dependencies and resources from the manifest; access packaged resources with `Bundle.module`. Completion uses SourceKit-LSP and the original project graph. Inline results currently belong to the Session entry file.
+Unsaved session and helper-file buffers participate in evaluation without rewriting the saved project. Selecting `Package.swift` only displays it; manifest edits take effect when saved. Unchanged saves retain the loaded package graph and do not resolve dependencies again. SwiftPM resolves dependencies and resources from the manifest; access packaged resources with `Bundle.module`. Completion uses SourceKit-LSP and the original project graph. Inline results currently belong to the Session entry file.
 
 ## Editor shortcuts
 

@@ -5,6 +5,64 @@ import Testing
 extension NativeHostTests {
     @MainActor
     struct SessionDocumentTests {
+        @Test(.timeLimit(.minutes(1)))
+        func manifestNavigationAndUnchangedSaveRetainProject() async throws {
+            let root = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+            let sources = root.appending(path: "Sources/Session")
+            try FileManager.default.createDirectory(at: sources, withIntermediateDirectories: true)
+            defer { do { try FileManager.default.removeItem(at: root) } catch { Issue.record(error) } }
+            let manifest = root.appending(path: "Package.swift")
+            let text = """
+            // swift-tools-version: 6.4
+            import PackageDescription
+            let package = Package(name: "Before", targets: [.target(name: "Session")])
+            """
+            try text.write(to: manifest, atomically: true, encoding: .utf8)
+            try "".write(to: sources.appending(path: "Session.swift"), atomically: true, encoding: .utf8)
+            let outside = root.deletingLastPathComponent().appending(path: UUID().uuidString + ".txt")
+            try "Notes".write(to: outside, atomically: true, encoding: .utf8)
+            defer { do { try FileManager.default.removeItem(at: outside) } catch { Issue.record(error) } }
+            let model = SessionModel()
+            do {
+                func waitForPackage() async throws {
+                    let deadline = ContinuousClock.now.advanced(by: .seconds(15))
+                    while model.isOpeningPackage && ContinuousClock.now < deadline {
+                        try await Task.sleep(for: .milliseconds(20))
+                    }
+                    try #require(!model.isOpeningPackage)
+                }
+                model.openProject(at: root)
+                try await waitForPackage()
+                try #require(model.project?.name == "Before")
+                try model.openDocument(at: outside)
+                try await Task.sleep(for: .milliseconds(100))
+                let revision = model.revision
+                try model.openDocument(at: manifest)
+                #expect(model.revision == revision)
+                #expect(!model.isOpeningPackage)
+                let date = try manifest.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate
+                #expect(model.saveDocument())
+                #expect(!model.isOpeningPackage)
+                #expect(try manifest.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate == date)
+                model.source = text + "\n"
+                model.sourceChanged()
+                #expect(model.revision == revision)
+                model.source = text
+                model.sourceChanged()
+                #expect(model.saveDocument())
+                #expect(!model.isOpeningPackage)
+                model.source = text.replacingOccurrences(of: "Before", with: "After")
+                model.sourceChanged()
+                #expect(model.saveDocument())
+                #expect(model.isOpeningPackage)
+                try await waitForPackage()
+                #expect(model.project?.name == "After")
+                #expect(model.saveDocument())
+                #expect(!model.isOpeningPackage)
+                try await model.shutdown()
+            } catch { try await model.shutdown(); throw error }
+        }
+
         @Test(.timeLimit(.minutes(2)))
         func dependencyDocumentRejectsEditingAndSaving() async throws {
             let url = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString + ".swift")

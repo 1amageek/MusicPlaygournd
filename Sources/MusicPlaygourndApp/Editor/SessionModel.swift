@@ -11,6 +11,7 @@ final class SessionModel {
     private(set) var fileBrowser = SessionFileBrowser()
     private(set) var project: SwiftPackageProject?
     var projectTarget: SwiftPackageProject.Target?
+    private var loadedManifest: String?
     private var projectCompletion: ProjectCompletionService?
     private var projectTask: Task<Void, Never>?
     private var projectRequestID = UUID()
@@ -396,7 +397,12 @@ final class SessionModel {
         guard !activeDocument.isReadOnly else { return }
         hasUnsavedChanges = true
         updateRowLines()
-        scheduleEvaluation()
+        if !isProjectManifest(activeDocument) { scheduleEvaluation() }
+    }
+
+    private func isProjectManifest(_ document: SessionDocument) -> Bool {
+        guard let root = project?.root else { return false }
+        return document.fileURL == root.appending(path: "Package.swift")
     }
 
     func scheduleEvaluation(immediate: Bool = false) {
@@ -1202,6 +1208,7 @@ final class SessionModel {
         projectTask = Task {
             defer { if projectRequestID == request { isOpeningPackage = false } }
             do {
+                let manifest = try String(contentsOf: root.appending(path: "Package.swift"), encoding: .utf8)
                 let loaded = try await evaluator.openProject(at: root, resolveDependencies: resolveDependencies, progress: { [weak self] message in
                     await MainActor.run {
                         guard let self, self.projectRequestID == request else { return }
@@ -1241,6 +1248,7 @@ final class SessionModel {
                 rememberProjectNavigation()
                 projectCompletion = nextCompletion
                 project = loaded
+                loadedManifest = manifest
                 projectTarget = loaded.targets.first(where: { $0.name == retainedTarget }) ?? loaded.targets.first
                 fileBrowser = listing
                 documents.append(contentsOf: newDocuments)
@@ -1397,7 +1405,7 @@ final class SessionModel {
 
     func selectDocument(_ id: UUID) {
         guard let index = documents.firstIndex(where: { $0.id == id }), index != activeDocumentIndex else { return }
-        let sameProject = isProjectDocument && (documents[index].isReadOnly || documents[index].fileURL.map { $0.path.hasPrefix(project!.root.path + "/") } == true)
+        let sameProject = isProjectManifest(documents[index]) || (isProjectDocument && (documents[index].isReadOnly || documents[index].fileURL.map { $0.path.hasPrefix(project!.root.path + "/") } == true))
         if !sameProject { abortPerformanceForDocumentChange() }
         activeDocumentIndex = index
         if !sameProject { lineMaps = [:] }
@@ -1504,11 +1512,18 @@ final class SessionModel {
         guard let destination = destination?.standardizedFileURL.resolvingSymlinksInPath() else { return false }
         do {
             guard !documents.contains(where: { $0.id != document.id && $0.fileURL == destination }) else { throw DocumentFailure.duplicateDestination }
-            try document.source.write(to: destination, atomically: true, encoding: .utf8)
+            let isManifest = project?.root.appending(path: "Package.swift") == destination
+            let unchanged: Bool
+            if isManifest, FileManager.default.fileExists(atPath: destination.path) {
+                unchanged = try String(contentsOf: destination, encoding: .utf8) == document.source
+            } else {
+                unchanged = false
+            }
+            if !unchanged { try document.source.write(to: destination, atomically: true, encoding: .utf8) }
             document.fileURL = destination
             if document.id == activeDocumentID { try saveHostSettings(for: destination) }
             document.isDirty = false
-            if let root = project?.root, destination == root.appending(path: "Package.swift") {
+            if let root = project?.root, isManifest, document.source != loadedManifest {
                 rememberProjectNavigation()
                 openProject(at: root, resolveDependencies: true)
             }

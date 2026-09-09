@@ -80,3 +80,6 @@
 
 - [x] README-1 Rewrote the user guide for Swift 6.4, composition, performance controls and projects; embedded the supplied screenshot unchanged `depends:none` `parallel:none`
 - [x] README-INT Checked current editor/control entry points, all relative links and exact screenshot bytes; documentation-only diff reviewed `depends:README-1` `parallel:none`
+
+- [x] MANIFEST-1 Retain the loaded manifest and graph across navigation and unchanged saves; manifest buffers apply on save; failed reloads retain the prior snapshot `depends:none` `parallel:none`
+- [x] MANIFEST-INT Native SessionModel with real SwiftPM verified navigation, unchanged file timestamps, reverted edits and changed-package reload (2.4s); release app build passed `depends:MANIFEST-1` `parallel:none`

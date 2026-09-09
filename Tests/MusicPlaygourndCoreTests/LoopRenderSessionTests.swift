@@ -5,6 +5,57 @@ import Testing
 @testable import MusicPlaygourndCore
 
 struct LoopRenderSessionTests {
+    @Test(.timeLimit(.minutes(1)))
+    func mutePreparationMatchesFullGraphAcrossControlsAndConcurrentRenders() async throws {
+        struct Mix: Sound {
+            var body: some Sound {
+                Track("Group") {
+                    Track("Lead") {
+                        Synthesizer(.bandLimitedSaw).notes("C4 E4").gain(0.2)
+                            .effect(.chorus(rateHz: 0.5, depth: 0.4, wet: 0.3))
+                    }.send(to: "shared", level: 0.5, placement: .preFader)
+                    Track("Bass") { Synthesizer(.sine).notes("C2").gain(0.3) }
+                        .send(to: "shared", level: 0.5, placement: .postFader)
+                }
+                BusReturn("shared").effect(.distortion(drive: 0.5))
+            }
+        }
+        let sound = try SoundCompiler().compile(Mix())
+        let session = try LoopRenderSession(sound: sound, bpm: 240, beatsPerBar: 4, revision: 1)
+        let loader = AVAudioFileSampleLoader()
+        let samples = try SamplePreparation(sound: sound, loader: loader, secondsPerBeat: 0.25)
+        let oscillators = try OscillatorPreparation.prepare(sound)
+        let mutes = session.catalog.descriptors.filter { $0.address.parameter == .trackMute }
+        #expect(mutes.count == 3)
+        let gain = try #require(session.catalog.descriptors.first {
+            $0.address.target == .source(0) && $0.address.parameter == .gain
+        })
+        var cases: [([LiveControlOverride], PreparedLoop)] = []
+        for value in [0.2, 0.4] {
+            for mask in 0..<8 {
+                var overrides = [LiveControlOverride(address: gain.address, value: .number(value))]
+                for (index, control) in mutes.enumerated() {
+                    overrides.append(.init(address: control.address, value: .number(mask & (1 << index) == 0 ? 0 : 1)))
+                }
+                let reference = try LoopRenderer().renderPrepared(sound, bpm: 240, beatsPerBar: 4,
+                    preparedSamples: samples, preparedOscillators: oscillators,
+                    overlay: RenderControlOverlay.make(overrides: overrides, catalog: session.catalog, revision: 1))
+                #expect(try session.render(overrides: overrides) == reference)
+                cases.append((overrides, reference))
+            }
+        }
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            for (overrides, reference) in cases {
+                group.addTask {
+                    let rendered = try session.render(overrides: overrides)
+                    #expect(rendered == reference)
+                }
+            }
+            try await group.waitForAll()
+        }
+        #expect(try session.render() == session.baseline)
+    }
+
     private func makeSession(revision: UInt64 = 7) throws -> LoopRenderSession {
         let sound = try SoundCompiler().compile(Synthesizer(.sine).notes("C4"))
         return try LoopRenderSession(sound: sound, bpm: 240, beatsPerBar: 4, revision: revision)

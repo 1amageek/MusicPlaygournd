@@ -63,3 +63,6 @@
 
 - [x] MUTE-1 Pack PCM as Float32 bytes; serialization reduced from 600–750ms to 8ms, exact and legacy decoding verified; bus processing and generation ordering unchanged `depends:none` `parallel:none`
 - [x] MUTE-INT Release built; real worker and native audio adoption measured at 312–318ms across four track mutes; unmute restores exact baseline PCM; remaining latency is full rendering `depends:MUTE-1` `parallel:none`
+
+- [x] MUTE2-1 Retain mute-independent boundaries per non-mute control state; bounded 32-buffer cache with Mutex snapshot ownership, exact routing and control invalidation `depends:none` `parallel:none`
+- [x] MUTE2-INT Full-render differential and concurrent checks passed; release built; real worker/audio adoption reduced from 312–318ms to 29–41ms, unmute exact; native project mute/unmute verified with zero errors `depends:MUTE2-1` `parallel:none`

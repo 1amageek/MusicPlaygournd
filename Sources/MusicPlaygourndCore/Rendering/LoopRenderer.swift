@@ -52,7 +52,9 @@ public struct LoopRenderer: Sendable {
         beatsPerBar: Int,
         preparedSamples: SamplePreparation,
         preparedOscillators: [Int: OscillatorPreparation],
-        overlay: RenderControlOverlay? = nil
+        overlay: RenderControlOverlay? = nil,
+        muteCache: MuteRenderCache? = nil,
+        cacheKey: [LiveControlAddress: LiveControlValue] = [:]
     ) throws -> PreparedLoop {
         try renderPreparedResult(
             sound,
@@ -61,7 +63,9 @@ public struct LoopRenderer: Sendable {
             preparedSamples: preparedSamples,
             preparedOscillators: preparedOscillators,
             overlay: overlay,
-            captureTrackStems: false
+            captureTrackStems: false,
+            muteCache: muteCache,
+            cacheKey: cacheKey
         ).loop
     }
 
@@ -91,7 +95,9 @@ public struct LoopRenderer: Sendable {
         preparedSamples: SamplePreparation,
         preparedOscillators: [Int: OscillatorPreparation],
         overlay: RenderControlOverlay?,
-        captureTrackStems: Bool
+        captureTrackStems: Bool,
+        muteCache: MuteRenderCache? = nil,
+        cacheKey: [LiveControlAddress: LiveControlValue] = [:]
     ) throws -> (loop: PreparedLoop, stems: [PreparedStem]) {
         try validateBasicInputs(sound, bpm: bpm, beatsPerBar: beatsPerBar)
         var extent = try beatValue(sound.extent)
@@ -169,7 +175,12 @@ public struct LoopRenderer: Sendable {
         }
         beatCount = context.beatCount
         frameCount = context.frameCount
-        var output = try context.renderRoots()
+        let cached = muteCache?.snapshot(for: cacheKey)
+        var output = try context.renderRoots(cache: cached, retainMuteBoundaries: muteCache != nil)
+        if let muteCache, cached == nil {
+            muteCache.store(.init(key: cacheKey, buffers: context.retainedMuteBuffers,
+                                  sourcePeaks: context.sourcePeakEnvelopes))
+        }
         output.clamp(to: -1...1)
 
         var samples = output.interleaved
@@ -419,6 +430,7 @@ private struct RenderContext {
     var meters: [PreparedMeterEnvelope] = []
     var capturedStems: [Int: StereoBuffer] = [:]
     var scheduledSources: [StereoBuffer]?
+    var retainedMuteBuffers: [Int: StereoBuffer] = [:]
 
     init(sound: CompiledSound, bpm: Double, beatCount: Double, frameCount: Int,
          preparedSamples: SamplePreparation, preparedOscillators: [Int: OscillatorPreparation], sampleFrames: [Int: Int],
@@ -787,9 +799,45 @@ private struct RenderContext {
         }
     }
 
-    mutating func renderRoots() throws -> StereoBuffer {
+    mutating func renderRoots(cache: MuteRenderCache.Snapshot? = nil,
+                              retainMuteBoundaries: Bool = false) throws -> StereoBuffer {
         try validateGrainBudget()
-        if sound.sources.contains(where: { $0.voicePolicy != nil || $0.chokeGroup != nil || $0.granularPlayback != nil || preparedOscillators[$0.id] != nil }) {
+        var boundaries = Set<Int>()
+        if retainMuteBoundaries && !sound.tracks.isEmpty {
+            var dependent = [Bool](repeating: false, count: sound.renderNodes.count)
+            for (index, node) in sound.renderNodes.enumerated() {
+                switch node {
+                case .track, .busReturn: dependent[index] = true
+                default: dependent[index] = inputs(of: node).contains { dependent[$0] }
+                }
+            }
+            for (index, node) in sound.renderNodes.enumerated() where neededNodes[index] && dependent[index] {
+                for input in inputs(of: node) where !dependent[input] { boundaries.insert(input) }
+            }
+            for root in sound.rootNodeIDs where !dependent[root] { boundaries.insert(root) }
+            // ponytail: cap retained boundaries at 32 buffers; larger frontiers recompute the uncached branches.
+            boundaries = Set(boundaries.sorted().suffix(32))
+        }
+        if let cache {
+            sourcePeakEnvelopes = cache.sourcePeaks
+            neededNodes = Array(repeating: false, count: sound.renderNodes.count)
+            nodeConsumers = Array(repeating: 0, count: sound.renderNodes.count)
+            var pending = sound.rootNodeIDs
+            while let node = pending.popLast() {
+                if neededNodes[node] { continue }
+                neededNodes[node] = true
+                if cache.buffers[node] == nil { pending += inputs(of: sound.renderNodes[node]) }
+            }
+            for index in sound.renderNodes.indices where neededNodes[index] && cache.buffers[index] == nil {
+                for input in inputs(of: sound.renderNodes[index]) { nodeConsumers[input] += 1 }
+            }
+            for root in sound.rootNodeIDs { nodeConsumers[root] += 1 }
+        }
+        let needsSources = sound.renderNodes.indices.contains {
+            if case .source = sound.renderNodes[$0] { return neededNodes[$0] && cache?.buffers[$0] == nil }
+            return false
+        }
+        if needsSources && sound.sources.contains(where: { $0.voicePolicy != nil || $0.chokeGroup != nil || $0.granularPlayback != nil || preparedOscillators[$0.id] != nil }) {
             scheduledSources = try VoiceScheduler.render(
                 templates: sound.events.indices.compactMap { index in
                     let voice = try makeVoice(index)
@@ -809,7 +857,8 @@ private struct RenderContext {
             }
         }
         for index in sound.renderNodes.indices where neededNodes[index] {
-            let rendered = try renderNode(index)
+            let rendered = try cache?.buffers[index] ?? renderNode(index)
+            if cache == nil && boundaries.contains(index) { retainedMuteBuffers[index] = rendered }
             if let target = meterBoundaries[index] {
                 let label: String
                 switch target {

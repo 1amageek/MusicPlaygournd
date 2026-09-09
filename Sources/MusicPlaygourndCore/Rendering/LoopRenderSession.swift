@@ -7,6 +7,7 @@ public struct LoopRenderSession: Sendable {
     public let catalog: LiveControlCatalog
     public let baseline: PreparedLoop
 
+    private let muteCache: MuteRenderCache
     private let sound: CompiledSound
     private let bpm: Double
     private let beatsPerBar: Int
@@ -26,13 +27,16 @@ public struct LoopRenderSession: Sendable {
         let preparedSamples = try SamplePreparation(sound: sound, loader: sampleLoader, secondsPerBeat: 60 / bpm)
         let preparedOscillators = try OscillatorPreparation.prepare(sound)
         let catalog = try LiveControlCatalog(sound: sound, revision: revision)
+        let muteCache = MuteRenderCache()
         let baseline = try renderer.renderPrepared(
             sound,
             bpm: bpm,
             beatsPerBar: beatsPerBar,
             preparedSamples: preparedSamples,
-            preparedOscillators: preparedOscillators
+            preparedOscillators: preparedOscillators,
+            muteCache: muteCache
         )
+        self.muteCache = muteCache
         self.revision = revision
         self.catalog = catalog
         self.baseline = baseline
@@ -49,14 +53,16 @@ public struct LoopRenderSession: Sendable {
     public func render(overrides: [LiveControlOverride] = []) throws -> PreparedLoop {
         try Task.checkCancellation()
         let overlay = try makeOverlay(overrides)
-        guard !overrides.isEmpty else { return baseline }
+        if overrides.isEmpty, muteCache.snapshot(for: [:]) != nil { return baseline }
         let rendered = try renderer.renderPrepared(
             sound,
             bpm: bpm,
             beatsPerBar: beatsPerBar,
             preparedSamples: preparedSamples,
             preparedOscillators: preparedOscillators,
-            overlay: overlay
+            overlay: overlay,
+            muteCache: muteCache,
+            cacheKey: Dictionary(uniqueKeysWithValues: overrides.filter { $0.address.parameter != .trackMute }.map { ($0.address, $0.value) })
         )
         try Task.checkCancellation()
         try validateShape(rendered)

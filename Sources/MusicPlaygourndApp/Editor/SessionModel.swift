@@ -2105,6 +2105,8 @@ final class SessionModel {
                     )
                     .gain("0.85 0.62 0.72 0.65")
                     .effect(.distortion(drive: 0.32))
+                    .effect(.chorus(rateHz: 0.5, depth: 0.6, wet: 0.4))
+                    .effect(.stereoWidth(1.5))
             }
             .send(to: "synths", level: 1, placement: .preFader)
             .trackLevel(0)
@@ -2121,7 +2123,7 @@ final class SessionModel {
                     .highPass("140")
                     .lowPass("1200")
                     .gain(0.32)
-                    .effect(.chorus(rateHz: 0.5, depth: 0.45, wet: 0.25))
+                    .effect(.chorus(rateHz: 0.5, depth: 0.65, wet: 0.4))
                     .effect(.reverb(roomSize: 0.7, wet: 0.32))
             }
             .send(to: "synths", level: 1, placement: .preFader)

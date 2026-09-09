@@ -58,8 +58,8 @@
 - [x] RESET-1 Reset vectorscope balance to zero and shared reverb to 0%; verify native values `depends:none` `parallel:none`
 - [x] RESET-INT Build and confirm reset through the native popover before main commit `depends:RESET-1` `parallel:none`
 
-- [ ] STEREO-1 Give Deep Current's synths stereo chorus while retaining mono kick, notes, tempo and attribution; update active LivePlayback source and initial template `depends:none` `parallel:none`
-- [ ] STEREO-INT Verify template-generated PCM stereo energy and native playback, build and commit only template changes `depends:STEREO-1` `parallel:none`
+- [x] STEREO-1 Add stereo chorus to Deep Current and save the same source in active LivePlayback; retain mono kick, notes, tempo and attribution `depends:none` `parallel:none`
+- [x] STEREO-INT Generated source matches active project; PCM Side/Mid 29.2%, native output 26.4%, peak 0.632; Release build passed `depends:STEREO-1` `parallel:none`
 
 - [ ] MUTE-1 Reduce measured render and PCM transfer latency without changing shared bus processing or accepted control ordering `depends:none` `parallel:none`
 - [ ] MUTE-INT Verify mute response through the actual worker and audio replacement path before commit `depends:MUTE-1` `parallel:none`

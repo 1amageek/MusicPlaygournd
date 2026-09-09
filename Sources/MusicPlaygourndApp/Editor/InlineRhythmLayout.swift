@@ -121,9 +121,16 @@ final class InlineRhythmLayout: NSObject, @MainActor NSLayoutManagerDelegate {
                 cardFrames[id] = frame
             }
         }
-        let bottom = max(manager.usedRect(for: container).maxY + origin.y * 2,
+        let used = manager.usedRect(for: container)
+        let viewport = editor.enclosingScrollView?.contentSize ?? .zero
+        let bottom = max(used.maxY + origin.y * 2,
                          (cardFrames.values.map(\.maxY).max() ?? 0) + origin.y)
-        let height = max(editor.enclosingScrollView?.contentSize.height ?? 0, bottom)
-        if abs(editor.frame.height - height) > 0.5 { editor.setFrameSize(NSSize(width: editor.frame.width, height: height)) }
+        let frame = NSRect(x: 0, y: 0,
+                           width: max(viewport.width, used.maxX + origin.x * 2),
+                           height: max(viewport.height, bottom))
+        if editor.frame != frame {
+            editor.frame = frame
+            editor.needsDisplay = true
+        }
     }
 }

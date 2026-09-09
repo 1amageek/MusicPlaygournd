@@ -68,9 +68,9 @@ struct CodeEditor: NSViewRepresentable {
         editor.isContinuousSpellCheckingEnabled = false
         editor.isGrammarCheckingEnabled = false
         editor.allowedTouchTypes = .indirect
-        editor.isVerticallyResizable = true
-        editor.isHorizontallyResizable = true
-        editor.autoresizingMask = [.width]
+        editor.isVerticallyResizable = false
+        editor.isHorizontallyResizable = false
+        editor.autoresizingMask = []
         editor.textContainer?.widthTracksTextView = false
         editor.textContainer?.containerSize = NSSize(width: 100_000, height: 100_000)
         editor.minSize = NSSize(width: 0, height: 0)
@@ -147,8 +147,9 @@ struct CodeEditor: NSViewRepresentable {
         if delta != 0 {
             context.coordinator.lastScrollDelta = scrollDelta
             let clip = scroll.contentView
-            let y = min(max(0, clip.bounds.minY - delta), max(0, editor.bounds.height - clip.bounds.height))
-            clip.scroll(to: CGPoint(x: clip.bounds.minX, y: y))
+            var proposed = clip.bounds
+            proposed.origin.y -= delta
+            clip.scroll(to: clip.constrainBoundsRect(proposed).origin)
             scroll.reflectScrolledClipView(clip)
         }
         context.coordinator.inlineLayout?.update(loop: inlineLoop, rowLines: resultLines, enabled: inlineEnabled,
@@ -232,8 +233,13 @@ struct CodeEditor: NSViewRepresentable {
                 }
             }
         }
+        private var viewportSize = NSSize.zero
+
         @objc func scrolled() {
-            inlineLayout?.layoutCards()
+            if let size = scroll?.contentView.bounds.size, size != viewportSize {
+                viewportSize = size
+                inlineLayout?.layoutCards()
+            }
             publishEditorState()
             publishLayout()
         }
@@ -264,7 +270,10 @@ struct CodeEditor: NSViewRepresentable {
             highlight(editor)
             restoreSelection(state.selection, in: editor)
             let clip = scroll.contentView
-            clip.scroll(to: CGPoint(x: max(0, state.horizontalScrollOffset), y: max(0, state.scrollOffset)))
+            var proposed = clip.bounds
+            proposed.origin = CGPoint(x: max(0, state.horizontalScrollOffset) - clip.contentInsets.left,
+                                      y: max(0, state.scrollOffset) - clip.contentInsets.top)
+            clip.scroll(to: clip.constrainBoundsRect(proposed).origin)
             scroll.reflectScrolledClipView(clip)
         }
 
@@ -300,7 +309,10 @@ struct CodeEditor: NSViewRepresentable {
 
         private func publishEditorState() {
             guard let scroll, let editor = scroll.documentView as? NSTextView, let id = documentID else { return }
-            parent.onEditorStateChange(id, EditorDocumentState(selection: editor.selectedRange(), scrollOffset: scroll.contentView.bounds.minY, horizontalScrollOffset: scroll.contentView.bounds.minX))
+            let clip = scroll.contentView
+            parent.onEditorStateChange(id, EditorDocumentState(selection: editor.selectedRange(),
+                scrollOffset: max(0, clip.bounds.minY + clip.contentInsets.top),
+                horizontalScrollOffset: max(0, clip.bounds.minX + clip.contentInsets.left)))
         }
         func publishLayout() {
             guard let scroll, let editor = scroll.documentView as? NSTextView,

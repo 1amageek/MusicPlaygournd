@@ -21,6 +21,8 @@ adopted control catalog -> complete override generation -> retained worker reren
 ```
 
 ## Contracts and Invariants
+
+InlineRhythmLayout owns document sizing from the complete text used rect, insets and inline cards, with each dimension at least the scroll content size excluding native insets. NSTextView automatic resizing is disabled so there is one sizing owner. The document origin remains `(0, 0)`; NSClipView owns scrolling and elastic bounds constraints, including negative origins reserved for ruler/content insets. Stored document offsets are normalized by adding the clip insets; restoring subtracts the insets and uses native constrainBoundsRect. Scroll-origin notifications publish viewport coordinates without resizing the document or clamping the active gesture; viewport-size changes relayout cards. File switches preserve independent offsets and leave source glyphs visible. The native editor integration check covers document extent, scrolling and return-to-start alongside buffers and undo.
 The editor owns inline, side, and bottom result layouts; inline is the default. Native NSTextView layout remains the authority for compiler-captured source lines. Pattern anchors own token glow and side-timeline alignment, while compiler-derived result lines own inline placement after the complete sound expression. Each result shows actual pre-mix PCM peaks, compiled event timing, and the adopted transport cursor. The header monitor shows actual post-FX stereo waveform and spectrum from the playback tap. No independent musical or Swift parser and no per-row transport exists.
 
 ### Inline results

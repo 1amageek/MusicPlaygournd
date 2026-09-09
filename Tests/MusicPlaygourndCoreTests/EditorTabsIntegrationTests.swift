@@ -32,12 +32,14 @@ extension NativeHostTests {
                 try await settle(hosting)
                 #expect(findEditor(hosting) === editor)
                 #expect(editor.string == "// B\n")
+                try expectVisibleText(editor)
                 let second = model.activeDocument
                 editor.insertText("// Edited B\n", replacementRange: NSRange(location: 0, length: 0))
                 editor.breakUndoCoalescing()
                 model.selectDocument(first.id)
                 try await settle(hosting)
                 #expect(editor.string == "// Edited A\n// A\n")
+                try expectVisibleText(editor)
                 try #require(editor.undoManager).undo()
                 #expect(editor.string == "// A\n")
                 #expect(first.source == "// A\n" && second.source == "// Edited B\n// B\n")
@@ -50,6 +52,22 @@ extension NativeHostTests {
                 #expect(model.documents.count == 3)
                 #expect(model.saveDocument())
                 #expect(try String(contentsOf: b, encoding: .utf8) == "// B\n")
+                let longSource = (0..<150).map { "// Line \($0)" }.joined(separator: "\n")
+                editor.insertText(longSource, replacementRange: NSRange(location: 0, length: (editor.string as NSString).length))
+                try await settle(hosting)
+                let scroll = try #require(editor.enclosingScrollView)
+                let clip = scroll.contentView
+                #expect(editor.frame.width >= scroll.contentSize.width)
+                clip.scroll(to: CGPoint(x: -clip.contentInsets.left, y: 600))
+                scroll.reflectScrolledClipView(clip)
+                try await settle(hosting)
+
+                #expect(abs(clip.bounds.minY - 600) < 1)
+                #expect(editor.visibleRect.minY >= 599)
+                clip.scroll(to: CGPoint(x: -clip.contentInsets.left, y: -clip.contentInsets.top))
+                scroll.reflectScrolledClipView(clip)
+                try await settle(hosting)
+                try expectVisibleText(editor)
                 window.contentView = nil
                 try await model.shutdown()
             } catch {
@@ -57,6 +75,19 @@ extension NativeHostTests {
                 try await model.shutdown()
                 throw error
             }
+        }
+
+        private func expectVisibleText(_ editor: CompletionTextView) throws {
+            let manager = try #require(editor.layoutManager)
+            let container = try #require(editor.textContainer)
+            manager.ensureLayout(for: container)
+            let rect = manager.boundingRect(forGlyphRange: NSRange(location: 0, length: 1), in: container)
+                .offsetBy(dx: editor.textContainerOrigin.x, dy: editor.textContainerOrigin.y)
+            if let ruler = editor.enclosingScrollView?.verticalRulerView {
+                let glyphInRuler = editor.convert(rect, to: ruler)
+                #expect(glyphInRuler.minX >= ruler.bounds.maxX, "Glyph overlaps the line-number gutter: \(glyphInRuler), ruler: \(ruler.bounds)")
+            }
+            #expect(editor.visibleRect.contains(rect), "Glyph: \(rect), visible: \(editor.visibleRect), frame: \(editor.frame)")
         }
 
         private func settle(_ view: NSView) async throws {

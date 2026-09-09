@@ -1,4 +1,4 @@
 # Progress
 
-- [x] SPM-1 Deliver native SwiftPM project management; package rendering/completion and 11 editor checks passed; native creation/opening, tree navigation, tabs and playback verified with the simplified sidebar `depends:none` `parallel:none`
-- [ ] SPM-INT Verify committed integration and publish only if this branch has a configured upstream; preserve unrelated artwork and release tags `depends:SPM-1` `parallel:none`
+- [x] SPM-1 Native SwiftPM projects, evaluation/completion, simplified sidebar and real GUI workflow verified; commit b77f05d `depends:none` `parallel:none`
+- [x] SPM-INT Committed sources match the verified signed app; native tree and session remain usable; branch has no upstream so no push performed; unrelated artwork and release tags preserved `depends:SPM-1` `parallel:none`

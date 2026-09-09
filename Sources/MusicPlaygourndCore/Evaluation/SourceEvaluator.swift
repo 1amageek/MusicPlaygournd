@@ -203,7 +203,7 @@ public actor SourceEvaluator {
         return result.loop
     }
 
-    public func openProject(at root: URL, resolveDependencies: Bool = false) async throws -> SwiftPackageProject {
+    public func openProject(at root: URL, resolveDependencies: Bool = false, progress: (@Sendable (String) async -> Void)? = nil) async throws -> SwiftPackageProject {
         while busy { try await Task.sleep(for: .milliseconds(40)) }
         busy = true
         defer { busy = false }
@@ -211,15 +211,16 @@ public actor SourceEvaluator {
         guard FileManager.default.fileExists(atPath: root.appending(path: "Package.swift").path) else {
             throw EvaluationError.invalidSource("Select a folder containing Package.swift.")
         }
+        await progress?(resolveDependencies ? "Resolving package dependencies…" : "Loading package…")
         if resolveDependencies {
-            _ = try await run(swiftExecutable, ["package", "--package-path", root.path, "resolve"], timeout: 120)
+            _ = try await run(swiftExecutable, ["package", "--package-path", root.path, "resolve"], timeout: 120, progress: progress)
         }
         let description = try await run(swiftExecutable, ["package", "--package-path", root.path, "describe", "--type", "json"], timeout: 60)
         return try SwiftPackageProject.decode(Data(description.utf8), root: root)
     }
 
     public func evaluateRetained(source: String, bpm: Double, beatsPerBar: Int,
-                                 revision: UInt64, project: ProjectEvaluationRequest? = nil) async throws -> RetainedEvaluation {
+                                 revision: UInt64, project: ProjectEvaluationRequest? = nil, progress: (@Sendable (String) async -> Void)? = nil) async throws -> RetainedEvaluation {
         // An actor may reenter at every await. This slot also protects the incremental workspace.
         while busy {
             try await Task.sleep(for: .milliseconds(40))
@@ -240,6 +241,7 @@ public actor SourceEvaluator {
         }
         let manager = FileManager.default
         let workerDirectory = workspace.appending(path: "Worker-" + UUID().uuidString)
+        await progress?("Preparing package build…")
         let cacheLock = try await acquireProjectCacheLock(required: project != nil)
         defer { if let cacheLock { flock(cacheLock, LOCK_UN); close(cacheLock) } }
         let projectRoot = projectBuildCache?.appending(path: "Project") ?? workspace.appending(path: "Project")
@@ -299,9 +301,9 @@ public actor SourceEvaluator {
                 entryFile.path,
                 runtimeSDK.appending(path: "SwiftMusic.o").path,
                 runtimeSDK.appending(path: "MusicPlaygourndCore.o").path,
-                "-o", executable.path], timeout: 60)
+                "-o", executable.path], timeout: 60, progress: progress)
         } else {
-            _ = try await run(swiftExecutable, ["build", "--configuration", "release", "--build-system", "native", "-Xswiftc", "-Xfrontend", "-Xswiftc", "-disable-round-trip-debug-types", "--package-path", buildRoot.path, "--product", product], timeout: 240)
+            _ = try await run(swiftExecutable, ["build", "--configuration", "release", "--build-system", "native", "-Xswiftc", "-Xfrontend", "-Xswiftc", "-disable-round-trip-debug-types", "--package-path", buildRoot.path, "--product", product], timeout: 240, progress: progress)
             if let binaryDirectory, projectWorkspace == nil { binaryPath = binaryDirectory }
             else {
                 let output = try await run(swiftExecutable, ["build", "--configuration", "release", "--build-system", "native", "--package-path", buildRoot.path, "--show-bin-path"], timeout: 20)
@@ -358,16 +360,17 @@ public actor SourceEvaluator {
                         entryFile.path,
                         runtimeSDK.appending(path: "SwiftMusic.o").path,
                         runtimeSDK.appending(path: "MusicPlaygourndCore.o").path,
-                        "-o", executable.path], timeout: 60)
+                        "-o", executable.path], timeout: 60, progress: progress)
                 } else {
                     _ = try await run(swiftExecutable, ["build", "--configuration", "release", "--build-system", "native",
                         "-Xswiftc", "-Xfrontend", "-Xswiftc", "-disable-round-trip-debug-types",
-                        "--package-path", buildRoot.path, "--product", product], timeout: 240)
+                        "--package-path", buildRoot.path, "--product", product], timeout: 240, progress: progress)
                 }
             } catch {
                 throw EvaluationError.processFailed("Switch variant preparation failed: \(error.localizedDescription)")
             }
         }
+        await progress?("Preparing audio…")
         let connection = try RenderWorkerConnection(
             executable: executable,
             outputURL: output, revision: revision, workingDirectory: project?.project.root)
@@ -766,12 +769,15 @@ public actor SourceEvaluator {
         }
     }
 
-    internal func run(_ executable: String, _ arguments: [String], timeout: Double) async throws -> String {
+    internal func run(_ executable: String, _ arguments: [String], timeout: Double, progress: (@Sendable (String) async -> Void)? = nil) async throws -> String {
         try Task.checkCancellation()
         let log = workspace.appending(path: "process.log")
         try Data().write(to: log)
         let output = try FileHandle(forWritingTo: log)
         defer { do { try output.close() } catch { /* Closing an already-finished diagnostic file cannot alter playback. */ } }
+        let reader = try progress == nil ? nil : FileHandle(forReadingFrom: log)
+        defer { if let reader { do { try reader.close() } catch { } } }
+        var pending = Data()
         let process = Process()
         let completion = ProcessCompletion()
         process.terminationHandler = { @Sendable task in
@@ -793,6 +799,16 @@ public actor SourceEvaluator {
                 let size = try FileManager.default.attributesOfItem(atPath: log.path)[.size] as? NSNumber
                 guard (size?.intValue ?? 0) <= 1_048_576 else {
                     throw EvaluationError.processFailed("Compiler or session output exceeded 1 MiB.")
+                }
+                if let reader, let chunk = try reader.read(upToCount: 65_536), !chunk.isEmpty {
+                    pending.append(chunk)
+                    if let newline = pending.lastIndex(of: 10) {
+                        let lines = String(decoding: pending[...newline], as: UTF8.self).split(whereSeparator: \.isNewline)
+                        if let line = lines.last(where: { $0.hasPrefix("Fetching ") || $0.hasPrefix("Fetched ") || $0.hasPrefix("Computing ") || $0.hasPrefix("Computed ") || $0.hasPrefix("Creating working copy") || $0.hasPrefix("Working copy") || $0.hasPrefix("Building ") || $0.hasPrefix("[") }) {
+                            await progress?(String(line.prefix(300)))
+                        }
+                        pending.removeSubrange(...newline)
+                    }
                 }
                 try await Task.sleep(for: .milliseconds(50))
             }

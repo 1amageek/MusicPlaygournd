@@ -28,3 +28,6 @@
 
 - [x] WELCOME-1 Launch welcome and Deep Current/Basic Beat selection use existing project creation/opening; cancellation preserves documents `depends:none` `parallel:none`
 - [x] WELCOME-INT Both template creation cases and editor integration passed; native welcome, chooser, save panel, cancellation and generated session observed; Release build passed `depends:WELCOME-1` `parallel:none`
+
+- [x] PREP-1 Publish real dependency/compiler progress with operation-scoped callbacks and navigator activity; readiness and playback contracts preserved `depends:none` `parallel:none`
+- [x] PREP-INT Partial-line progress delivered before exit; success/failure and cancellation/timeout cases passed; Release build and native MyLiveSet sidebar compiler progress verified `depends:PREP-1` `parallel:none`

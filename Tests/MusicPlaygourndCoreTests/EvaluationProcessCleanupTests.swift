@@ -1,10 +1,42 @@
 import Darwin
 import Foundation
 import Testing
+import Synchronization
 @testable import MusicPlaygourndCore
 
 extension NativeHostTests {
     struct EvaluationProcessCleanupTests {
+        @Test(.timeLimit(.minutes(1)), arguments: [0, 3])
+        func progressArrivesBeforeProcessExitAndPreservesFailures(exitCode: Int) async throws {
+            let root = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+            try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false)
+            defer { do { try FileManager.default.removeItem(at: root) } catch { Issue.record(error) } }
+            let finished = root.appending(path: "finished")
+            let received = Mutex(0)
+            let evaluator = SourceEvaluator(packageURL: root, workspace: root, swiftExecutable: "/usr/bin/false")
+            let script = """
+            import sys, time
+            print('Fetching https://example.com/', end='', flush=True)
+            time.sleep(0.1)
+            print('Music.git', flush=True)
+            time.sleep(0.5)
+            open(\(finished.path.debugDescription), 'w').close()
+            sys.exit(\(exitCode))
+            """
+            do {
+                _ = try await evaluator.run("/usr/bin/python3", ["-c", script], timeout: 5, progress: { message in
+                    #expect(message == "Fetching https://example.com/Music.git")
+                    #expect(!FileManager.default.fileExists(atPath: finished.path))
+                    received.withLock { $0 += 1 }
+                })
+                #expect(exitCode == 0)
+            } catch let error as EvaluationError {
+                guard case .processFailed = error else { throw error }
+                #expect(exitCode == 3)
+            }
+            #expect(received.withLock { $0 } == 1)
+        }
+
         @Test(.timeLimit(.minutes(1)), arguments: [false, true])
         func compilerGroupsAreReapedOnTimeoutAndCancellation(cancel: Bool) async throws {
             let directory = FileManager.default.temporaryDirectory.appending(path: "compiler-cleanup-\(UUID())")

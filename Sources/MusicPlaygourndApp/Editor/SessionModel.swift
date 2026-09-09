@@ -111,6 +111,8 @@ final class SessionModel {
     var beatsPerBar = 4
     var diagnostic = "" { didSet { diagnosticRange = nil } }
     var status = "No project open"
+    var preparationProgress = ""
+    var isOpeningPackage = false
     var isPreparing = false
     var isPlaying = false
     private(set) var isRecording = false
@@ -416,12 +418,18 @@ final class SessionModel {
         diagnostic = ""
         diagnosticRange = nil
         isPreparing = true
+        preparationProgress = "Preparing package build…"
         status = loop == nil ? "Preparing your first loop…" : "Preparing edit · current loop continues"
         evaluationTask = Task { [weak self, evaluator] in
             do {
                 if !immediate { try await Task.sleep(for: .milliseconds(150)) }
                 await self?.adoptionTask?.value
-                let evaluation = try await evaluator.evaluateRetained(source: text, bpm: tempo, beatsPerBar: meter, revision: requested, project: projectRequest)
+                let evaluation = try await evaluator.evaluateRetained(source: text, bpm: tempo, beatsPerBar: meter, revision: requested, project: projectRequest, progress: { [weak self] message in
+                    await MainActor.run {
+                        guard let self, self.revision == requested, !self.isOpeningPackage else { return }
+                        self.preparationProgress = message
+                    }
+                })
                 let candidate = evaluation.loop
                 try Task.checkCancellation()
                 guard let self, requested == self.revision else { return }
@@ -1125,15 +1133,23 @@ final class SessionModel {
     }
 
     func openProject(at root: URL, resolveDependencies: Bool = false) {
-        if resolveDependencies { evaluationTask?.cancel() }
+        if resolveDependencies { evaluationTask?.cancel(); isPreparing = false }
         let retainedTarget = project?.root == root ? projectTarget?.name : nil
         projectTask?.cancel()
         let request = UUID()
         projectRequestID = request
+        isOpeningPackage = true
+        preparationProgress = "Loading package…"
         status = "Opening package…"
         projectTask = Task {
+            defer { if projectRequestID == request { isOpeningPackage = false } }
             do {
-                let loaded = try await evaluator.openProject(at: root, resolveDependencies: resolveDependencies)
+                let loaded = try await evaluator.openProject(at: root, resolveDependencies: resolveDependencies, progress: { [weak self] message in
+                    await MainActor.run {
+                        guard let self, self.projectRequestID == request else { return }
+                        self.preparationProgress = message
+                    }
+                })
                 try Task.checkCancellation()
                 guard projectRequestID == request else { return }
                 let listing = SessionFileBrowser()

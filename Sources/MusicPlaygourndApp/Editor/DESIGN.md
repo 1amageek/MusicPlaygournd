@@ -247,3 +247,5 @@ Saving the active project manifest starts dependency resolution and project relo
 ### Project entry flow
 
 When no document is open, ContentView presents WelcomeView instead of the editor chrome. New Project opens a native sheet with Deep Current and Basic Beat templates, then the existing save panel chooses the name and directory. SessionModel owns presentation state and creates the selected source through its existing transactional generator. Cancel creates no directory; failure remains visible. Existing projects use the existing open panel and project task. Opening a document reveals the workspace. Template selection never replaces an existing document.
+
+The navigator shows a Package Dependencies section during preparation, using actual evaluator progress lines rather than estimated percentages. Project request IDs and evaluation revisions reject stale callbacks; operation activity controls spinner visibility. WelcomeView shows the same opening progress before a project has a navigator. Readiness and existing adopted audio remain owned by the evaluation/playback paths.

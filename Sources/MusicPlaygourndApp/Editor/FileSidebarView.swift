@@ -29,6 +29,20 @@ struct FileSidebarView: View {
                     }
                     .tag(root)
                 }
+                if model.isOpeningPackage || model.isPreparing {
+                    Section("Package Dependencies") {
+                        HStack(alignment: .top, spacing: 8) {
+                            ProgressView().controlSize(.mini)
+                            Text(model.preparationProgress)
+                                .font(.system(size: 11))
+                                .foregroundStyle(.secondary)
+                                .lineLimit(3)
+                                .help(model.preparationProgress)
+                        }
+                        .padding(.vertical, 4)
+                        .accessibilityIdentifier("package-preparation-progress")
+                    }
+                }
             }
             .listStyle(.sidebar)
             .onChange(of: selection) { _, url in

@@ -26,6 +26,12 @@ struct WelcomeView: View {
             .controlSize(.large)
             .buttonStyle(.bordered)
             .frame(width: 300)
+            if model.isOpeningPackage {
+                HStack(spacing: 8) {
+                    ProgressView().controlSize(.small)
+                    Text(model.preparationProgress).font(.callout).foregroundStyle(.secondary)
+                }
+            }
             if let error = model.fileBrowser.errorMessage {
                 Text(error).font(.callout).foregroundStyle(.orange)
                     .textSelection(.enabled).frame(maxWidth: 520)

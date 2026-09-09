@@ -1982,6 +1982,8 @@ final class SessionModel {
     import SwiftMusic
 
     // Deep Current — C minor, 140 BPM. Open the acid cutoff while playing.
+    // Inspired by Switch Angel’s live-coding performance, with respect and thanks.
+    // Watch the original: https://www.youtube.com/watch?v=HkgV_-nJOuE
     struct Session: Music {
         var body: some Sound {
             Track("Kick") {

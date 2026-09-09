@@ -12,20 +12,22 @@ struct MusicPlaygourndApp: App {
                 .onAppear { delegate.model = model; model.prepareInitialSource(); NSApplication.shared.activate(ignoringOtherApps: true) }
         }
         .defaultSize(width: 1160, height: 760)
+        .windowStyle(.hiddenTitleBar)
+        .windowToolbarStyle(.unified)
         .commands {
             CommandGroup(replacing: .newItem) {
                 Button("New Project…", action: model.newProject).keyboardShortcut("n", modifiers: [.command, .shift])
                 Button("Open Project…", action: model.chooseProject).keyboardShortcut("o", modifiers: [.command, .shift])
                 Divider()
                 Button("Open Session…", action: model.openDocument).keyboardShortcut("o")
-                Button("Close Tab") { model.closeDocument(model.activeDocumentID) }.keyboardShortcut("w")
+                Button("Close Tab") { model.closeDocument(model.activeDocumentID) }.keyboardShortcut("w").disabled(!model.hasOpenDocument)
             }
             CommandGroup(replacing: .saveItem) {
-                Button("Save Session") { model.saveDocument() }.keyboardShortcut("s")
+                Button("Save Session") { model.saveDocument() }.keyboardShortcut("s").disabled(!model.hasOpenDocument)
             }
             CommandMenu("Session") {
-                Button("Apply Edit") { model.scheduleEvaluation(immediate: true) }.keyboardShortcut("r")
-                Button("Play / Pause", action: model.togglePlayback)
+                Button("Apply Edit") { model.scheduleEvaluation(immediate: true) }.keyboardShortcut("r").disabled(!model.hasOpenDocument)
+                Button("Play / Pause", action: model.togglePlayback).disabled(!model.hasOpenDocument && !model.isPlaying)
                 Divider()
                 Button("Inline Results") { model.inlineLayout = true }
                 Button("Side Timeline") { model.inlineLayout = false; model.bottomLayout = false }

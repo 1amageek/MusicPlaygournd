@@ -29,6 +29,7 @@ final class SessionModel {
     private var activeDocumentIndex = 0
     var activeDocument: SessionDocument { documents[activeDocumentIndex] }
     var activeDocumentID: UUID { activeDocument.id }
+    var hasOpenDocument: Bool { fileURL != nil }
     private var revisionDocuments: [UInt64: UUID] = [:]
     var audibleDocumentID: UUID? { currentRevision.flatMap { revisionDocuments[$0] } }
     var editorLoop: PreparedLoop? { audibleDocumentID == activeDocumentID ? loop : nil }
@@ -109,7 +110,7 @@ final class SessionModel {
     var outputSamples = [Float]()
     var beatsPerBar = 4
     var diagnostic = "" { didSet { diagnosticRange = nil } }
-    var status = "Ready to play"
+    var status = "No project open"
     var isPreparing = false
     var isPlaying = false
     private(set) var isRecording = false
@@ -364,6 +365,7 @@ final class SessionModel {
     }
 
     func scheduleEvaluation(immediate: Bool = false) {
+        guard hasOpenDocument else { return }
         if requiresEvaluatorReset {
             deferredEvaluation = true
             deferredEvaluationImmediate = deferredEvaluationImmediate || immediate
@@ -461,6 +463,7 @@ final class SessionModel {
     }
 
     func togglePlayback() {
+        guard hasOpenDocument || isPlaying else { return }
         guard let engine else { diagnostic = audioError; return }
         if isPlaying {
             wantsPlayback = false
@@ -1146,7 +1149,7 @@ final class SessionModel {
                 if let sources = listing.entries.first(where: { $0.url.lastPathComponent == "Sources" }) {
                     try listing.toggle(sources)
                     for target in loaded.targets {
-                        if let item = listing.entries.first(where: { $0.url == loaded.root.appending(path: target.path) }) { try listing.toggle(item) }
+                        if let item = listing.entries.first(where: { $0.url.resolvingSymlinksInPath().path == loaded.root.appending(path: target.path).resolvingSymlinksInPath().path }) { try listing.toggle(item) }
                     }
                 }
                 let nextCompletion = await completionService.projectService(root: loaded.root)
@@ -1163,7 +1166,8 @@ final class SessionModel {
                 projectTarget = loaded.targets.first
                 fileBrowser = listing
                 documents.append(contentsOf: newDocuments)
-                let selected = documents.first(where: { $0.fileURL?.path == selectedPath }) ?? documents.first(where: { $0.fileURL == entry })
+                let selected = selectedPath.flatMap { path in documents.first(where: { $0.fileURL?.path == path }) }
+                    ?? documents.first(where: { $0.fileURL == entry })
                 if let selected { selectDocument(selected.id) }
                 scheduleEvaluation(immediate: true)
             } catch is CancellationError { }

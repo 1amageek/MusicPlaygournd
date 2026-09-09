@@ -57,7 +57,7 @@ final class SessionFileBrowser {
                 guard values.isSymbolicLink != true, values.isHidden != true else { continue }
                 let isDirectory = values.isDirectory == true
                 if isDirectory || values.isRegularFile == true {
-                    loaded.append(Entry(url: child, isDirectory: isDirectory))
+                    loaded.append(Entry(url: child.standardizedFileURL.resolvingSymlinksInPath(), isDirectory: isDirectory))
                 }
             }
             if let failure { throw failure }

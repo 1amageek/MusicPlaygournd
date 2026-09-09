@@ -1,4 +1,5 @@
 # Progress
 
-- [x] SPM-1 Native SwiftPM projects, evaluation/completion, simplified sidebar and real GUI workflow verified; commit b77f05d `depends:none` `parallel:none`
-- [x] SPM-INT Committed sources match the verified signed app; native tree and session remain usable; branch has no upstream so no push performed; unrelated artwork and release tags preserved `depends:SPM-1` `parallel:none`
+- [ ] TEMPLATE-1 Correct creation to the actual SwiftPM initial template; current custom Session/Resources/Recordings generator does not meet the request; retain existing-path protection; current manifest and generator formatting corrected with four-space indentation and multiline declarations, and SwiftPM metadata is unchanged `depends:none` `parallel:none`
+- [x] NAV-1 Native NavigationSplitView/List/DisclosureGroup, unified toolbar, detail-only logs/status and redundant folder strip removal verified by app build and native selection/expansion/visibility checks `depends:none` `parallel:none`
+- [ ] TEMPLATE-INT Verify standard SwiftPM package creation/opening without requiring a custom Session.swift entry, existing-path preservation, and the native navigator flow `depends:TEMPLATE-1,NAV-1` `parallel:none`

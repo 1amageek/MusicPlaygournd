@@ -9,51 +9,44 @@ struct ContentView: View {
     @State private var logsExpanded = false
     @State private var controlsPresented = false
     @State private var maximumTakeMinutes = 10
-    @State private var sidebarVisible = true
+    @State private var columnVisibility: NavigationSplitViewVisibility = .all
 
     var body: some View {
         VStack(spacing: 0) {
-            header
-            Divider()
-            HSplitView {
-                if sidebarVisible {
-                    FileSidebarView(model: model, browser: model.fileBrowser)
-                        .frame(minWidth: 160, idealWidth: 190, maxWidth: 260)
-                }
-            VStack(spacing: 0) {
-                FileTabsView(model: model)
-                Divider()
-            VSplitView {
-                HSplitView {
-                    editor
-                    if !model.inlineLayout && !model.bottomLayout {
-                        TimelineView(loop: model.editorLoop, rowLines: model.rowLines, lineRects: lineRects, beatPosition: model.beatPosition, isPlaying: model.isPlaying, onScroll: { timelineScroll += $0 }, mutedTracks: model.rowMuteStates, onToggleTrackMute: model.toggleTrackMute)
-                            .frame(minWidth: 340)
+            NavigationSplitView(columnVisibility: $columnVisibility) {
+                FileSidebarView(model: model, browser: model.fileBrowser)
+                    .navigationSplitViewColumnWidth(min: 160, ideal: 220, max: 320)
+            } detail: {
+                VStack(spacing: 0) {
+                    if model.hasOpenDocument {
+                        VStack(spacing: 0) {
+                            FileTabsView(model: model)
+                            Divider()
+                            VSplitView {
+                                HSplitView {
+                                    editor
+                                    if !model.inlineLayout && !model.bottomLayout {
+                                        TimelineView(loop: model.editorLoop, rowLines: model.rowLines, lineRects: lineRects, beatPosition: model.beatPosition, isPlaying: model.isPlaying, onScroll: { timelineScroll += $0 }, mutedTracks: model.rowMuteStates, onToggleTrackMute: model.toggleTrackMute)
+                                            .frame(minWidth: 340)
+                                    }
+                                }
+                                if !model.inlineLayout && model.bottomLayout { rhythm }
+                            }
+                        }
+                    } else {
+                        Text("No Selection").font(.system(size: 20)).foregroundStyle(.tertiary)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
+                    Divider()
+                    logs
+                    Divider()
+                    statusBar
                 }
-                if !model.inlineLayout && model.bottomLayout { rhythm }
             }
+            .navigationSplitViewStyle(.balanced)
+            .toolbar {
+                ToolbarItem(placement: .principal) { header }
             }
-            }
-            Divider()
-            logs
-            Divider()
-            HStack(spacing: 10) {
-                if model.isPreparing { ProgressView().controlSize(.mini) }
-                else { Circle().fill(diagnosticCount == 0 ? Color.mint : .orange).frame(width: 6, height: 6) }
-                Text(model.status).font(.system(size: 11))
-                Spacer()
-                if let revision = model.currentRevision {
-                    Text("\(model.audibleDocumentID == model.activeDocumentID ? "LOOP" : "OTHER TAB") r\(revision) / EDIT r\(model.revision)").font(.system(size: 10, design: .monospaced)).foregroundStyle(.secondary)
-                }
-                Menu {
-                    Button("Inline Results") { model.inlineLayout = true }
-                    Button("Side Timeline") { model.inlineLayout = false; model.bottomLayout = false }
-                    Button("Bottom Overview") { model.inlineLayout = false; model.bottomLayout = true }
-                } label: {
-                    Label(model.inlineLayout ? "Inline Results" : (model.bottomLayout ? "Bottom Overview" : "Side Timeline"), systemImage: "rectangle.3.group")
-                }.menuStyle(.borderlessButton).fixedSize().help("Rhythm display layout")
-            }.padding(.horizontal, 18).padding(.vertical, 10)
         }
         .background(Color(red: 0.06, green: 0.07, blue: 0.08))
         .preferredColorScheme(.dark)
@@ -67,15 +60,27 @@ struct ContentView: View {
         }
     }
 
+    private var statusBar: some View {
+        HStack(spacing: 10) {
+            if model.isPreparing { ProgressView().controlSize(.mini) }
+            else { Circle().fill(diagnosticCount == 0 ? Color.mint : .orange).frame(width: 6, height: 6) }
+            Text(model.status).font(.system(size: 11))
+            Spacer()
+            if let revision = model.currentRevision {
+                Text("\(model.audibleDocumentID == model.activeDocumentID ? "LOOP" : "OTHER TAB") r\(revision) / EDIT r\(model.revision)").font(.system(size: 10, design: .monospaced)).foregroundStyle(.secondary)
+            }
+            Menu {
+                Button("Inline Results") { model.inlineLayout = true }
+                Button("Side Timeline") { model.inlineLayout = false; model.bottomLayout = false }
+                Button("Bottom Overview") { model.inlineLayout = false; model.bottomLayout = true }
+            } label: {
+                Label(model.inlineLayout ? "Inline Results" : (model.bottomLayout ? "Bottom Overview" : "Side Timeline"), systemImage: "rectangle.3.group")
+            }.menuStyle(.borderlessButton).fixedSize().help("Rhythm display layout")
+        }.padding(.horizontal, 18).padding(.vertical, 10)
+    }
+
     private var header: some View {
         HStack(spacing: 12) {
-            Button { sidebarVisible.toggle() } label: {
-                Image(systemName: "sidebar.left").font(.system(size: 15))
-                    .frame(width: 24, height: 38)
-            }.buttonStyle(.plain)
-                .foregroundStyle(.secondary)
-                .accessibilityLabel(sidebarVisible ? "Hide files" : "Show files")
-                .accessibilityIdentifier("toggle-file-sidebar")
             HStack(spacing: 14) {
                 Button { model.togglePlayback() } label: {
                     Image(systemName: model.isPlaying ? "pause.fill" : "play.fill")
@@ -87,6 +92,7 @@ struct ContentView: View {
                     .keyboardShortcut(.return, modifiers: [.command])
                     .accessibilityLabel(model.isPlaying ? "Pause" : "Play")
                     .accessibilityIdentifier("play-toggle")
+                    .disabled(!model.hasOpenDocument && !model.isPlaying)
                 Button(action: record) {
                     Image(systemName: model.isRecording ? "stop.circle" : "record.circle")
                         .font(.system(size: 18)).foregroundStyle(model.isRecording ? Color.red : .secondary)
@@ -137,8 +143,7 @@ struct ContentView: View {
                     LiveControlsView(model: model, maximumTakeMinutes: $maximumTakeMinutes)
                         .frame(width: 780, height: 420)
                 }
-        }.padding(.horizontal, 20).frame(height: 76)
-            .background(Color(red: 0.045, green: 0.055, blue: 0.065))
+        }.frame(minWidth: 680, idealWidth: 880, maxWidth: 1100).frame(height: 52)
     }
 
     private func record() {

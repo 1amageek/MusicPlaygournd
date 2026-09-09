@@ -6,7 +6,7 @@ struct FileTabsView: View {
     var body: some View {
         ScrollView(.horizontal) {
             HStack(spacing: 0) {
-                ForEach(model.documents) { document in
+                ForEach(model.documents.filter { $0.fileURL != nil || $0.isDirty }) { document in
                     HStack(spacing: 8) {
                         Button { model.selectDocument(document.id) } label: {
                             HStack(spacing: 7) {

@@ -5,6 +5,7 @@ struct FileTreeRow: View {
     @Bindable var browser: SessionFileBrowser
     let children: [URL: [SessionFileBrowser.Entry]]
     let dirtyFiles: Set<URL>
+    var load: ((URL, Int) -> Void)? = nil
 
     var body: some View {
         if entry.isDirectory {
@@ -17,7 +18,7 @@ struct FileTreeRow: View {
                 }
             )) {
                 ForEach(children[entry.url] ?? []) { child in
-                    FileTreeRow(entry: child, browser: browser, children: children, dirtyFiles: dirtyFiles)
+                    FileTreeRow(entry: child, browser: browser, children: children, dirtyFiles: dirtyFiles, load: load)
                 }
             } label: {
                 Label {
@@ -46,6 +47,13 @@ struct FileTreeRow: View {
                 }
             }
             .tag(entry.url)
+            .draggable(entry.url)
+            .contextMenu {
+                if let load, entry.url.pathExtension == "swift", entry.url.lastPathComponent != "Package.swift" {
+                    Button("Load into Deck A") { load(entry.url, 0) }
+                    Button("Load into Deck B") { load(entry.url, 1) }
+                }
+            }
             .help(entry.url.path)
         }
     }

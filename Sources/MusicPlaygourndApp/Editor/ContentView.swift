@@ -23,7 +23,7 @@ struct ContentView: View {
     private var editorWorkspace: some View {
         VStack(spacing: 0) {
             NavigationSplitView(columnVisibility: $columnVisibility) {
-                FileSidebarView(model: model, browser: model.fileBrowser)
+                FileSidebarView(model: model, browser: model.fileBrowser, deckWorkspace: deckWorkspace)
                     .navigationSplitViewColumnWidth(min: 160, ideal: 220, max: 320)
             } detail: {
                 VStack(spacing: 0) {

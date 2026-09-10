@@ -157,6 +157,9 @@ struct DeckHeaderView: View {
                 }
         }.padding(.horizontal, 10).padding(.vertical, 10).frame(maxWidth: .infinity)
             .contentShape(Rectangle())
+            .onDrop(of: [.fileURL, .url], isTargeted: nil) { providers in
+                workspace.receiveDrop(providers, into: index)
+            }
     }
 
     static func waveformPeak(_ peaks: [Float], at phase: Double) -> Float {

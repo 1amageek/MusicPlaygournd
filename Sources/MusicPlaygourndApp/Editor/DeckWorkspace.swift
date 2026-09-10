@@ -80,19 +80,79 @@ final class DeckWorkspace {
         return Color(red: values[0], green: values[1], blue: values[2])
     }
     func refresh() { a.refresh(); b.refresh() }
+    private var isClosing = false
+    private var loadTasks: [Int: Task<Void, Never>] = [:]
+    private(set) var discovering: Set<Int> = []
+
+    func receiveDrop(_ providers: [NSItemProvider], into deck: Int) -> Bool {
+        guard providers.count == 1, let provider = providers.first,
+              provider.canLoadObject(ofClass: NSURL.self) else { return false }
+        provider.loadObject(ofClass: NSURL.self) { [weak self] object, error in
+            let url = object as? URL
+            let message = error?.localizedDescription
+            Task { @MainActor [weak self] in
+                guard let self, !self.isClosing else { return }
+                guard let url, url.isFileURL, url.pathExtension == "swift" else {
+                    (deck == 0 ? self.a : self.b).hostDiagnostic = message ?? "Drop one local Swift Music file onto this deck."
+                    return
+                }
+                self.loadFile(url, into: deck)
+            }
+        }
+        return true
+    }
+
     func loadSelected(_ deck: Int) {
         let model = deck == 0 ? a : b
-        let alert = NSAlert()
-        alert.messageText = "Load into Deck \(deck == 0 ? "A" : "B")"
-        alert.informativeText = "Music type in \(model.activeDocument.name)"
-        let name = NSTextField(string: model.loadedType)
-        name.frame = NSRect(x: 0, y: 0, width: 260, height: 24)
-        alert.accessoryView = name
-        alert.addButton(withTitle: "Load")
-        alert.addButton(withTitle: "Cancel")
-        guard alert.runModal() == .alertFirstButtonReturn else { return }
-        do { try model.loadIntoDeck(model.activeDocument, type: name.stringValue) }
-        catch { model.hostDiagnostic = error.localizedDescription }
+        load(model.activeDocument, into: deck)
+    }
+
+    func loadFile(_ url: URL, into deck: Int) {
+        let model = deck == 0 ? a : b
+        do {
+            try model.openDocument(at: url)
+            selectedDeck = deck
+            load(model.activeDocument, into: deck)
+        } catch { model.hostDiagnostic = error.localizedDescription }
+    }
+
+    func load(_ document: SessionDocument, into deck: Int) {
+        loadTasks[deck]?.cancel()
+        let model = deck == 0 ? a : b
+        let source = document.source
+        discovering.insert(deck)
+        loadTasks[deck] = Task { [weak self] in
+            do {
+                let names = try await model.musicEntries(in: document)
+                try Task.checkCancellation()
+                guard let self else { return }
+                guard document.source == source else {
+                    throw EvaluationError.invalidSource("Source changed while finding Music entries. Load it again.")
+                }
+                guard let first = names.first else { throw EvaluationError.invalidSource("This file contains no Music entry.") }
+                var entry = first
+                if names.count > 1 {
+                    let alert = NSAlert()
+                    alert.messageText = "Load into Deck \(deck == 0 ? "A" : "B")"
+                    alert.informativeText = "Choose a Music entry in \(document.name)."
+                    let picker = NSPopUpButton(frame: NSRect(x: 0, y: 0, width: 260, height: 28))
+                    picker.addItems(withTitles: names)
+                    alert.accessoryView = picker
+                    alert.addButton(withTitle: "Load")
+                    alert.addButton(withTitle: "Cancel")
+                    guard alert.runModal() == .alertFirstButtonReturn else { self.discovering.remove(deck); return }
+                    entry = names[picker.indexOfSelectedItem]
+                }
+                if let url = document.fileURL { try model.openDocument(at: url) }
+                try model.loadIntoDeck(document, type: entry)
+                self.discovering.remove(deck)
+            } catch is CancellationError {
+                // A superseding request owns the deck's loading indicator.
+            } catch {
+                self?.discovering.remove(deck)
+                model.hostDiagnostic = error.localizedDescription
+            }
+        }
     }
     func confirmAllDocuments() -> Bool {
         var seen: Set<UUID> = []
@@ -105,6 +165,10 @@ final class DeckWorkspace {
         return true
     }
     func shutdown() async throws {
+        isClosing = true
+        for task in loadTasks.values { task.cancel() }
+        for task in loadTasks.values { await task.value }
+        loadTasks.removeAll()
         var failure: Error?
         do { try await a.shutdown() } catch { failure = error }
         do { try await b.shutdown() } catch { failure = failure ?? error }

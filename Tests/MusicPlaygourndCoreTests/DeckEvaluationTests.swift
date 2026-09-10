@@ -5,6 +5,30 @@ import Testing
 
 extension NativeHostTests {
     struct DeckEvaluationTests {
+        @Test(.timeLimit(.minutes(2)))
+        func compilerDiscoversMusicEntriesWithoutStartingWorkers() async throws {
+            let host = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+            let root = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+            let sdk = host.appending(path: ".build/MusicPlaygournd.app/Contents/Resources/RuntimeSDK")
+            try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+            defer { do { try FileManager.default.removeItem(at: root) } catch { Issue.record(error) } }
+            let evaluator = SourceEvaluator(packageURL: host, workspace: root.appending(path: "Worker"), swiftExecutable: "/usr/bin/swift", runtimeSDK: sdk)
+            let source = """
+            // struct Fake: Music {}
+            struct Rhythm: Sound { var body: some Sound { Sample("kick") } }
+            struct First: Music { var body: some Sound { Rhythm() } }
+            """
+            #expect(try await evaluator.musicEntries(source: source) == ["First"])
+            #expect(try await evaluator.musicEntries(source: source + "\nstruct Second: SwiftMusic.Music { var body: some Sound { Rhythm() } }") == ["First", "Second"])
+            #expect(try await evaluator.musicEntries(source: "struct OnlySound: Sound { var body: some Sound { Sample(\"kick\") } }").isEmpty)
+            do {
+                _ = try await evaluator.musicEntries(source: "struct Broken: Music { invalid source }")
+                Issue.record("Invalid source unexpectedly passed discovery")
+            } catch { #expect(await evaluator.workerStateForTests().pid == nil) }
+            #expect(await evaluator.workerStateForTests().pid == nil)
+            try await evaluator.shutdown()
+        }
+
         @Test(.timeLimit(.minutes(6))) @MainActor
         func sameFileHasIndependentWorkersAndExplicitMusicEntries() async throws {
             let host = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()

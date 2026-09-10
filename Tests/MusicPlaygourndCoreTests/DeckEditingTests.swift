@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import Testing
 @testable import MusicPlaygourndApp
@@ -6,6 +7,26 @@ import Testing
 extension NativeHostTests {
     @MainActor
     struct DeckEditingTests {
+        @Test(.timeLimit(.minutes(1)))
+        func droppedFileSelectsItsDeckBeforeDiscoveryCompletes() async throws {
+            let root = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+            try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false)
+            defer { do { try FileManager.default.removeItem(at: root) } catch { Issue.record(error) } }
+            let file = root.appending(path: "Dropped.swift")
+            try "import SwiftMusic\nstruct Dropped: Music { var body: some Sound { Sample(\"kick\") } }".write(to: file, atomically: true, encoding: .utf8)
+            let workspace = DeckWorkspace()
+            #expect(workspace.selectedDeck == 0)
+            #expect(workspace.receiveDrop([NSItemProvider(object: file as NSURL)], into: 1))
+            for _ in 0..<100 where workspace.selectedDeck != 1 { try await Task.sleep(for: .milliseconds(10)) }
+            #expect(workspace.selectedDeck == 1)
+            #expect(workspace.active === workspace.b)
+            #expect(workspace.active.fileURL == file)
+            #expect(workspace.active.source.contains("struct Dropped"))
+            workspace.loadFile(root.appending(path: "Missing.swift"), into: 0)
+            #expect(workspace.selectedDeck == 1)
+            try await workspace.shutdown()
+        }
+
         @Test(.timeLimit(.minutes(1)))
         func tapsAndSharedDocumentsKeepSelectionIndependentOfLoading() async throws {
             var taps = TapTempo()

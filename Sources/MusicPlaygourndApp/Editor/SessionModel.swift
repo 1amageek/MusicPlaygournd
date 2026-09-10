@@ -470,6 +470,21 @@ final class SessionModel {
         }
     }
 
+    func musicEntries(in document: SessionDocument) async throws -> [String] {
+        guard !document.isReadOnly, let url = document.fileURL, url.pathExtension == "swift", document.name != "Package.swift" else {
+            throw EvaluationError.invalidSource("Select a writable Swift Music source.")
+        }
+        var request: ProjectEvaluationRequest?
+        if let project {
+            guard let target = project.targets.first(where: { url.path.hasPrefix(project.root.appending(path: $0.path).path + "/") }) else {
+                throw EvaluationError.invalidSource("The file is outside this project's Swift targets.")
+            }
+            let relative = String(url.path.dropFirst(project.root.appending(path: target.path).path.count + 1))
+            request = try ProjectEvaluationRequest(project: project, target: target.selectingEntry(relative), buffers: projectBuffers)
+        }
+        return try await evaluator.musicEntries(source: document.source, project: request)
+    }
+
     func loadIntoDeck(_ document: SessionDocument, type: String = "Session") throws {
         guard !document.isReadOnly, let url = document.fileURL, url.pathExtension == "swift" else {
             throw EvaluationError.invalidSource("Select a writable Swift Music source.")

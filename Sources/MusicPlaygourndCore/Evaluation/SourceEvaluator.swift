@@ -171,6 +171,74 @@ public actor SourceEvaluator {
         return (await worker?.connection.processIdentifierForTests, exporting, retired)
     }
 
+    /// Resolves real conformances without creating or replacing an audio worker.
+    public func musicEntries(source: String, project: ProjectEvaluationRequest? = nil) async throws -> [String] {
+        guard source.utf8.count <= 65_536 else { throw EvaluationError.invalidSource("Source exceeds 64 KiB.") }
+        let manager = FileManager.default
+        let directory = manager.temporaryDirectory.appending(path: "MusicEntries-" + UUID().uuidString)
+        try manager.createDirectory(at: directory, withIntermediateDirectories: true)
+        let probe = SourceEvaluator(packageURL: packageURL, workspace: directory, swiftExecutable: swiftExecutable, runtimeSDK: runtimeSDK)
+        do {
+            let environment = try await probe.resolveCompilerEnvironment()
+            let entry = directory.appending(path: "Entry.swift")
+            try ("import SwiftMusic\nimport MusicPlayground\n" + source).write(to: entry, atomically: true, encoding: .utf8)
+            var arguments = ["-frontend", "-dump-ast", "-dump-ast-format", "json", "-suppress-warnings",
+                "-sdk", environment.sdkPath, "-plugin-path", environment.pluginPath,
+                "-module-name", project?.target.moduleName ?? "MusicEntryDiscovery"]
+            if !environment.target.isEmpty { arguments += ["-target", environment.target] }
+            if let runtimeSDK { arguments += ["-I", runtimeSDK.path] }
+            if let binaryDirectory {
+                arguments += ["-I", binaryDirectory, "-I", URL(fileURLWithPath: binaryDirectory).appending(path: "Modules").path]
+            }
+            // SwiftPM's cached dependency modules supplement the bundled host modules.
+            if let projectBuildCache {
+                let build = projectBuildCache.appending(path: "Project/.build")
+                if manager.fileExists(atPath: build.path) {
+                    for child in try manager.contentsOfDirectory(at: build, includingPropertiesForKeys: nil) {
+                        let modules = child.appending(path: "release/Modules")
+                        if manager.fileExists(atPath: modules.path) { arguments += ["-I", modules.path] }
+                    }
+                }
+            }
+            arguments += ["-primary-file", entry.path]
+            if let project {
+                for (index, file) in project.target.sources.enumerated() where file != project.target.entry && file.hasSuffix(".swift") {
+                    let original = project.project.root.appending(path: project.target.path).appending(path: file)
+                    let text = try project.buffers[original] ?? String(contentsOf: original, encoding: .utf8)
+                    guard text.utf8.count <= 65_536 else { throw EvaluationError.invalidSource("\(file) exceeds 64 KiB.") }
+                    let copy = directory.appending(path: "Sibling\(index).swift")
+                    try text.write(to: copy, atomically: true, encoding: .utf8)
+                    arguments.append(copy.path)
+                }
+            }
+            let output = try await probe.run(swiftExecutable, arguments, timeout: 20)
+            let names = try Self.decodeMusicEntries(Data(output.utf8))
+            try manager.removeItem(at: directory)
+            return names
+        } catch {
+            let failure = error
+            do { try manager.removeItem(at: directory) }
+            catch { throw EvaluationError.invalidResult("Entry discovery cleanup failed: \(error); discovery failed: \(failure)") }
+            throw failure
+        }
+    }
+
+    internal static func decodeMusicEntries(_ ast: Data) throws -> [String] {
+        guard let root = try JSONSerialization.jsonObject(with: ast) as? [String: Any],
+              root["_kind"] as? String == "source_file", let items = root["items"] as? [[String: Any]] else {
+            throw EvaluationError.invalidResult("Unsupported Swift AST for Music entry discovery.")
+        }
+        return items.compactMap { item in
+            guard ["struct_decl", "class_decl", "enum_decl"].contains(item["_kind"] as? String ?? ""),
+                  let inheritance = item["inherits"] as? [String: Any],
+                  let conformances = inheritance["conformances"] as? [[String: Any]],
+                  conformances.contains(where: { $0["protocol"] as? String == "s:10SwiftMusic0B0P" }),
+                  let name = item["name"] as? [String: Any],
+                  let base = name["base_name"] as? [String: Any] else { return nil }
+            return base["name"] as? String
+        }.sorted()
+    }
+
     public func format(source: String) async throws -> String {
         guard source.utf8.count <= 65_536 else {
             throw EvaluationError.invalidSource("Source exceeds the 64 KiB editor limit.")

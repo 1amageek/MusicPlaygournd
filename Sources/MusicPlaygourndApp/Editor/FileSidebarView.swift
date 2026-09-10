@@ -4,6 +4,7 @@ import SwiftUI
 struct FileSidebarView: View {
     @Bindable var model: SessionModel
     @Bindable var browser: SessionFileBrowser
+    var deckWorkspace: DeckWorkspace? = nil
     @SwiftUI.State private var filter = ""
     @SwiftUI.State private var rootExpanded = true
     @SwiftUI.State private var selection: URL?
@@ -16,7 +17,7 @@ struct FileSidebarView: View {
                         let children = Dictionary(grouping: visibleEntries, by: { $0.url.deletingLastPathComponent() })
                         let dirtyFiles = Set(model.documents.filter(\.isDirty).compactMap(\.fileURL))
                         ForEach(children[root] ?? []) { entry in
-                            FileTreeRow(entry: entry, browser: browser, children: children, dirtyFiles: dirtyFiles)
+                            FileTreeRow(entry: entry, browser: browser, children: children, dirtyFiles: dirtyFiles, load: deckWorkspace.map { workspace in { url, deck in workspace.loadFile(url, into: deck) } })
                         }
                     } label: {
                         Label {

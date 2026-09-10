@@ -141,3 +141,5 @@
 - [x] MIXUI-2 Compact EQ above Wave and existing Filter-Space XY integrated; native EQ drag, independent deck values and pad reset verified `depends:MIXUI-1` `parallel:none`
 - [x] MIXUI-TOP Native top safe area reclaims 52 points; sidebar collapse/expand preserves window controls `depends:MIXUI-1` `parallel:none`
 - [ ] MIXUI-INT Final Release build passed (27.86 s); native EQ, XY/reset and header geometry verified; CUE scope question remains unanswered `depends:MIXUI-1,MIXUI-2,MIXUI-TOP` `parallel:none`
+
+- [x] DROPSELECT-1 Native NSItemProvider delivery selects the receiving deck and source before discovery; failed opens preserve selection (0.126 s); real compiler discovery passed (1.452 s), Release built (25.19 s); physical drag automation did not complete `depends:none` `parallel:none`

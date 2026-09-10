@@ -1,12 +1,22 @@
 import AVFoundation
 import Foundation
 
-/// Owns the single hardware graph and post-mix recording path for up to two decks.
+/// Owns the main graph, optional headphone output, and recording for up to two decks.
 @MainActor
 public final class AudioOutput: MasterRecording {
     internal let audioEngine = AVAudioEngine()
     internal let meterStore = OutputMeterStore()
     private let input = AVAudioMixerNode()
+    private let cueMixer = AVAudioMixerNode()
+    private let cueSilentSink = AVAudioMixerNode()
+    private let cueMasterSend = AVAudioMixerNode()
+    private var cueSends: [AVAudioMixerNode] = []
+    internal let cueOutput = CueOutput()
+    public private(set) var cueDecks: Set<Int> = []
+    public private(set) var cueMix: Float = 0
+    public var cueDeviceID: UInt32? { cueOutput.deviceID }
+    public var cueLevel: Float { cueOutput.level }
+
     private let space = AVAudioUnitReverb()
     private let balance = AVAudioMixerNode()
     public private(set) var masterBalance: Float = 0
@@ -49,7 +59,17 @@ public final class AudioOutput: MasterRecording {
         audioEngine.connect(input, to: space, format: format)
         audioEngine.connect(space, to: balance, format: format)
         audioEngine.connect(balance, to: node, format: format)
-        audioEngine.connect(node, to: audioEngine.mainMixerNode, format: format)
+        for mixer in [cueMixer, cueSilentSink, cueMasterSend] { audioEngine.attach(mixer) }
+        cueSilentSink.outputVolume = 0
+        cueMasterSend.outputVolume = 0
+        audioEngine.connect(node, to: [AVAudioConnectionPoint(node: audioEngine.mainMixerNode, bus: 0),
+                                      AVAudioConnectionPoint(node: cueMasterSend, bus: 0)], fromBus: 0, format: format)
+        audioEngine.connect(cueMasterSend, to: cueMixer, fromBus: 0, toBus: 2, format: format)
+        audioEngine.connect(cueMixer, to: cueSilentSink, format: format)
+        audioEngine.connect(cueSilentSink, to: audioEngine.mainMixerNode, fromBus: 0, toBus: 1, format: format)
+        let cueBuffer = cueOutput.buffer
+        cueMixer.installTap(onBus: 0, bufferSize: 512, format: format) { @Sendable [cueBuffer] buffer, _ in cueBuffer.capture(buffer) }
+
         let meter = meterStore
         let capture = recordingCapture
         audioEngine.mainMixerNode.installTap(onBus: 0,
@@ -71,7 +91,13 @@ public final class AudioOutput: MasterRecording {
         }
         let mixer = AVAudioMixerNode()
         audioEngine.attach(mixer)
-        audioEngine.connect(source, to: mixer, format: format)
+        let cueSend = AVAudioMixerNode()
+        cueSend.outputVolume = 0
+        audioEngine.attach(cueSend)
+        audioEngine.connect(source, to: [AVAudioConnectionPoint(node: mixer, bus: 0),
+                                        AVAudioConnectionPoint(node: cueSend, bus: 0)], fromBus: 0, format: format)
+        audioEngine.connect(cueSend, to: cueMixer, fromBus: 0, toBus: AVAudioNodeBus(decks.count), format: format)
+        cueSends.append(cueSend)
         audioEngine.connect(mixer, to: input, fromBus: 0, toBus: AVAudioNodeBus(decks.count), format: format)
         decks.append(mixer)
         return decks.count - 1
@@ -90,9 +116,76 @@ public final class AudioOutput: MasterRecording {
         active.remove(deck)
         if active.isEmpty {
             audioEngine.stop()
+            cueOutput.buffer.reset(enabled: cueDeviceID != nil)
             smoother.finishAll()
             meterStore.clear()
         }
+    }
+
+    public func mainOutputDeviceID() throws -> UInt32 { try CueOutput.device(of: audioEngine) }
+
+    public func selectMainOutput(_ id: UInt32) throws {
+        let previous = try mainOutputDeviceID()
+        guard previous != id else { return }
+        guard !isRecording else { throw PlaybackError.audioSetupFailed("Stop recording before changing the main output.") }
+        guard id != cueDeviceID, try CueOutputDevice.available().contains(where: { $0.id == id }),
+              let unit = audioEngine.outputNode.audioUnit else {
+            throw PlaybackError.audioSetupFailed("Choose a connected stereo main output different from the headphone output.")
+        }
+        let wasRunning = audioEngine.isRunning
+        audioEngine.stop()
+        func bind(_ device: UInt32) throws {
+            var device = device
+            try CueOutputDevice.check(AudioUnitSetProperty(unit, kAudioOutputUnitProperty_CurrentDevice,
+                kAudioUnitScope_Global, 0, &device, UInt32(MemoryLayout<UInt32>.size)))
+            if wasRunning { try audioEngine.start() }
+            guard try mainOutputDeviceID() == device else { throw PlaybackError.audioSetupFailed("Main output changed during setup.") }
+        }
+        do { try bind(id) }
+        catch {
+            let failure = error
+            audioEngine.stop()
+            do { try bind(previous) }
+            catch { throw PlaybackError.audioSetupFailed("Main output change failed: \(failure.localizedDescription) Restoration failed: \(error.localizedDescription)") }
+            throw failure
+        }
+    }
+
+    public func availableCueDevices() throws -> [CueOutputDevice] {
+        let main = try CueOutput.device(of: audioEngine)
+        return try CueOutputDevice.available().filter { $0.id != main }
+    }
+
+    public func selectCueDevice(_ id: UInt32?) throws {
+        guard id != nil else { cueOutput.stop(); return }
+        try cueOutput.select(id, main: CueOutput.device(of: audioEngine))
+    }
+
+    public func validateCueDevice() throws {
+        do { try cueOutput.validate(main: CueOutput.device(of: audioEngine)) }
+        catch { cueOutput.stop(); throw error }
+    }
+
+    public func setCue(_ enabled: Bool, deck: Int) throws {
+        guard cueSends.indices.contains(deck) else { throw PlaybackError.audioSetupFailed("Unknown cue deck.") }
+        if enabled { cueDecks.insert(deck) } else { cueDecks.remove(deck) }
+        updateCueMix()
+    }
+
+    public func setCueMix(_ value: Float) throws {
+        guard value.isFinite, (0...1).contains(value) else { throw PlaybackError.audioSetupFailed("Cue mix must be between 0 and 1.") }
+        cueMix = value
+        updateCueMix()
+    }
+
+    public func setCueLevel(_ value: Float) throws {
+        guard value.isFinite, (0...1).contains(value) else { throw PlaybackError.invalidMasterVolume(value) }
+        cueOutput.level = value
+    }
+
+    private func updateCueMix() {
+        for (index, send) in cueSends.enumerated() { send.outputVolume = cueDecks.contains(index) ? 1 - cueMix : 0 }
+        cueMasterSend.outputVolume = cueMix
     }
 
     public func setCrossfade(_ value: Float) throws {
@@ -194,6 +287,8 @@ public final class AudioOutput: MasterRecording {
         recordingCapture.finish()
         recordingTake?.task.cancel()
         smoother.cancelAll()
+        cueOutput.stop()
+        cueMixer.removeTap(onBus: 0)
         audioEngine.mainMixerNode.removeTap(onBus: 0)
         audioEngine.stop()
     }

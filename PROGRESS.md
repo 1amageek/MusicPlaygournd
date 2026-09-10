@@ -143,3 +143,7 @@
 - [ ] MIXUI-INT Final Release build passed (27.86 s); native EQ, XY/reset and header geometry verified; CUE scope question remains unanswered `depends:MIXUI-1,MIXUI-2,MIXUI-TOP` `parallel:none`
 
 - [x] DROPSELECT-1 Native NSItemProvider delivery selects the receiving deck and source before discovery; failed opens preserve selection (0.126 s); real compiler discovery passed (1.452 s), Release built (25.19 s); physical drag automation did not complete `depends:none` `parallel:none`
+
+- [x] CUE-1 Independent cue bus and main/headphone device switching; bounded bridge, native PCM isolation/level and live device switching passed (3 tests, 0.949 s) `depends:none` `parallel:none`
+- [ ] CUE-2 Deck headphone buttons, central cue settings and app Settings Audio tab with main/headphone routing; build and native UI verification `depends:CUE-1` `parallel:none`
+- [ ] CUE-INT Integrated main/cue separation verified within available hardware; disconnected headphone hardware limitation recorded `depends:CUE-1,CUE-2` `parallel:none`

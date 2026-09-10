@@ -5,6 +5,7 @@ struct WaveCompressorView: View {
     let settings: MasterCompressorSettings
     let snapshot: MasterCompressorSnapshot
     let onChange: (MasterCompressorSettings) -> Void
+    var tint: Color = .mint
 
     var body: some View {
         VStack(spacing: 12) {
@@ -16,7 +17,7 @@ struct WaveCompressorView: View {
                 .accessibilityIdentifier("compressor-enabled")
                 Spacer()
                 Text(String(format: "GR  −%.1f dB", snapshot.gainReduction))
-                    .monospacedDigit().foregroundStyle(.mint)
+                    .monospacedDigit().foregroundStyle(tint)
                     .accessibilityLabel("Gain reduction")
                 Button("Reset") { onChange(.defaults) }
                     .buttonStyle(.plain).accessibilityLabel("Reset compressor")
@@ -44,8 +45,8 @@ struct WaveCompressorView: View {
                             if isInput {
                                 context.stroke(wave, with: .color(.white.opacity(0.24)), lineWidth: 1)
                             } else {
-                                context.addFilter(.shadow(color: .mint.opacity(0.45), radius: 3))
-                                context.stroke(wave, with: .linearGradient(Gradient(colors: [.mint, .cyan, .indigo]),
+                                context.addFilter(.shadow(color: tint.opacity(0.45), radius: 3))
+                                context.stroke(wave, with: .linearGradient(Gradient(colors: [tint.opacity(0.7), tint, tint.opacity(0.9)]),
                                     startPoint: .zero, endPoint: CGPoint(x: size.width, y: size.height)), lineWidth: 1)
                             }
                         }
@@ -56,11 +57,11 @@ struct WaveCompressorView: View {
                             path.move(to: CGPoint(x: 0, y: y))
                             path.addLine(to: CGPoint(x: geometry.size.width, y: y))
                         }
-                        .stroke(.mint.opacity(settings.enabled ? 0.9 : 0.45),
+                        .stroke(tint.opacity(settings.enabled ? 0.9 : 0.45),
                             style: StrokeStyle(lineWidth: 1, dash: [4, 4]))
                         .allowsHitTesting(false)
                     }
-                    Circle().fill(.mint).frame(width: 10, height: 10)
+                    Circle().fill(tint).frame(width: 10, height: 10)
                         .overlay(Circle().stroke(.white.opacity(0.8), lineWidth: 1))
                         .position(x: geometry.size.width - 12, y: center - threshold * halfHeight)
                         .allowsHitTesting(false)
@@ -68,7 +69,7 @@ struct WaveCompressorView: View {
                         Text(String(format: "THRESHOLD  %.1f dBFS", settings.threshold))
                         Spacer()
                         Text("PRE").foregroundStyle(.secondary)
-                        Text("POST").foregroundStyle(.mint)
+                        Text("POST").foregroundStyle(tint)
                     }.font(.system(size: 9, design: .monospaced)).padding(.horizontal, 4)
                         .allowsHitTesting(false)
                 }
@@ -117,7 +118,7 @@ struct WaveCompressorView: View {
                 get: { logarithmic ? log(settings[keyPath: keyPath]) : settings[keyPath: keyPath] },
                 set: { change(keyPath, to: min(range.upperBound, max(range.lowerBound, logarithmic ? exp($0) : $0))) }
             ), in: logarithmic ? log(range.lowerBound)...log(range.upperBound) : range)
-            .controlSize(.small).tint(.mint)
+            .controlSize(.small).tint(tint)
             .accessibilityLabel("Compressor " + title)
             .accessibilityValue(String(format: "%.1f", settings[keyPath: keyPath]) + unit)
         }

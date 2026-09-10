@@ -90,12 +90,15 @@ struct DeckHeaderView: View {
                         .frame(width: 21, height: 24).background(color, in: RoundedRectangle(cornerRadius: 4))
                 }.buttonStyle(.plain).accessibilityLabel("Deck \(name) color")
                     .popover(isPresented: $colorDeck[index]) {
-                        ColorPicker("Deck \(name)", selection: Binding(get: { index == 0 ? workspace.colorA : workspace.colorB }, set: { workspace.setColor($0, deck: index) }), supportsOpacity: false)
-                            .padding(16).frame(width: 220)
+                        DeckColorPalette(name: name, selection: Binding(
+                            get: { index == 0 ? workspace.colorA : workspace.colorB },
+                            set: { workspace.setColor($0, deck: index) }))
                     }
                 Menu {
                     Button("Load selected file") { workspace.loadSelected(index) }
                     Button("Open file…") { workspace.selectedDeck = index; model.openDocument() }
+                    Divider()
+                    Button("Change Deck Color…") { colorDeck[index] = true }
                 } label: {
                     Text(model.loadedDocument == nil ? "Load…" : (model.loadedType == "Session" ? (model.project?.name ?? model.loadedType) : model.loadedType))
                         .font(.system(size: 11, weight: .medium)).lineLimit(1).frame(maxWidth: .infinity, alignment: .leading)
@@ -176,7 +179,7 @@ struct DeckHeaderView: View {
                 .background(MultiFingerGestureView(onMotion: model.scratch, onEnd: model.endScratch, onRelease: model.releaseScratch))
                 .help("Scratch with two or three fingers, even while paused. Right/up forward, left/down reverse.")
                 .popover(isPresented: $compressorDeck[index]) {
-                    WaveCompressorView(settings: workspace.a.compressorSettings, snapshot: workspace.a.compressorMeter, onChange: workspace.a.setCompressor)
+                    WaveCompressorView(settings: workspace.a.compressorSettings, snapshot: workspace.a.compressorMeter, onChange: workspace.a.setCompressor, tint: color)
                         .frame(width: 460, height: 300).padding(12)
                 }
         }.padding(.horizontal, 10).padding(.vertical, 10).frame(maxWidth: .infinity)

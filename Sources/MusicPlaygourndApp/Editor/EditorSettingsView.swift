@@ -38,6 +38,14 @@ struct EditorSettingsView: View {
                     if !highlightingStatus.isEmpty {
                         Text(highlightingStatus).font(.caption).foregroundStyle(.secondary)
                     }
+                    HStack(spacing: 16) {
+                        Text("Deck Colors").font(.subheadline)
+                        ColorPicker("A", selection: Binding(get: { workspace.colorA }, set: { workspace.setColor($0, deck: 0) }), supportsOpacity: false)
+                            .accessibilityLabel("Deck A color")
+                        ColorPicker("B", selection: Binding(get: { workspace.colorB }, set: { workspace.setColor($0, deck: 1) }), supportsOpacity: false)
+                            .accessibilityLabel("Deck B color")
+                        Spacer()
+                    }.fixedSize(horizontal: false, vertical: true)
                     Text("Changes apply immediately to all editor tabs.")
                         .font(.caption).foregroundStyle(.secondary)
                 }.padding(20)

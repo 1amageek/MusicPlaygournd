@@ -155,3 +155,6 @@
 - [x] INERTIA-2 Wave release/coast/recontact/cancel callbacks verified; existing two/three-finger and axis checks passed `depends:INERTIA-1` `parallel:none`
 - [x] SPECTRUM-READABILITY Removed compounded transparency; selected deck tint and EQ remain readable during native playback `depends:none` `parallel:none`
 - [x] INERTIA-INT Six focused tests passed (0.301 s), Release built and updated app launched with zero playback errors; physical trackpad inertia feel remains unverified `depends:INERTIA-1,INERTIA-2,SPECTRUM-READABILITY` `parallel:none`
+
+- [x] PALETTE-1 Restore 12-swatch deck palette and compressor tint; native Cyan selection and Magenta restoration verified `depends:none` `parallel:none`
+- [x] PALETTE-INT Release build and native palette/settings verification passed; paused compressor tint verified; live waveform check interrupted by app closure `depends:PALETTE-1` `parallel:none`

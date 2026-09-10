@@ -8,10 +8,12 @@ MusicPlayground is a native macOS live music editor powered by [SwiftMusic](http
 
 ## Get started
 
+Current source preview: **0.2.0**, powered by **SwiftMusic 0.5.0**.
+
 Requires **Swift 6.4**, **macOS 15 or later**, and Xcode command-line tools. Swift 6.4 operation was verified on September 10, 2026.
 
 ```sh
-git clone https://github.com/1amageek/MusicPlaygournd.git
+git clone --branch 0.2.0 https://github.com/1amageek/MusicPlaygournd.git
 cd MusicPlaygournd
 ./Scripts/build-app.sh
 open .build/MusicPlaygournd.app

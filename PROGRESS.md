@@ -104,3 +104,7 @@
 - [x] COMP-1 f9c0f83: live stereo-linked compressor; focused PCM and native recording checks passed `depends:none` `parallel:none`
 - [x] COMP-2 Wave controls, pre/post traces and bounded telemetry connected; native accessibility changes and reset verified during playback; bundled source inventory and root manifest fingerprint restore existing cached-project builds `depends:COMP-1` `parallel:none`
 - [ ] COMP-INT Release build and existing FirstLight playback passed with zero errors/dropouts; native controls produced 18 dB reduction and reset to bypass; PCM/recording/revision checks passed; physical mouse drag remains unverified because automation coordinates do not reach the popover `depends:COMP-1,COMP-2` `parallel:none`
+
+- [x] REL020-1 App 0.2.0 (2), source-preview documentation and public SwiftMusic 0.5.0 verified; Release build, runtime artifact digests and code signature passed; unchanged template/PCM checks retained `depends:none` `parallel:none`
+- [ ] REL020-2 Push the release commit and publish the 0.2.0 tag and GitHub source preview with validation limits `depends:REL020-1` `parallel:none`
+- [ ] REL020-INT Verify remote main/tag/release commit identity, published notes and packaged version `depends:REL020-1,REL020-2` `parallel:none`

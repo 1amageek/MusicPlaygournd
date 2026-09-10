@@ -7,8 +7,6 @@ final class MultiFingerGestureRecognizer {
     private var monitor: Any?
     private var windowObserver: NSObjectProtocol?
     private weak var touchView: NSView?
-    private static var touchUsers: [ObjectIdentifier: (count: Int, types: NSTouch.TouchTypeMask, resting: Bool)] = [:]
-    private var touchKey: ObjectIdentifier?
     var reversesHorizontalMotion = false
     var onChange: ((Double) -> Void)?
     var onMotion: ((Double, Double) -> Void)?
@@ -28,28 +26,14 @@ final class MultiFingerGestureRecognizer {
         monitor = nil
         if let windowObserver { NotificationCenter.default.removeObserver(windowObserver) }
         windowObserver = nil
-        if let key = touchKey, var users = Self.touchUsers[key] {
-            users.count -= 1
-            if users.count == 0 {
-                touchView?.allowedTouchTypes = users.types
-                touchView?.wantsRestingTouches = users.resting
-                Self.touchUsers.removeValue(forKey: key)
-            } else { Self.touchUsers[key] = users }
-        }
-        touchKey = nil
+        if let touchView { TrackpadTouchDelivery.release(touchView) }
         touchView = nil
         reset()
         region = view
         guard let window = view?.window else { return }
         if let content = window.contentView {
             touchView = content
-            let key = ObjectIdentifier(content)
-            touchKey = key
-            var users = Self.touchUsers[key] ?? (0, content.allowedTouchTypes, content.wantsRestingTouches)
-            users.count += 1
-            Self.touchUsers[key] = users
-            content.allowedTouchTypes.insert(.indirect)
-            content.wantsRestingTouches = true
+            TrackpadTouchDelivery.acquire(content)
         }
         windowObserver = NotificationCenter.default.addObserver(
             forName: NSWindow.didResignKeyNotification, object: window, queue: .main
@@ -59,6 +43,7 @@ final class MultiFingerGestureRecognizer {
         monitor = NSEvent.addLocalMonitorForEvents(matching: .gesture) { [weak self, weak window] event in
             MainActor.assumeIsolated {
                 guard let self else { return }
+                guard !TrackpadEdgeController.isActive else { self.reset(); return }
                 guard let window, self.contains(window.mouseLocationOutsideOfEventStream, in: event.window) else {
                     self.reset()
                     return

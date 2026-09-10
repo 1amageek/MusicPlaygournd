@@ -8,6 +8,7 @@ struct DeckHeaderView: View {
     @State private var colorDeck = [false, false]
     @State private var compressorDeck = [false, false]
     @State private var scopeVisible = false
+    @State private var edgeMode = false
     @State private var controlsDeck = [false, false]
     @State private var maximumTakeMinutes = 10
 
@@ -23,6 +24,7 @@ struct DeckHeaderView: View {
             }
         }
         .frame(height: 208)
+        .background(TrackpadEdgeView(enabled: $edgeMode, workspace: workspace))
         .background(LinearGradient(colors: [Color(red: 0.055, green: 0.07, blue: 0.08), .black.opacity(0.45)], startPoint: .top, endPoint: .bottom))
     }
 
@@ -63,6 +65,15 @@ struct DeckHeaderView: View {
                 Text("B").foregroundStyle(workspace.colorB)
             }.font(.system(size: 15, weight: .bold))
             HStack(spacing: 8) {
+                Button { edgeMode.toggle() } label: {
+                    Text(edgeMode ? "ESC" : "EDGE").font(.system(size: 9, weight: .bold))
+                        .padding(.horizontal, 5).frame(height: 22)
+                        .background(edgeMode ? Color.orange : Color.white.opacity(0.12), in: RoundedRectangle(cornerRadius: 4))
+                        .foregroundStyle(edgeMode ? .black : .white)
+                }.buttonStyle(.plain)
+                    .accessibilityLabel("Trackpad edge mode")
+                    .accessibilityValue(edgeMode ? "On. Press Escape to exit." : "Off")
+                    .help("Edge mode: left edge A, right edge B, bottom crossfader. Cursor is hidden. Escape exits.")
                 Image(systemName: "speaker.wave.2").font(.system(size: 11)).foregroundStyle(.secondary)
                 Slider(value: $workspace.masterVolume, in: 0...1).controlSize(.mini).tint(.gray)
                     .background(MultiFingerGestureView(onChange: { workspace.masterVolume = min(1, max(0, workspace.masterVolume + $0 * 0.01)) }))

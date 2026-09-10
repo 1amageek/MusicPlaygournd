@@ -164,3 +164,6 @@
 
 - [x] WAVE-DIR-1 Make Wave follow horizontal finger motion; preserve vertical and knob direction, two/three fingers and inertia `depends:none` `parallel:none`
 - [x] WAVE-DIR-INT Four gesture/native PCM tests and release build passed `depends:WAVE-DIR-1` `parallel:none`
+
+- [x] EDGE-1 Add explicit edge mode with contact-locked routing, cursor capture and Esc/focus-loss teardown; preserve regular gestures outside mode `depends:none` `parallel:none`
+- [x] EDGE-INT Six tests and release build passed; user verified cursor capture/Esc restoration; TranceSet opened for physical edge trial `depends:EDGE-1` `parallel:none`

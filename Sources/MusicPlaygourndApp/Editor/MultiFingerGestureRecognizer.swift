@@ -12,6 +12,8 @@ final class MultiFingerGestureRecognizer {
     var onChange: ((Double) -> Void)?
     var onMotion: ((Double, Double) -> Void)?
     var onEnd: (() -> Void)?
+    var onRelease: (() -> Void)?
+    private var coasting = false
     private var firstTimestamp: Double?
     private var lastTimestamp: Double?
     private var lastPoint: NSPoint?
@@ -73,8 +75,10 @@ final class MultiFingerGestureRecognizer {
         return region.bounds.contains(point) && region.visibleRect.contains(point)
     }
 
-    func reset() {
+    func reset(releasing: Bool = false) {
         let wasTracking = tracking
+        let wasCoasting = coasting
+        coasting = false
         firstTimestamp = nil
         lastTimestamp = nil
         lastPoint = nil
@@ -82,12 +86,27 @@ final class MultiFingerGestureRecognizer {
         accumulated = .zero
         tracking = false
         horizontal = false
-        if wasTracking { onEnd?() }
+        if releasing && wasTracking, let onRelease {
+            coasting = true
+            onRelease()
+        } else if wasTracking || wasCoasting { onEnd?() }
+    }
+
+    func release(timestamp: Double) {
+        guard tracking else { return }
+        reset(releasing: timestamp - (lastTimestamp ?? 0) <= 0.12)
     }
 
     private func update(_ event: NSEvent) {
         let touches = event.touches(matching: .touching, in: nil)
-        guard touches.count == 2 || touches.count == 3 else { reset(); return }
+        guard touches.count == 2 || touches.count == 3 else {
+            if touches.count < 2 && (!event.touches(matching: .ended, in: nil).isEmpty || event.phase == .ended) {
+                release(timestamp: event.timestamp)
+            } else if !coasting || !event.touches(matching: .cancelled, in: nil).isEmpty || touches.count > 3 {
+                reset()
+            }
+            return
+        }
         var point = NSPoint.zero
         for touch in touches {
             point.x += touch.normalizedPosition.x * touch.deviceSize.width / CGFloat(touches.count)
@@ -98,6 +117,7 @@ final class MultiFingerGestureRecognizer {
 
     func update(point: NSPoint, touchCount: Int, timestamp: Double = ProcessInfo.processInfo.systemUptime) {
         guard touchCount == 2 || touchCount == 3 else { reset(); return }
+        if coasting { reset() }
         if lastTouchCount != touchCount { reset() }
         lastTouchCount = touchCount
         if firstTimestamp == nil { firstTimestamp = timestamp }

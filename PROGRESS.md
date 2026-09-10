@@ -150,3 +150,8 @@
 
 - [x] HIGHLIGHT-1 Fresh language connection and bounded highlight retry; native NSTextStorage recovery and stale-document regressions passed `depends:none` `parallel:none`
 - [x] HIGHLIGHT-INT Release build passed; Trance.swift in Deck B visibly colors keywords, comments, types and strings `depends:HIGHLIGHT-1` `parallel:none`
+
+- [x] INERTIA-1 Sample-clock decay, paused PCM/output release and return to playback verified by native tests `depends:none` `parallel:none`
+- [x] INERTIA-2 Wave release/coast/recontact/cancel callbacks verified; existing two/three-finger and axis checks passed `depends:INERTIA-1` `parallel:none`
+- [x] SPECTRUM-READABILITY Removed compounded transparency; selected deck tint and EQ remain readable during native playback `depends:none` `parallel:none`
+- [x] INERTIA-INT Six focused tests passed (0.301 s), Release built and updated app launched with zero playback errors; physical trackpad inertia feel remains unverified `depends:INERTIA-1,INERTIA-2,SPECTRUM-READABILITY` `parallel:none`

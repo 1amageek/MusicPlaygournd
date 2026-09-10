@@ -327,3 +327,9 @@ The app Settings scene receives the existing DeckWorkspace. Its Audio tab expose
 Transport TAP/SYNC/headphone actions use the approved dark rounded button surfaces with 10-point semibold labels and a 13-point headphone icon. Their 25-point controls remain inside the existing 32-point row; selected cue uses the deck tint. Verify legibility and fit at the standard window size without increasing header height.
 
 Semantic coloring retries one transient SourceKit-LSP timeout/process failure after a 500 ms delay, displaying recovery status. A second failure remains a diagnostic; cancellation, document identity, source and syntax-context guards still reject stale results. Verify actual NSTextStorage colors after first-request failure and document changes during recovery.
+
+### Wave inertial release
+
+MultiFingerGestureRecognizer distinguishes natural ended contacts from cancellation. Wave alone supplies onRelease; existing knob gestures retain their immediate end behavior. Recent motion (within 120 ms) releases to native inertia. Held/old motion ends immediately. A new contact, region exit, window resignation or detach cancels inertia through onEnd even after touch tracking ended. Two/three contacts and both axes remain supported. The gesture owns only contact lifecycle; Playback owns deceleration and PCM timing. Verify natural release, stale release, recontact and reset with real recognizer callbacks; physical trackpad feel is a separate manual check.
+
+Semantic coloring retries one transient SourceKit-LSP timeout/process failure after a 500 ms delay, displaying recovery status. A second failure remains a diagnostic; cancellation, document identity, source and syntax-context guards still reject stale results. Verify actual NSTextStorage colors after first-request failure and document changes during recovery.

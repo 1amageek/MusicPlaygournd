@@ -20,7 +20,7 @@ struct SpectrumEqualizerView: View {
             ZStack {
                 SpectrumView(bands: spectrum, isPlaying: isPlaying, tint: tint).padding(.horizontal, 12)
                     .padding(.top, top).padding(.bottom, compact ? 16 : 24)
-                    .opacity(0.6).allowsHitTesting(false)
+                    .allowsHitTesting(false)
                 Canvas { context, size in
                     for bandIndex in 0..<(responses.isEmpty ? 0 : responses.count + 1) {
                         var path = Path()

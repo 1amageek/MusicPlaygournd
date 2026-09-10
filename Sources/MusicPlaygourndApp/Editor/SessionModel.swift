@@ -645,6 +645,8 @@ final class SessionModel {
         } catch { diagnostic = error.localizedDescription }
     }
 
+    func releaseScratch() { engine?.releaseScratch() }
+
     func endScratch() {
         engine?.endScratch()
         refresh()

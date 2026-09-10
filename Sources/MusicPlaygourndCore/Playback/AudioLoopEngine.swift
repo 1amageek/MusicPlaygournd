@@ -11,6 +11,7 @@ public final class AudioLoopEngine: AudioUnitHosting, MasterRecording {
     private let balanceMixer: AVAudioMixerNode
     public let output: AudioOutput
     private let deckIndex: Int
+    private var scratchOutputActive = false
     private let deckGain = AVAudioMixerNode()
     private let deckMeterStore = OutputMeterStore()
     public var compressorSettings: MasterCompressorSettings { output.compressorSettings }
@@ -269,6 +270,7 @@ public final class AudioLoopEngine: AudioUnitHosting, MasterRecording {
         let starting = !transport.isScratching
         try transport.scratch(bySeconds: seconds, over: duration)
         guard starting else { return }
+        scratchOutputActive = true
         deckMeterStore.activate()
         do { try output.start(deckIndex) }
         catch {
@@ -277,7 +279,10 @@ public final class AudioLoopEngine: AudioUnitHosting, MasterRecording {
         }
     }
 
+    public func releaseScratch() { transport.releaseScratch() }
+
     public func endScratch() {
+        scratchOutputActive = false
         transport.endScratch()
         if !transport.snapshot().isPlaying {
             deckMeterStore.clear()
@@ -298,6 +303,7 @@ public final class AudioLoopEngine: AudioUnitHosting, MasterRecording {
     }
 
     public func snapshot() -> PlaybackSnapshot {
+        if scratchOutputActive && !transport.isScratching { endScratch() }
         let position = transport.positionSnapshot()
         let rawSnapshot = position.playback
         pruneRetainedLoops()
@@ -714,6 +720,9 @@ final class AudioTransport: Sendable {
     private struct Scratch: Sendable {
         var step: Double
         var remaining: Int
+        var released = false
+        var targetStep = 0.0
+        var decay = 1.0
     }
 
     private struct State: Sendable {
@@ -1019,6 +1028,17 @@ final class AudioTransport: Sendable {
         }
     }
 
+    func releaseScratch() {
+        state.withLock { state in
+            guard var scratch = state.scratch, let current = state.current else { return }
+            scratch.released = true
+            scratch.remaining = max(1, Int(1.2 * current.sampleRate * state.clockRate))
+            scratch.targetStep = state.isPlaying ? current.bpm / 60 / current.sampleRate : 0
+            scratch.decay = exp(log(0.001) / Double(scratch.remaining))
+            state.scratch = scratch
+        }
+    }
+
     func endScratch() {
         state.withLock { state in
             state.scratch = nil
@@ -1189,18 +1209,21 @@ final class AudioTransport: Sendable {
 
             if var scratch = state.scratch, let current = state.current {
                 for offset in 0..<frameCount {
-                    if scratch.remaining > 0 && scratch.step != 0 {
+                    if scratch.released && scratch.remaining == 0 { scratch.step = scratch.targetStep }
+                    if (scratch.remaining > 0 || (scratch.released && state.isPlaying)) && scratch.step != 0 {
                         let value = sample(at: state.beatPosition, in: current)
-                        write(buffers: buffers, frame: offset, left: value.0, right: value.1)
+                        let gain = scratch.released ? Float(min(1, abs(scratch.step) / (current.bpm / 60 / current.sampleRate))) : 1
+                        write(buffers: buffers, frame: offset, left: value.0 * gain, right: value.1 * gain)
                         let beat = (state.beatPosition + scratch.step).truncatingRemainder(dividingBy: current.beatCount)
                         state.beatPosition = beat < 0 ? beat + current.beatCount : beat
                         state.framePosition = frame(for: state.beatPosition, in: current)
-                        scratch.remaining -= 1
                     } else {
                         write(buffers: buffers, frame: offset, left: 0, right: 0)
                     }
+                    if scratch.remaining > 0 { scratch.remaining -= 1 }
+                    if scratch.released { scratch.step = scratch.targetStep + (scratch.step - scratch.targetStep) * scratch.decay }
                 }
-                state.scratch = scratch
+                state.scratch = scratch.released && scratch.remaining == 0 ? nil : scratch
                 return noErr
             }
 

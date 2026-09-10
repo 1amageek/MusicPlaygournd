@@ -5,6 +5,7 @@ import SwiftUI
 struct MultiFingerGestureView: NSViewRepresentable {
     var onMotion: ((Double, Double) -> Void)?
     var onEnd: (() -> Void)?
+    var onRelease: (() -> Void)?
     var onChange: ((Double) -> Void)?
 
     func makeNSView(context: Context) -> RegionView { RegionView() }
@@ -13,6 +14,7 @@ struct MultiFingerGestureView: NSViewRepresentable {
         view.gesture.onChange = onChange
         view.gesture.onMotion = onMotion
         view.gesture.onEnd = onEnd
+        view.gesture.onRelease = onRelease
     }
 
     static func dismantleNSView(_ view: RegionView, coordinator: ()) {
@@ -20,6 +22,7 @@ struct MultiFingerGestureView: NSViewRepresentable {
         view.gesture.onChange = nil
         view.gesture.onMotion = nil
         view.gesture.onEnd = nil
+        view.gesture.onRelease = nil
     }
 
     final class RegionView: NSView {

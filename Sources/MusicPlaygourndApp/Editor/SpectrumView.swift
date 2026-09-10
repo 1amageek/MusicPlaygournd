@@ -20,7 +20,7 @@ struct SpectrumView: View {
                 let height = max(0, Double(db + 90) / 90 * plotHeight)
                 let rect = CGRect(x: Double(index) * width, y: plotHeight - height, width: max(1, width - 2), height: height)
                 context.fill(Path(roundedRect: rect, cornerRadius: 1), with: .linearGradient(
-                    Gradient(colors: [(tint ?? .cyan).opacity(0.25), tint ?? .mint]), startPoint: CGPoint(x: 0, y: plotHeight), endPoint: .zero))
+                    Gradient(colors: [(tint ?? .cyan).opacity(0.75), tint ?? .mint]), startPoint: CGPoint(x: 0, y: plotHeight), endPoint: .zero))
             }
 
         }

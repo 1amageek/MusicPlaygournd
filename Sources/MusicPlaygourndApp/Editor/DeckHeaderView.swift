@@ -67,6 +67,10 @@ struct DeckHeaderView: View {
                 Slider(value: $workspace.masterVolume, in: 0...1).controlSize(.mini).tint(.gray)
                     .background(MultiFingerGestureView(onChange: { workspace.masterVolume = min(1, max(0, workspace.masterVolume + $0 * 0.01)) }))
                     .frame(maxWidth: .infinity).accessibilityLabel("Master volume")
+                Button { workspace.refreshCueDevices(); workspace.cueSettingsVisible = true } label: {
+                    Image(systemName: "headphones").font(.system(size: 12))
+                }.buttonStyle(.plain).accessibilityLabel("Headphone output settings")
+                    .popover(isPresented: $workspace.cueSettingsVisible) { CueSettingsView(workspace: workspace) }
                 Button(action: record) { Image(systemName: workspace.a.isRecording ? "stop.circle.fill" : "record.circle") }
                     .buttonStyle(.plain).accessibilityLabel("Record master")
                     .disabled(!workspace.a.isPlaying && !workspace.b.isPlaying && !workspace.a.isRecording)
@@ -108,10 +112,30 @@ struct DeckHeaderView: View {
                     .textFieldStyle(.plain).frame(width: 43).accessibilityLabel("Deck \(name) BPM")
                     .background(MultiFingerGestureView(onChange: { model.adjustTempo(by: $0 * 0.25) }))
                     .help("BPM — use two or three fingers to adjust tempo")
-                Button { workspace.tap(index) } label: { Text("TAP").frame(width: 26, height: 24) }
+                Button { workspace.tap(index) } label: {
+                    Text("TAP").font(.system(size: 10, weight: .semibold)).foregroundStyle(.primary)
+                        .frame(width: 32, height: 25)
+                        .background(.white.opacity(0.09), in: RoundedRectangle(cornerRadius: 4))
+                        .overlay(RoundedRectangle(cornerRadius: 4).strokeBorder(.white.opacity(0.08)))
+                }.buttonStyle(.plain)
                     .accessibilityLabel("Deck \(name) tap tempo")
-                Button { workspace.sync(index) } label: { Text("SYNC").frame(width: 31, height: 24) }
+                Button { workspace.sync(index) } label: {
+                    Text("SYNC").font(.system(size: 10, weight: .semibold)).foregroundStyle(.primary)
+                        .frame(width: 38, height: 25)
+                        .background(.white.opacity(0.09), in: RoundedRectangle(cornerRadius: 4))
+                        .overlay(RoundedRectangle(cornerRadius: 4).strokeBorder(.white.opacity(0.08)))
+                }.buttonStyle(.plain)
                     .disabled(!(index == 0 ? workspace.b : workspace.a).isPlaying)
+                Button { workspace.toggleCue(index) } label: {
+                    Image(systemName: "headphones").font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(workspace.cueDeviceID != nil && workspace.cueDecks.contains(index) ? color : .white.opacity(0.9))
+                        .frame(width: 28, height: 25)
+                        .background(workspace.cueDeviceID != nil && workspace.cueDecks.contains(index) ? color.opacity(0.22) : .white.opacity(0.09),
+                                    in: RoundedRectangle(cornerRadius: 4))
+                        .overlay(RoundedRectangle(cornerRadius: 4).strokeBorder(.white.opacity(0.08)))
+                }.buttonStyle(.plain).accessibilityLabel("Deck \(name) headphone cue")
+                    .accessibilityValue(workspace.cueDeviceID != nil && workspace.cueDecks.contains(index) ? "On" : "Off")
+                    .help("Preview this deck in headphones before the crossfader")
                 Button { controlsDeck[index] = true } label: {
                     if model.isPreparing { ProgressView().controlSize(.mini) }
                     else { Image(systemName: "ellipsis").frame(width: 14, height: 24) }

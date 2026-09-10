@@ -317,3 +317,11 @@ The DJ detail column extends into the top container safe area when the sidebar i
 
 
 A successful file drop/open into a deck immediately selects that deck for editing after the document opens, before asynchronous Music entry discovery. Failed opens keep the previous editing deck. Entry discovery must not steal editing focus when it completes later.
+
+### Headphone cue controls
+
+DeckWorkspace owns UI cue selection and accepted mix/level/device state, calling AudioOutput's cue contract. Each transport row places a headphone button beside SYNC. Without a selected output it opens central cue settings; after configuration it toggles that deck's send. The central headphone button opens output selection, CUE/MASTER blend and headphone level. Output defaults to None; refresh discovers connected devices and reports routing failures. Header dimensions and the main volume/crossfade remain unchanged. Verify button placement, disconnected configuration and control dispatch against Playback's native cue checks.
+
+The app Settings scene receives the existing DeckWorkspace. Its Audio tab exposes main output selection and reuses CueSettingsView for headphone routing/mix/level. It does not create another graph or store independent audio settings.
+
+Transport TAP/SYNC/headphone actions use the approved dark rounded button surfaces with 10-point semibold labels and a 13-point headphone icon. Their 25-point controls remain inside the existing 32-point row; selected cue uses the deck tint. Verify legibility and fit at the standard window size without increasing header height.

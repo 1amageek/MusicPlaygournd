@@ -22,6 +22,18 @@ public struct CueOutputDevice: Identifiable, Sendable, Equatable {
             address.mSelector = kAudioDevicePropertyDeviceIsAlive
             try check(AudioObjectGetPropertyData(id, &address, 0, nil, &aliveSize, &alive))
             guard alive != 0 else { continue }
+            address.mSelector = kAudioObjectPropertyClass
+            var deviceClass: UInt32 = 0
+            try check(AudioObjectGetPropertyData(id, &address, 0, nil, &aliveSize, &deviceClass))
+            if deviceClass == kAudioAggregateDeviceClassID {
+                address.mSelector = kAudioAggregateDevicePropertyComposition
+                var composition: Unmanaged<CFDictionary>?
+                var compositionSize = UInt32(MemoryLayout<Unmanaged<CFDictionary>?>.size)
+                try check(AudioObjectGetPropertyData(id, &address, 0, nil, &compositionSize, &composition))
+                guard let composition else { throw PlaybackError.audioSetupFailed("Aggregate output has no configuration.") }
+                let settings = composition.takeRetainedValue() as NSDictionary
+                if (settings[kAudioAggregateDeviceIsPrivateKey] as? NSNumber)?.boolValue == true { continue }
+            }
             address.mSelector = kAudioDevicePropertyStreamConfiguration
             address.mScope = kAudioDevicePropertyScopeOutput
             try check(AudioObjectGetPropertyDataSize(id, &address, 0, nil, &size))

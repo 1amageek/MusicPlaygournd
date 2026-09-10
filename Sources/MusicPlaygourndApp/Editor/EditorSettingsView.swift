@@ -2,6 +2,7 @@ import SwiftUI
 import MusicPlaygourndCore
 
 struct EditorSettingsView: View {
+    let workspace: DeckWorkspace
     let semanticTokens: @MainActor (String) async throws -> [SwiftSemanticToken]
     @State private var highlightingStatus = ""
     @AppStorage("editor.fontSize") private var fontSize = 12.0
@@ -42,6 +43,8 @@ struct EditorSettingsView: View {
                 }.padding(20)
             }
             .tabItem { Label("Themes & Fonts", systemImage: "textformat") }
+            AudioSettingsView(workspace: workspace)
+                .tabItem { Label("Audio", systemImage: "speaker.wave.2") }
         }.frame(width: 720, height: 400)
     }
 

@@ -144,6 +144,6 @@
 
 - [x] DROPSELECT-1 Native NSItemProvider delivery selects the receiving deck and source before discovery; failed opens preserve selection (0.126 s); real compiler discovery passed (1.452 s), Release built (25.19 s); physical drag automation did not complete `depends:none` `parallel:none`
 
-- [x] CUE-1 Independent cue bus and main/headphone device switching; bounded bridge, native PCM isolation/level and live device switching passed (3 tests, 0.949 s) `depends:none` `parallel:none`
-- [ ] CUE-2 Deck headphone buttons, central cue settings and app Settings Audio tab with main/headphone routing; build and native UI verification `depends:CUE-1` `parallel:none`
-- [ ] CUE-INT Integrated main/cue separation verified within available hardware; disconnected headphone hardware limitation recorded `depends:CUE-1,CUE-2` `parallel:none`
+- [x] CUE-1 Independent cue and main/headphone routing (145b097); native PCM, volume, live device switching and private-device filtering verified (3 tests, 1.050 s) `depends:none` `parallel:none`
+- [x] CUE-2 Rounded TAP/SYNC/CUE buttons and shared Audio settings verified in the Release app; main device switch/restore and unconfigured cue popover exercised `depends:CUE-1` `parallel:none`
+- [x] CUE-INT Release build and native UI passed; main/cue PCM separation and output switching verified; physical headphone listening unavailable because headphones are disconnected `depends:CUE-1,CUE-2` `parallel:none`

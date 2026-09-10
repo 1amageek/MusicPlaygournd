@@ -10,6 +10,55 @@ final class DeckWorkspace {
     let b: SessionModel
     let output: AudioOutput?
     private let documents = SessionDocumentStore()
+    var cueSettingsVisible = false
+    private(set) var cueDeviceID: UInt32?
+    private(set) var cueDecks: Set<Int> = []
+    var cueDevices: [CueOutputDevice] = []
+    var audioDevices: [CueOutputDevice] = []
+    private(set) var mainDeviceID: UInt32?
+    func selectMainDevice(_ id: UInt32?) {
+        guard let id else { return }
+        do {
+            guard let output else { throw PlaybackError.audioSetupFailed("Audio output is unavailable.") }
+            try output.selectMainOutput(id)
+            cueError = nil
+        } catch { cueError = error.localizedDescription }
+        refreshCueDevices()
+    }
+    var cueError: String?
+    private var lastCueCheck = Date.distantPast
+    var cueMix = 0.0 {
+        didSet { do { try output?.setCueMix(Float(cueMix)) } catch { cueMix = oldValue; cueError = error.localizedDescription } }
+    }
+    var cueLevel = 0.5 {
+        didSet { do { try output?.setCueLevel(Float(cueLevel)) } catch { cueLevel = oldValue; cueError = error.localizedDescription } }
+    }
+    func refreshCueDevices() {
+        do {
+            guard let output else { throw PlaybackError.audioSetupFailed("Audio output is unavailable.") }
+            audioDevices = try CueOutputDevice.available()
+            mainDeviceID = try output.mainOutputDeviceID()
+            try output.validateCueDevice()
+            cueDevices = try output.availableCueDevices()
+            cueDeviceID = output.cueDeviceID
+        } catch { cueDeviceID = output?.cueDeviceID; cueError = error.localizedDescription }
+    }
+    func selectCueDevice(_ id: UInt32?) {
+        do {
+            guard let output else { throw PlaybackError.audioSetupFailed("Audio output is unavailable.") }
+            try output.selectCueDevice(id)
+            cueError = nil
+        } catch { cueError = error.localizedDescription }
+        cueDeviceID = output?.cueDeviceID
+    }
+    func toggleCue(_ deck: Int) {
+        guard cueDeviceID != nil else { refreshCueDevices(); cueSettingsVisible = true; return }
+        do {
+            try output?.setCue(!cueDecks.contains(deck), deck: deck)
+            cueDecks = output?.cueDecks ?? []
+            cueError = nil
+        } catch { cueError = error.localizedDescription; cueSettingsVisible = true }
+    }
     var selectedDeck = 0
     var active: SessionModel { selectedDeck == 0 ? a : b }
     var crossfade = 0.5 {
@@ -79,7 +128,13 @@ final class DeckWorkspace {
               values.count == 3, values.allSatisfy({ $0.isFinite && (0...1).contains($0) }) else { return fallback }
         return Color(red: values[0], green: values[1], blue: values[2])
     }
-    func refresh() { a.refresh(); b.refresh() }
+    func refresh() {
+        a.refresh(); b.refresh()
+        if cueDeviceID != nil && Date().timeIntervalSince(lastCueCheck) >= 1 {
+            lastCueCheck = Date()
+            refreshCueDevices()
+        }
+    }
     private var isClosing = false
     private var loadTasks: [Int: Task<Void, Never>] = [:]
     private(set) var discovering: Set<Int> = []
@@ -166,6 +221,7 @@ final class DeckWorkspace {
     }
     func shutdown() async throws {
         isClosing = true
+        try output?.selectCueDevice(nil)
         for task in loadTasks.values { task.cancel() }
         for task in loadTasks.values { await task.value }
         loadTasks.removeAll()

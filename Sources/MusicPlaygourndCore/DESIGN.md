@@ -28,3 +28,5 @@ Failure is reported as a diagnostic or typed error; the last adopted loop surviv
 Core tests own PCM behavior, limits, revision handoff and cancellation. Parent integration owns actual UI/device behavior.
 
 Semantic highlighting is owned by the existing Evaluation/Editor components alongside completion. Its source-snapshot, language-service and presentation contracts are documented in their linked designs.
+
+The live master compressor is owned by [Playback](Playback/DESIGN.md); it reuses [Rendering](Rendering/DESIGN.md)'s scalar dynamics step, exposes accepted settings and bounded aligned input/output envelopes, and runs upstream of master capture and recording.

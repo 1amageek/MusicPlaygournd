@@ -2,8 +2,8 @@ import Foundation
 import SwiftMusic
 
 /// Stereo-linked dynamics with a verified periodic scalar state for loop rendering.
-internal struct DynamicsProcessor {
-    private enum Mode { case compressor, gate, limiter }
+internal struct DynamicsProcessor: Sendable {
+    private enum Mode: Sendable { case compressor, gate, limiter }
     private let mode: Mode
     private let threshold: Double
     private let ratio: Double
@@ -47,7 +47,7 @@ internal struct DynamicsProcessor {
         release = try coefficient(releaseSeconds)
     }
 
-    private func step(peak: Double, state: inout Double) throws -> Double {
+    func step(peak: Double, state: inout Double) throws -> Double {
         let gain: Double
         switch mode {
         case .compressor:

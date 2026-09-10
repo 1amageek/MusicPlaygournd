@@ -9,6 +9,9 @@ public final class AudioLoopEngine: AudioUnitHosting, MasterRecording {
     private let sourceNode: AVAudioSourceNode
     private let timePitch: AVAudioUnitTimePitch
     private let balanceMixer: AVAudioMixerNode
+    private let compressor: AVAudioUnitEffect
+    private let compressorKernel: MasterCompressorKernel
+    public private(set) var compressorSettings = MasterCompressorSettings.defaults
     private let equalizer: AVAudioUnitEQ
     public private(set) var masterBalance: Float = 0
     public private(set) var equalizerBands = MasterEqualizerBand.defaults
@@ -53,6 +56,10 @@ public final class AudioLoopEngine: AudioUnitHosting, MasterRecording {
         let transport = AudioTransport()
         let timePitch = AVAudioUnitTimePitch()
         let balanceMixer = AVAudioMixerNode()
+        let compressor = MasterCompressorAudioUnit.makeNode()
+        guard let compressorUnit = compressor.auAudioUnit as? MasterCompressorAudioUnit else {
+            throw PlaybackError.audioSetupFailed("Cannot instantiate the master compressor.")
+        }
         let equalizer = AVAudioUnitEQ(numberOfBands: 4)
         let delay = AVAudioUnitDelay()
         let reverb = AVAudioUnitReverb()
@@ -93,6 +100,7 @@ public final class AudioLoopEngine: AudioUnitHosting, MasterRecording {
         audioEngine.attach(sourceNode)
         audioEngine.attach(timePitch)
         audioEngine.attach(balanceMixer)
+        audioEngine.attach(compressor)
         audioEngine.attach(equalizer)
         audioEngine.attach(delay)
         audioEngine.attach(reverb)
@@ -101,7 +109,8 @@ public final class AudioLoopEngine: AudioUnitHosting, MasterRecording {
         audioEngine.connect(equalizer, to: delay, format: format)
         audioEngine.connect(delay, to: reverb, format: format)
         audioEngine.connect(reverb, to: balanceMixer, format: format)
-        audioEngine.connect(balanceMixer, to: audioEngine.mainMixerNode, format: format)
+        audioEngine.connect(balanceMixer, to: compressor, format: format)
+        audioEngine.connect(compressor, to: audioEngine.mainMixerNode, format: format)
         audioEngine.mainMixerNode.outputVolume = 1
         let recordingCapture = MasterRecordingCapture()
         self.recordingCapture = recordingCapture
@@ -117,6 +126,8 @@ public final class AudioLoopEngine: AudioUnitHosting, MasterRecording {
         self.sourceNode = sourceNode
         self.timePitch = timePitch
         self.balanceMixer = balanceMixer
+        self.compressor = compressor
+        self.compressorKernel = compressorUnit.kernel
         self.equalizer = equalizer
         self.delay = delay
         self.reverb = reverb
@@ -450,6 +461,15 @@ public final class AudioLoopEngine: AudioUnitHosting, MasterRecording {
         let filter = equalizer.bands[0]
         return (timePitch.rate, filter.bypass ? nil : filter.frequency,
                 delay.wetDryMix / 100, reverb.wetDryMix / 100)
+    }
+
+    public func setCompressor(_ value: MasterCompressorSettings) throws {
+        try compressorKernel.configure(value)
+        compressorSettings = value
+    }
+
+    public func compressorSnapshot() -> MasterCompressorSnapshot {
+        transport.snapshot().isPlaying ? compressorKernel.snapshot() : .empty
     }
 
     public func resetDiagnostics() { meterStore.resetDiagnostics() }

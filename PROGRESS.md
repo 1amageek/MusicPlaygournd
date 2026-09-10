@@ -100,3 +100,7 @@
 
 - [x] WELCOME-FIX-1 Restore 1160×760pt editor size on welcome-to-workspace transition and give welcome action labels readable fixed sizing; retain user resizing after entry `depends:none` `parallel:none`
 - [x] WELCOME-FIX-INT Release build passed; native screenshots verify full welcome labels and FirstLight workspace at 1160×760pt `depends:WELCOME-FIX-1` `parallel:none`
+
+- [x] COMP-1 Live native compressor implemented; 8 focused dynamics/native PCM checks and hardware recording/host-effect check passed; settings validation, aligned bounded telemetry and bypass/reset verified `depends:none` `parallel:none`
+- [ ] COMP-2 Connect Wave threshold drag, Ratio/Attack/Release, bypass/reset, aligned pre/post envelopes and actual gain reduction to accepted playback settings; preserve source and transport `depends:COMP-1` `parallel:none`
+- [ ] COMP-INT Build and visually exercise Wave controls during playback, verify unchanged revisions and record/output routing, then push scoped commits `depends:COMP-1,COMP-2` `parallel:none`

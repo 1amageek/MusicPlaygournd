@@ -19,6 +19,15 @@ extension NativeHostTests {
             try engine.play()
             try await Task.sleep(for: .milliseconds(300))
             let dry = try await record(engine, at: directory.appendingPathComponent("dry.wav"))
+            try engine.setCompressor(.init(enabled: true, threshold: -60, ratio: 8,
+                attackMilliseconds: 0.1, releaseMilliseconds: 100))
+            try await Task.sleep(for: .milliseconds(150))
+            let compressed = try await record(engine, at: directory.appendingPathComponent("compressed.wav"))
+            #expect(try rms(compressed.destination) < rms(dry.destination) * 0.35)
+            #expect(engine.compressorSnapshot().gainReduction > 6)
+            #expect(engine.snapshot().revision == 31 && engine.snapshot().isPlaying)
+            #expect(try engine.discoverAudioEffects().allSatisfy { $0.id.componentSubType != 0x6d706370 })
+            try engine.setCompressor(.defaults)
             let id = try #require(engine.discoverAudioEffects().first {
                 $0.id.componentManufacturer == kAudioUnitManufacturer_Apple && $0.id.componentSubType == kAudioUnitSubType_HighPassFilter
             }).id
@@ -38,7 +47,7 @@ extension NativeHostTests {
             #expect(!engine.isRecording)
             #expect(engine.snapshot().isPlaying)
             #expect(engine.snapshot().revision == 31)
-            #expect(try Set(FileManager.default.contentsOfDirectory(atPath: directory.path)) == ["dry.wav", "wet.wav"])
+            #expect(try Set(FileManager.default.contentsOfDirectory(atPath: directory.path)) == ["dry.wav", "wet.wav", "compressed.wav"])
         }
 
         @Test(.timeLimit(.minutes(1)))

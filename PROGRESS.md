@@ -185,3 +185,6 @@
 
 - [x] WIDE-EDGE-1 Widen side bands to 18 percent while preserving bottom 12 percent crossfade priority and two-finger routing `depends:none` `parallel:none`
 - [x] WIDE-EDGE-INT Four edge tests and release build passed; updated app opened for physical trial `depends:WIDE-EDGE-1` `parallel:none`
+
+- [x] EDGE-SIM-1 Remove whole-pad two-finger capture and restore independent concurrent edges, retaining widths and sensitivity `depends:none` `parallel:none`
+- [x] EDGE-SIM-INT Three edge tests and release build passed; updated app launched for physical simultaneous-control trial `depends:EDGE-SIM-1` `parallel:none`

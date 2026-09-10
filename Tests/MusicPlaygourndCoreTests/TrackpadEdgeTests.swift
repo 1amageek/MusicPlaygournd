@@ -6,39 +6,6 @@ extension NativeHostTests {
     @MainActor
     struct TrackpadEdgeTests {
         @Test(.timeLimit(.minutes(1)))
-        func twoFingersOwnWholePadUntilAllContactsLift() {
-            let controller = TrackpadEdgeController()
-            var deltas: [Double] = []
-            var cancelled = 0
-            var scratches = 0
-            controller.onCrossfadeDelta = { deltas.append($0) }
-            controller.onCancel = { cancelled += 1 }
-            controller.onScratch = { _, _, _ in scratches += 1 }
-            let finger = NSNumber(value: 1)
-            controller.begin(identity: finger, point: NSPoint(x: 0.05, y: 0.5), timestamp: 1)
-            #expect(!controller.routeFader(point: .zero, touchCount: 1))
-            #expect(controller.routeFader(point: NSPoint(x: 0.5, y: 0.5), touchCount: 2))
-            #expect(cancelled == 1 && deltas.isEmpty)
-            controller.move(identity: finger, point: NSPoint(x: 0.05, y: 0.6), deviceHeight: 100, timestamp: 2)
-            #expect(scratches == 0)
-            #expect(controller.routeFader(point: NSPoint(x: 0.6, y: 0.5), touchCount: 2))
-            #expect(abs(deltas.last! - 0.3) < 0.0001)
-            #expect(controller.routeFader(point: NSPoint(x: 0.6, y: 0.4), touchCount: 2))
-            #expect(abs(deltas.last! + 0.3) < 0.0001)
-            #expect(controller.routeFader(point: .zero, touchCount: 1))
-            #expect(controller.routeFader(point: NSPoint(x: 0.2, y: 0.2), touchCount: 2))
-            #expect(deltas.count == 2)
-            #expect(controller.routeFader(point: NSPoint(x: 0.8, y: 0.8), touchCount: 2, contactsChanged: true))
-            #expect(deltas.count == 2)
-            #expect(controller.routeFader(point: .zero, touchCount: 3))
-            #expect(controller.routeFader(point: .zero, touchCount: 0))
-            #expect(!controller.routeFader(point: .zero, touchCount: 1))
-            #expect(controller.routeFader(point: .zero, touchCount: 2))
-            controller.cancelContacts()
-            #expect(!controller.routeFader(point: .zero, touchCount: 1))
-        }
-
-        @Test(.timeLimit(.minutes(1)))
         func edgeRoutingLocksContactsAndSeparatesReleaseFromCancellation() {
             let controller = TrackpadEdgeController()
             var fades: [Double] = []
@@ -72,7 +39,7 @@ extension NativeHostTests {
             controller.move(identity: b, point: NSPoint(x: 0.05, y: 0.4), deviceHeight: 100, timestamp: 1.1)
             controller.move(identity: f, point: NSPoint(x: 0.8, y: 0.5), deviceHeight: 100, timestamp: 1.1)
             #expect(fades.count == 1 && abs(fades[0] - 1.8) < 0.0001)
-            #expect(scratch.count == 2)
+            #expect(scratch.count == 2 && cancelled == 0)
             #expect(scratch[0].0 == .a && abs(scratch[0].1 - 10) < 0.0001)
             #expect(scratch[1].0 == .b && abs(scratch[1].1 + 10) < 0.0001)
             controller.end(identity: a, timestamp: 1.11, cancelled: false)

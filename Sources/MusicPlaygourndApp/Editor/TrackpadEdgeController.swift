@@ -24,8 +24,6 @@ final class TrackpadEdgeController {
     var onRelease: ((Region) -> Void)?
     var onCancel: (() -> Void)?
     private var contacts: [Contact] = []
-    private var faderGesture = false
-    private var faderPoint: NSPoint?
     private var monitor: Any?
     private var observers: [NSObjectProtocol] = []
     private var touchView: NSView?
@@ -78,34 +76,8 @@ final class TrackpadEdgeController {
     var onStopScratch: ((Region) -> Void)?
 
     func cancelContacts() {
-        faderGesture = false
-        faderPoint = nil
         contacts.removeAll(keepingCapacity: true)
         onCancel?()
-    }
-
-    /// Two fingers own the whole pad until every contact lifts.
-    func routeFader(point: NSPoint, touchCount: Int, contactsChanged: Bool = false) -> Bool {
-        guard touchCount > 0 else {
-            let consumed = faderGesture
-            faderGesture = false
-            faderPoint = nil
-            return consumed
-        }
-        if touchCount == 2 && !faderGesture {
-            cancelContacts()
-            faderGesture = true
-        }
-        guard faderGesture else { return false }
-        guard touchCount == 2, point.x.isFinite, point.y.isFinite else {
-            faderPoint = nil
-            return true
-        }
-        defer { faderPoint = point }
-        guard !contactsChanged, let previous = faderPoint else { return true }
-        let dx = point.x - previous.x, dy = point.y - previous.y
-        onCrossfadeDelta?(Double(abs(dx) >= abs(dy) ? dx : dy) * Self.crossfadeSensitivity)
-        return true
     }
 
     func start(in window: NSWindow) {
@@ -181,15 +153,6 @@ final class TrackpadEdgeController {
     }
 
     private func handle(_ event: NSEvent) {
-        var touchCount = 0
-        var centroid = NSPoint.zero
-        for touch in event.touches(matching: .touching, in: nil) where !touch.isResting {
-            touchCount += 1
-            centroid.x += touch.normalizedPosition.x / 2
-            centroid.y += touch.normalizedPosition.y / 2
-        }
-        let changed = !event.touches(matching: [.began, .ended, .cancelled], in: nil).isEmpty
-        if routeFader(point: centroid, touchCount: touchCount, contactsChanged: changed) { return }
         for touch in event.touches(matching: .began, in: nil) where !touch.isResting {
             begin(identity: touch.identity, point: touch.normalizedPosition, timestamp: event.timestamp)
         }

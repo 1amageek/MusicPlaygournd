@@ -30,6 +30,46 @@ extension NativeHostTests {
         }
 
         @Test(.timeLimit(.minutes(1)))
+        func waveHorizontalMotionFollowsFingersAndKeepsVerticalDirection() throws {
+            for count in [2, 3] {
+                for point in [NSPoint(x: 10, y: 0), NSPoint(x: -10, y: 0),
+                              NSPoint(x: 0, y: 10), NSPoint(x: 0, y: -10)] {
+                    let transport = AudioTransport()
+                    transport.beginUpdate(revision: 1)
+                    try transport.submit(loop: loop(), revision: 1)
+                    try transport.seek(bySeconds: 1)
+                    let gesture = MultiFingerGestureRecognizer()
+                    gesture.reversesHorizontalMotion = true
+                    var failure: Error?
+                    gesture.onMotion = { distance, duration in
+                        do { try transport.scratch(bySeconds: distance * 0.05, over: duration) }
+                        catch { failure = error }
+                    }
+                    gesture.onRelease = { transport.releaseScratch() }
+                    gesture.update(point: .zero, touchCount: count, timestamp: 1)
+                    gesture.update(point: point, touchCount: count, timestamp: 1.1)
+                    gesture.update(point: NSPoint(x: point.x * 1.1, y: point.y * 1.1), touchCount: count, timestamp: 1.11)
+                    #expect(failure == nil)
+                    let before = transport.snapshot().beatPosition
+                    _ = try render(transport, frames: 100)
+                    let held = transport.snapshot().beatPosition
+                    let forward = point.x < 0 || point.y > 0
+                    #expect(forward ? held > before : held < before)
+                    gesture.release(timestamp: 1.12)
+                    _ = try render(transport, frames: 100)
+                    let released = transport.snapshot().beatPosition
+                    #expect(forward ? released > held : released < held)
+                }
+            }
+            let knob = MultiFingerGestureRecognizer()
+            var delta = 0.0
+            knob.onChange = { delta = $0 }
+            knob.update(point: .zero, touchCount: 2, timestamp: 1)
+            knob.update(point: NSPoint(x: 10, y: 0), touchCount: 2, timestamp: 1.1)
+            #expect(delta == 10)
+        }
+
+        @Test(.timeLimit(.minutes(1)))
         func releasedVelocityDecaysAndResumesPlayIntent() throws {
             let transport = AudioTransport()
             transport.beginUpdate(revision: 1)

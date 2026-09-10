@@ -337,3 +337,7 @@ Semantic coloring retries one transient SourceKit-LSP timeout/process failure af
 ### Deck color access and compressor presentation
 
 The existing DeckWorkspace color bindings and persistence remain authoritative. Themes & Fonts settings expose stable native Deck Colors wells, while the deck menu and existing badge open a 12-swatch palette with selected-state feedback and a custom color well. WaveCompressorView receives the invoking deck tint for its post waveform and controls; the shared master compressor's processing/ownership remains unchanged. Standalone output monitoring retains the default mint tint. Native UI verification checks picker access and the selected tint in the compressor.
+
+### Wave horizontal direction
+
+Wave opts into horizontal motion inversion at the gesture adapter: rightward contact motion decreases playback position so the waveform follows the fingers to the right. Leftward motion advances playback. Vertical motion retains up-forward/down-reverse, and other controls retain their existing direction. Two/three-finger input and released velocity use the same signed motion. Verify contact-to-PCM position for both axes and finger counts.

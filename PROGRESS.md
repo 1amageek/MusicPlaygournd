@@ -161,3 +161,6 @@
 
 - [x] DECK-COLOR-1 Independent nonblocking readers; two real language processes, bounded shutdown, cancellation, final response and native editor regressions passed (10 tests, 2.35 s) `depends:none` `parallel:none`
 - [x] DECK-COLOR-INT Release build passed (63.78 s); native TranceSet A/B/A switching retained keyword, comment, type and string colors with zero errors `depends:DECK-COLOR-1` `parallel:none`
+
+- [x] WAVE-DIR-1 Make Wave follow horizontal finger motion; preserve vertical and knob direction, two/three fingers and inertia `depends:none` `parallel:none`
+- [x] WAVE-DIR-INT Four gesture/native PCM tests and release build passed `depends:WAVE-DIR-1` `parallel:none`

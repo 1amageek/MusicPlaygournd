@@ -9,6 +9,7 @@ final class MultiFingerGestureRecognizer {
     private weak var touchView: NSView?
     private static var touchUsers: [ObjectIdentifier: (count: Int, types: NSTouch.TouchTypeMask, resting: Bool)] = [:]
     private var touchKey: ObjectIdentifier?
+    var reversesHorizontalMotion = false
     var onChange: ((Double) -> Void)?
     var onMotion: ((Double, Double) -> Void)?
     var onEnd: (() -> Void)?
@@ -128,8 +129,9 @@ final class MultiFingerGestureRecognizer {
         if !tracking {
             horizontal = abs(accumulated.x) > abs(accumulated.y)
         }
-        let primary = horizontal ? accumulated.x : accumulated.y
-        let delta = horizontal ? point.x - previous.x : point.y - previous.y
+        let direction: Double = horizontal && reversesHorizontalMotion ? -1 : 1
+        let primary = (horizontal ? accumulated.x : accumulated.y) * direction
+        let delta = (horizontal ? point.x - previous.x : point.y - previous.y) * direction
         if tracking {
             onChange?(Double(delta))
             onMotion?(Double(delta), min(0.25, max(1.0 / 240, timestamp - (lastTimestamp ?? timestamp))))

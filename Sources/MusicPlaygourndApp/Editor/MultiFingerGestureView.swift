@@ -3,6 +3,7 @@ import SwiftUI
 
 /// Registers a bounded control region without intercepting clicks.
 struct MultiFingerGestureView: NSViewRepresentable {
+    var reversesHorizontalMotion = false
     var onMotion: ((Double, Double) -> Void)?
     var onEnd: (() -> Void)?
     var onRelease: (() -> Void)?
@@ -11,6 +12,7 @@ struct MultiFingerGestureView: NSViewRepresentable {
     func makeNSView(context: Context) -> RegionView { RegionView() }
 
     func updateNSView(_ view: RegionView, context: Context) {
+        view.gesture.reversesHorizontalMotion = reversesHorizontalMotion
         view.gesture.onChange = onChange
         view.gesture.onMotion = onMotion
         view.gesture.onEnd = onEnd

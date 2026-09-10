@@ -173,3 +173,6 @@
 
 - [x] PLAY-MODE-1 Rename the control and move it to the log bar; keep capture lifecycle owned by the workspace view `depends:none` `parallel:none`
 - [x] PLAY-MODE-INT Release build passed; native screenshots verify log bar placement in collapsed/expanded states and removal of the center button `depends:PLAY-MODE-1` `parallel:none`
+
+- [x] PLAY-KEY-1 Route Space to combined transport and standalone left/right Command/Option taps to deck transport/CUE in Play Mode; preserve typing and shortcuts `depends:none` `parallel:none`
+- [x] PLAY-KEY-INT Three focused tests and release build passed; native Space starts and pauses both decks; unrelated color/scroll suite failures remain outside scope `depends:PLAY-KEY-1` `parallel:none`

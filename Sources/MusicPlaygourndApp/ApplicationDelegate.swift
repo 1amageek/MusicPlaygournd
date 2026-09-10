@@ -11,10 +11,13 @@ final class ApplicationDelegate: NSObject, NSApplicationDelegate, NSWindowDelega
         NSApplication.shared.windows.first?.delegate = self
         playbackKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             let consumed = MainActor.assumeIsolated {
-                guard let self, let model = self.model,
-                      model.hasOpenDocument || model.loadedDocument != nil || model.isPlaying,
+                guard !TrackpadEdgeController.isActive, let self, let model = self.model,
+                      self.workspace?.hasPlaybackContent ?? (model.hasOpenDocument || model.loadedDocument != nil || model.isPlaying),
                       Self.handlesPlaybackSpace(event) else { return false }
-                if !event.isARepeat { model.togglePlayback() }
+                if !event.isARepeat {
+                    if let workspace = self.workspace { workspace.toggleAllPlayback() }
+                    else { model.togglePlayback() }
+                }
                 return true
             }
             return consumed ? nil : event

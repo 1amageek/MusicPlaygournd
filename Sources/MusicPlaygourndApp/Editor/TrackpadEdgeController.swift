@@ -27,6 +27,8 @@ final class TrackpadEdgeController {
     private var observers: [NSObjectProtocol] = []
     private var touchView: NSView?
     private var cursorHidden = false
+    private let keys = PlayModeKeys()
+    var onKeyAction: ((PlayModeKeys.Action) -> Void)?
 
     static func region(at point: NSPoint) -> Region? {
         guard point.x.isFinite, point.y.isFinite,
@@ -94,16 +96,22 @@ final class TrackpadEdgeController {
         }
         Self.owner = self
         active = true
+        keys.reset()
         touchView = content
         TrackpadTouchDelivery.acquire(content)
         NSCursor.hide()
         cursorHidden = true
         monitor = NSEvent.addLocalMonitorForEvents(matching: [.gesture, .scrollWheel, .mouseMoved,
             .leftMouseDown, .leftMouseUp, .rightMouseDown, .rightMouseUp, .otherMouseDown, .otherMouseUp,
-            .leftMouseDragged, .rightMouseDragged, .otherMouseDragged, .keyDown]) { [weak self] event in
+            .leftMouseDragged, .rightMouseDragged, .otherMouseDragged, .keyDown, .flagsChanged]) { [weak self] event in
             let consume = MainActor.assumeIsolated {
                 guard let self, self.active else { return false }
+                if event.type == .flagsChanged {
+                    if let action = self.keys.handle(type: event.type, keyCode: event.keyCode, flags: event.modifierFlags) { self.onKeyAction?(action) }
+                    return false
+                }
                 if event.type == .keyDown {
+                    if let action = self.keys.handle(type: event.type, keyCode: event.keyCode, flags: event.modifierFlags, repeating: event.isARepeat) { self.onKeyAction?(action) }
                     if event.keyCode == 53 { self.stop(); return true }
                     return !event.modifierFlags.contains(.command)
                 }
@@ -126,6 +134,7 @@ final class TrackpadEdgeController {
     func stop() {
         guard active else { return }
         cancelContacts()
+        keys.reset()
         let result = CGAssociateMouseAndMouseCursorPosition(1)
         if cursorHidden { NSCursor.unhide(); cursorHidden = false }
         guard result == .success else {

@@ -59,6 +59,17 @@ final class DeckWorkspace {
             cueError = nil
         } catch { cueError = error.localizedDescription; cueSettingsVisible = true }
     }
+    var hasPlaybackContent: Bool {
+        [a, b].contains { $0.hasOpenDocument || $0.loadedDocument != nil || $0.isPlaying || $0.isPlaybackQueued }
+    }
+
+    func toggleAllPlayback() {
+        let stop = a.isPlaying || a.isPlaybackQueued || b.isPlaying || b.isPlaybackQueued
+        for model in [a, b] {
+            if !stop || model.isPlaying || model.isPlaybackQueued { model.togglePlayback() }
+        }
+    }
+
     var selectedDeck = 0
     var active: SessionModel { selectedDeck == 0 ? a : b }
     var crossfade = 0.5 {

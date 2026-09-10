@@ -18,6 +18,15 @@ struct TrackpadEdgeView: NSViewRepresentable {
         view.controller.onRelease = { ($0 == .a ? workspace.a : workspace.b).releaseScratch() }
         view.controller.onStopScratch = { ($0 == .a ? workspace.a : workspace.b).endScratch() }
         view.controller.onCancel = { workspace.a.endScratch(); workspace.b.endScratch() }
+        view.controller.onKeyAction = { [weak view] action in
+            switch action {
+            case .all: workspace.toggleAllPlayback()
+            case .deck(let index): (index == 0 ? workspace.a : workspace.b).togglePlayback()
+            case .cue(let index):
+                if workspace.cueDeviceID == nil { view?.controller.stop() }
+                workspace.toggleCue(index)
+            }
+        }
         view.requested = enabled
     }
 

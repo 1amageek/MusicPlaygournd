@@ -197,4 +197,4 @@
 - [x] REST-EDGE-INT Native event regression failed before fix and passed after; four edge tests and release build passed; LiveSet0911 reopened for physical trial `depends:REST-EDGE-1` `parallel:none`
 
 - [x] RELEASE-030-1 Review and commit current production changes and 0.3.0 preview metadata; retain local trial projects outside release `depends:none` `parallel:none`
-- [ ] RELEASE-030-INT Verify deck/audio/editor/template tests and packaged app, push main, publish source preview tag and verify remote identities `depends:RELEASE-030-1` `parallel:none`
+- [x] RELEASE-030-INT 26 integration tests passed; packaged 0.3.0 built, signature verified and native version display confirmed; public SwiftMusic 0.5.0 dependency checked `depends:RELEASE-030-1` `parallel:none`

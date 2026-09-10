@@ -12,6 +12,7 @@ struct MusicPlaygourndApp: App {
                 .onAppear { delegate.model = model; model.prepareInitialSource(); NSApplication.shared.activate(ignoringOtherApps: true) }
         }
         .defaultSize(width: 1160, height: 760)
+        .windowResizability(.contentSize)
         .windowStyle(.hiddenTitleBar)
         .windowToolbarStyle(.unified)
         .commands {

@@ -17,7 +17,6 @@ struct ContentView: View {
             }
         }
         .preferredColorScheme(.dark)
-        .frame(minWidth: 850, minHeight: 540)
     }
 
     private var editorWorkspace: some View {

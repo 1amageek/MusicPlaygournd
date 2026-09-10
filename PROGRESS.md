@@ -94,3 +94,6 @@
 
 - [x] TEMPO-1 Move gesture ownership to the BPM view; accept three-finger horizontal motion only inside its visible bounds, preserve native editing/scrolling and existing tempo deltas `depends:none` `parallel:none`
 - [x] TEMPO-INT Native region/lifecycle check passed; Release app built and FirstLight reopened; physical three-finger input requires manual confirmation `depends:TEMPO-1` `parallel:none`
+
+- [x] WELCOME-1 Match the observed Xcode welcome hierarchy with a compact 480×360pt startup view; preserve existing new/open/cancel/error routes and independently resizable editor content `depends:none` `parallel:none`
+- [x] WELCOME-INT Release build passed; native startup is 480×360pt content (480×388pt including title bar), New Project cancellation retains welcome, FirstLight opens at editor minimum with toolbar restored `depends:WELCOME-1` `parallel:none`

@@ -114,3 +114,6 @@
 - [x] DJ-3 Independent editing/evaluation implemented (d60e6e4); separate workers/caches verified same-file State isolation, explicit Alternate entry and failed-load retention; shared-buffer edits/save/discard/tab-close and TAP checks passed `depends:DJ-2` `parallel:none`
 - [x] DJ-4 DJ workspace integrated (bef2a62); Release built, live same-file State isolation, pause, Sync, EQ/reset, scope/reset and color persistence visually verified `depends:DJ-3` `parallel:none`
 - [x] DJ-INT Integrated Release build/signature and live DualDeck playback passed; same-file independent sliders, different-rate Sync, A/B pause, scope/EQ reset and persisted Mint/Violet colors verified; focused PCM/worker/document evidence retained, no source changes after verification `depends:DJ-1,DJ-2,DJ-3,DJ-4` `parallel:none`
+
+- [x] TRANCE-1 Add the credited G-minor B template; preserve A and saved deck choices; verify live-loop PCM (5 tracks, 2 sliders, peak 0.603, Side/Mid -15.96 dB) `depends:none` `parallel:none`
+- [x] TRANCE-INT Release app built; native project generation, B entry selection, playback and scope verified with zero errors `depends:TRANCE-1` `parallel:none`

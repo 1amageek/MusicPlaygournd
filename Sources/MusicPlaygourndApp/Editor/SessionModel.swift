@@ -1312,10 +1312,13 @@ final class SessionModel {
                 let selectedPath = UserDefaults.standard.string(forKey: "project.selected." + deckIdentity + loaded.root.path)
                 let restored = UserDefaults.standard.stringArray(forKey: "project.tabs." + deckIdentity + loaded.root.path) ?? []
                 let savedEntry = UserDefaults.standard.string(forKey: "deck.entry." + deckIdentity + loaded.root.path)
+                let defaultEntry = deckIdentity == "B" && loaded.targets[0].sources.contains("Trance.swift")
+                    ? loaded.root.appending(path: loaded.targets[0].path).appending(path: "Trance.swift")
+                    : loaded.entryURL(for: loaded.targets[0])
                 let entry = savedEntry.flatMap { path -> URL? in
                     let url = URL(fileURLWithPath: path).standardizedFileURL.resolvingSymlinksInPath()
                     return loaded.targets.contains { target in target.sources.contains { loaded.root.appending(path: target.path).appending(path: $0) == url } } ? url : nil
-                } ?? loaded.entryURL(for: loaded.targets[0])
+                } ?? defaultEntry
                 var requestedURLs = restored.filter { $0.hasPrefix(loaded.root.path + "/") && FileManager.default.fileExists(atPath: $0) }.map { URL(fileURLWithPath: $0).resolvingSymlinksInPath() }
                 if !requestedURLs.contains(entry) { requestedURLs.append(entry) }
                 var newDocuments: [SessionDocument] = []
@@ -1353,7 +1356,7 @@ final class SessionModel {
                 if let target = loaded.targets.first(where: { entry.path.hasPrefix(loaded.root.appending(path: $0.path).path + "/") }) {
                     projectTarget = try target.selectingEntry(String(entry.path.dropFirst(loaded.root.appending(path: target.path).path.count + 1)))
                 }
-                loadedType = UserDefaults.standard.string(forKey: "deck.type." + deckIdentity + loaded.root.path) ?? "Session"
+                loadedType = UserDefaults.standard.string(forKey: "deck.type." + deckIdentity + loaded.root.path) ?? (entry.lastPathComponent == "Trance.swift" ? "Trance" : "Session")
                 if let selected { selectDocument(selected.id) }
                 scheduleEvaluation(immediate: true)
             } catch is CancellationError { }
@@ -1438,6 +1441,7 @@ final class SessionModel {
             """
             try manifest.write(to: root.appending(path: "Package.swift"), atomically: true, encoding: .utf8)
             try initialSource.write(to: sources.appending(path: "Session.swift"), atomically: true, encoding: .utf8)
+            try tranceSource.write(to: sources.appending(path: "Trance.swift"), atomically: true, encoding: .utf8)
             try "Place sample files here. Access them with Bundle.module.\n".write(to: sources.appending(path: "Resources/README.txt"), atomically: true, encoding: .utf8)
             try ".build/\n.swiftpm/\n.DS_Store\nRecordings/\n".write(to: root.appending(path: ".gitignore"), atomically: true, encoding: .utf8)
         } catch {
@@ -2226,6 +2230,95 @@ final class SessionModel {
         learnedBindings = bindings
         if bindings.count != state.bindings.count { hostDiagnostic = "Stale MIDI Learn bindings were left unattached." }
     }
+
+    static let tranceSource = """
+    import SwiftMusic
+    import MusicPlayground
+
+    // G minor, 140 BPM. Open the acid slider to build energy.
+    // Adapted for SwiftMusic from Switch Angel's "Coding Trance Music from Scratch (Again)".
+    // With respect and thanks: https://www.youtube.com/watch?v=iu5rnQkfO6M
+    // Instrumental adaptation: synthesized here, without the original recording or voiceover.
+    struct Trance: Music {
+        @State private var leadLevel = 0.8
+
+        var body: some Sound {
+            TranceDrums()
+            TranceBass()
+            TranceLead(acid: slider(0.58, in: 0...1))
+            BusReturn("trance.lead").gain(slider($leadLevel, in: 0...1))
+            BusReturn("trance.bass")
+        }
+    }
+
+    struct TranceDrums: Sound {
+        var body: some Sound {
+            Track("Trance Kick") {
+                Sample("kick").rhythm("x*4").gain(1.1)
+                    .effect(.saturation(drive: 0.18))
+                    .duck(targetBus: "trance.lead", depth: -12,
+                          attack: .milliseconds(160), recovery: .milliseconds(220))
+                    .duck(targetBus: "trance.bass", depth: -9,
+                          attack: .milliseconds(100), recovery: .milliseconds(190))
+            }
+            Track("Trance Backbeat") {
+                Sample("snare").rhythm("~ x ~ x").highPass("900").gain(0.24)
+                    .effect(.reverb(roomSize: 0.3, wet: 0.12))
+            }
+            Track("Trance Hats") {
+                Sample("closedHat").rhythm("[~ x] [~ x] [~ x] [~ [x x]]")
+                    .gain("0.35 0.25 0.3 0.24")
+                    .pan("-0.45 0.45 -0.3 0.55")
+            }
+        }
+    }
+
+    struct TranceBass: Sound {
+        var body: some Sound {
+            Track("Trance Bass") {
+                Synthesizer(.bandLimitedSaw)
+                    .notes("G1*16")
+                    .transpose("<0 0 -2 -2>")
+                    .unison(voices: 5, detuneCents: 18)
+                    .gate(0.65)
+                    .envelope(attack: .milliseconds(2), decay: .milliseconds(90),
+                              sustainLevel: 0.15, release: .milliseconds(35))
+                    .lowPass("720", resonanceQ: 1.4)
+                    .acidEnvelope(0.25, decay: .milliseconds(100))
+                    .gain(0.38)
+            }
+            .send(to: "trance.bass", level: 1, placement: .preFader)
+            .trackLevel(0)
+        }
+    }
+
+    struct TranceLead: Sound {
+        var acid: Double
+
+        var body: some Sound {
+            Track("Trance Lead") {
+                Synthesizer(.bandLimitedSaw)
+                    // The reference's five-note G-minor figure, phrased across sixteenths.
+                    .notes("G3 D4 G3 Bb4 G4 G3 D4 G3 Bb4 G4 G3 D4 G3 Bb4 G4 D4")
+                    .transpose("<0 0 -2 -2>")
+                    .unison(voices: 5, detuneCents: 24)
+                    .gate(0.7)
+                    .envelope(attack: .milliseconds(3), decay: .milliseconds(140),
+                              sustainLevel: 0.2, release: .milliseconds(100))
+                    .lowPass("450", resonanceQ: 3.5)
+                    .acidEnvelope(acid, decay: .milliseconds(170))
+                    .effect(.filter(kind: .highPass, cutoffHz: 190, resonance: 0.707))
+                    // Pan creates real L/R differences before the stereo effects.
+                    .pan("-0.65 0.35 -0.2 0.65")
+                    .effect(.delay(time: .eighth, feedback: 0.35, wet: 0.3))
+                    .effect(.reverb(roomSize: 0.45, wet: 0.16))
+                    .gain(1.6)
+            }
+            .send(to: "trance.lead", level: 1, placement: .preFader)
+            .trackLevel(0)
+        }
+    }
+    """
 
     static let initialSource = """
     import SwiftMusic

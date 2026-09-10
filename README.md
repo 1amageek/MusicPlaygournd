@@ -29,6 +29,7 @@ Sessions run local Swift with your account's permissions. Open code you trust.
 
 The development branch adds independent A/B decks. Build `main` to use this workspace; the 0.2.0 tag above retains the single-deck release.
 
+- New projects include **Session.swift** for A and **Trance.swift** for B. Trance adapts the lead, bass and ducking arrangement from [Switch Angel’s performance](https://www.youtube.com/watch?v=iu5rnQkfO6M) into editable synthesized music, with acid/level sliders and stereo panning. It does not include the original recording or voiceover.
 - Left and right tab groups share file contents and undo, but select independently. Selecting a tab changes the wide editor, not the playing music.
 - Use the deck's file menu or a tab's **Load into Deck** action, then enter the top-level `Music` type name (`Session` by default). The same file and type can run on both decks with independent State, sliders, mute and playback.
 - **TAP** sets that deck's tempo. **Sync** matches a playing deck's BPM and beat phase; both decks must be prepared and playing. A Music-controlled BPM must use its own control instead.

@@ -106,5 +106,5 @@
 - [ ] COMP-INT Release build and existing FirstLight playback passed with zero errors/dropouts; native controls produced 18 dB reduction and reset to bypass; PCM/recording/revision checks passed; physical mouse drag remains unverified because automation coordinates do not reach the popover `depends:COMP-1,COMP-2` `parallel:none`
 
 - [x] REL020-1 App 0.2.0 (2), source-preview documentation and public SwiftMusic 0.5.0 verified; Release build, runtime artifact digests and code signature passed; unchanged template/PCM checks retained `depends:none` `parallel:none`
-- [ ] REL020-2 Push the release commit and publish the 0.2.0 tag and GitHub source preview with validation limits `depends:REL020-1` `parallel:none`
-- [ ] REL020-INT Verify remote main/tag/release commit identity, published notes and packaged version `depends:REL020-1,REL020-2` `parallel:none`
+- [x] REL020-2 Published 0.2.0 source-preview tag and GitHub Release at 260a49b with validation limits `depends:REL020-1` `parallel:none`
+- [x] REL020-INT Remote main and peeled 0.2.0 tag matched 260a49b at publication; published preview notes, app 0.2.0 (2), runtime digests and signing verified `depends:REL020-1,REL020-2` `parallel:none`

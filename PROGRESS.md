@@ -179,3 +179,6 @@
 
 - [x] FADE-SENS-1 Increase bottom-edge crossfade sensitivity threefold with relative motion and no touch-down jump `depends:none` `parallel:none`
 - [x] FADE-SENS-INT Three native edge tests and release build passed; physical sensitivity remains for user trial `depends:FADE-SENS-1` `parallel:none`
+
+- [x] FREE-FADE-1 Route two-finger motion anywhere to crossfade, exclusively until all fingers lift; preserve single-contact edge controls `depends:none` `parallel:none`
+- [x] FREE-FADE-INT Four edge tests and release build passed; updated app opened with new help; physical two-finger feel awaits user trial `depends:FREE-FADE-1` `parallel:none`

@@ -90,6 +90,31 @@ struct LiveReplacementPlaybackTests {
         #expect(transport.snapshot().overrideGeneration == 1)
     }
 
+    @Test(.timeLimit(.minutes(1)))
+    func seekMovesPCMAndPreservesPausedState() throws {
+        let transport = AudioTransport()
+        #expect(throws: PlaybackError.noCurrentLoop) { try transport.seek(bySeconds: 1) }
+        let source = loop(scale: 0.8)
+        transport.beginUpdate(revision: 1)
+        try transport.submit(loop: source, revision: 1)
+        try transport.seek(bySeconds: 0.5)
+        #expect(!transport.snapshot().isPlaying)
+        #expect(abs(transport.snapshot().beatPosition - 1) < 0.00001)
+        try transport.startPlayback()
+        #expect(abs(try render(transport, frames: 1)[0] - source.samples[22_050 * 2]) < 0.00001)
+        try transport.seek(bySeconds: -1)
+        #expect(transport.snapshot().isPlaying)
+        #expect(abs(transport.snapshot().beatPosition - (3 + 2.0 / 44_100)) < 0.00001)
+        #expect(abs(try render(transport, frames: 1)[0] - source.samples[66_151 * 2]) < 0.00001)
+        let before = transport.snapshot()
+        #expect(throws: PlaybackError.invalidSeekOffset) { try transport.seek(bySeconds: .infinity) }
+        #expect(transport.snapshot() == before)
+        transport.stopPlayback()
+        try transport.seek(bySeconds: 2)
+        #expect(!transport.snapshot().isPlaying)
+        #expect(abs(transport.snapshot().beatPosition - before.beatPosition) < 0.00001)
+    }
+
     private func loop(scale: Float, bpm: Double = 120) -> PreparedLoop {
         var samples = [Float](repeating: 0, count: 88_200 * 2)
         for frame in 0..<88_200 {

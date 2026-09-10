@@ -261,6 +261,10 @@ public final class AudioLoopEngine: AudioUnitHosting, MasterRecording {
         }
     }
 
+    public func seek(bySeconds seconds: Double) throws {
+        try transport.seek(bySeconds: seconds)
+    }
+
     public func stop() {
         transport.stopPlayback()
         deckMeterStore.clear()
@@ -939,6 +943,28 @@ final class AudioTransport: Sendable {
             state.clockDiscontinuous = false
             state.pendingBoundary = state.pending == nil ? nil : Double(current.beatsPerBar)
             state.isPlaying = true
+        }
+    }
+
+    func seek(bySeconds seconds: Double) throws {
+        guard seconds.isFinite else { throw PlaybackError.invalidSeekOffset }
+        try state.withLock { state in
+            guard let current = state.current else { throw PlaybackError.noCurrentLoop }
+            guard state.reservation == nil, state.replacement == nil, state.fade == nil else {
+                throw PlaybackError.replacementInProgress
+            }
+            let duration = current.beatCount * 60 / current.bpm
+            let offset = seconds.truncatingRemainder(dividingBy: duration) / duration * current.beatCount
+            let local = state.beatPosition.truncatingRemainder(dividingBy: current.beatCount)
+            let target = (local + offset).truncatingRemainder(dividingBy: current.beatCount)
+            state.beatPosition = target < 0 ? target + current.beatCount : target
+            state.framePosition = frame(for: state.beatPosition, in: current)
+            state.synchronization = nil
+            state.clockSample = nil
+            state.lastHostTime = nil
+            state.clockDiscontinuous = false
+            let meter = Double(current.beatsPerBar)
+            state.pendingBoundary = state.pending == nil ? nil : (floor(state.beatPosition / meter) + 1) * meter
         }
     }
 

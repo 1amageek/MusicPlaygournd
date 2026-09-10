@@ -5,6 +5,7 @@ public enum PlaybackError: Error, Sendable, Equatable, CustomStringConvertible, 
 
     case audioSetupFailed(String)
     case audioStartFailed(String)
+    case invalidSeekOffset
     case noCurrentLoop
     case staleRevision(UInt64)
     case duplicateRevision(UInt64)
@@ -28,6 +29,7 @@ public enum PlaybackError: Error, Sendable, Equatable, CustomStringConvertible, 
         switch self {
         case .audioSetupFailed(let message): "Audio setup failed: \(message)"
         case .audioStartFailed(let message): "Audio start failed: \(message)"
+        case .invalidSeekOffset: "Seek offset must be finite"
         case .noCurrentLoop: "No prepared loop is available"
         case .staleRevision(let revision): "Revision \(revision) is stale"
         case .duplicateRevision(let revision): "Revision \(revision) was already submitted"

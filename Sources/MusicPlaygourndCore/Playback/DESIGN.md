@@ -19,6 +19,9 @@ revision/bar adoption + live rate                          balanceMixer -> mainM
 ```
 
 ## Contracts and Invariants
+
+`seek(bySeconds:)` moves within the retained loop, wrapping at both ends without changing playing state or playback rate. Finite offsets are required. The transport Mutex owns position mutation and clock invalidation; pending code adoption is rescheduled at the next bar. An active replacement/reservation rejects seek explicitly. No compile or buffer copy occurs. PCM seek tests verify forward/backward wrap, paused retention and invalid-input preservation.
+
 Public @MainActor engine: init() throws; beginUpdate(revision: UInt64); submit(loop: PreparedLoop, revision: UInt64) throws; play() throws; stop(); snapshot() -> PlaybackSnapshot. Snapshot fields loop: PreparedLoop?, revision: UInt64?, beatPosition: Double, isPlaying: Bool. New edit clears pending but preserves current. Reject stale/duplicate completions. First loop adopts while stopped. Existing playing loop adopts at next current-meter bar boundary without resetting the accumulated transport clock. Snapshot reports actual adopted PCM. Callback copies bounded PCM, no await/UI/I/O. Immutable buffers retain an off-callback owner to prevent deallocation on callback.
 
 Live MainActor controls are `setPlaybackRate(_ rate: Float) throws`, `setLowPass(cutoff: Float?) throws`, `setDelay(mix: Float) throws`, `setReverb(mix: Float) throws`, and `outputMeter() -> OutputMeterSnapshot`. The generic engine defaults to rate 1; SessionModel supplies `liveBPM / 120` because its loops use a fixed 120 BPM preparation base. A nil cutoff bypasses EQ; a cutoff must be finite within 20...20,000 Hz. Delay and reverb mixes are normalized finite 0...1 values converted to native wet percentages. Neutral defaults are rate 1, bypassed EQ, and zero wet mix. Invalid controls fail explicitly and retain the last valid settings.

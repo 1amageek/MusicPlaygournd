@@ -117,3 +117,7 @@
 
 - [x] TRANCE-1 Add the credited G-minor B template; preserve A and saved deck choices; verify live-loop PCM (5 tracks, 2 sliders, peak 0.603, Side/Mid -15.96 dB) `depends:none` `parallel:none`
 - [x] TRANCE-INT Release app built; native project generation, B entry selection, playback and scope verified with zero errors `depends:TRANCE-1` `parallel:none`
+
+- [x] SEEK-CORE Implement retained-PCM seek with wrapping and paused-state preservation; real transport PCM test passed `depends:none` `parallel:none`
+- [ ] SEEK-1 Connect Wave-only bidirectional three-finger seek `depends:SEEK-CORE` `parallel:none`
+- [ ] SEEK-INT Build and verify native app integration `depends:SEEK-1` `parallel:none`

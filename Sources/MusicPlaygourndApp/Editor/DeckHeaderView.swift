@@ -120,6 +120,8 @@ struct DeckHeaderView: View {
                 context.stroke(wave, with: .color(color), lineWidth: 1)
               }.frame(height: 25).contentShape(Rectangle())
             }.buttonStyle(.plain).accessibilityLabel("Deck \(name) waveform, open master compressor")
+                .background(MultiFingerGestureView(onMotion: model.scratch, onEnd: model.endScratch))
+                .help("Scratch with two or three fingers, even while paused. Right/up forward, left/down reverse.")
                 .popover(isPresented: Binding(get: { compressorDeck == index }, set: { if !$0 { compressorDeck = nil } })) {
                     WaveCompressorView(settings: workspace.a.compressorSettings, snapshot: workspace.a.compressorMeter, onChange: workspace.a.setCompressor)
                         .frame(width: 460, height: 300).padding(12)

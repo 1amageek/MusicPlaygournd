@@ -5,10 +5,15 @@ import AppKit
 final class MultiFingerGestureRecognizer {
     private weak var region: NSView?
     private var monitor: Any?
+    private var windowObserver: NSObjectProtocol?
     private weak var touchView: NSView?
     private static var touchUsers: [ObjectIdentifier: (count: Int, types: NSTouch.TouchTypeMask, resting: Bool)] = [:]
     private var touchKey: ObjectIdentifier?
     var onChange: ((Double) -> Void)?
+    var onMotion: ((Double, Double) -> Void)?
+    var onEnd: (() -> Void)?
+    private var firstTimestamp: Double?
+    private var lastTimestamp: Double?
     private var lastPoint: NSPoint?
     private var accumulated = NSPoint.zero
     private var lastTouchCount: Int?
@@ -18,6 +23,8 @@ final class MultiFingerGestureRecognizer {
     func attach(to view: NSView?) {
         if let monitor { NSEvent.removeMonitor(monitor) }
         monitor = nil
+        if let windowObserver { NotificationCenter.default.removeObserver(windowObserver) }
+        windowObserver = nil
         if let key = touchKey, var users = Self.touchUsers[key] {
             users.count -= 1
             if users.count == 0 {
@@ -41,6 +48,11 @@ final class MultiFingerGestureRecognizer {
             content.allowedTouchTypes.insert(.indirect)
             content.wantsRestingTouches = true
         }
+        windowObserver = NotificationCenter.default.addObserver(
+            forName: NSWindow.didResignKeyNotification, object: window, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.reset() }
+        }
         monitor = NSEvent.addLocalMonitorForEvents(matching: .gesture) { [weak self, weak window] event in
             MainActor.assumeIsolated {
                 guard let self else { return }
@@ -62,11 +74,15 @@ final class MultiFingerGestureRecognizer {
     }
 
     func reset() {
+        let wasTracking = tracking
+        firstTimestamp = nil
+        lastTimestamp = nil
         lastPoint = nil
         lastTouchCount = nil
         accumulated = .zero
         tracking = false
         horizontal = false
+        if wasTracking { onEnd?() }
     }
 
     private func update(_ event: NSEvent) {
@@ -77,14 +93,15 @@ final class MultiFingerGestureRecognizer {
             point.x += touch.normalizedPosition.x * touch.deviceSize.width / CGFloat(touches.count)
             point.y += touch.normalizedPosition.y * touch.deviceSize.height / CGFloat(touches.count)
         }
-        update(point: point, touchCount: touches.count)
+        update(point: point, touchCount: touches.count, timestamp: event.timestamp)
     }
 
-    func update(point: NSPoint, touchCount: Int) {
+    func update(point: NSPoint, touchCount: Int, timestamp: Double = ProcessInfo.processInfo.systemUptime) {
         guard touchCount == 2 || touchCount == 3 else { reset(); return }
         if lastTouchCount != touchCount { reset() }
         lastTouchCount = touchCount
-        defer { lastPoint = point }
+        if firstTimestamp == nil { firstTimestamp = timestamp }
+        defer { lastPoint = point; lastTimestamp = timestamp }
         guard let previous = lastPoint else { return }
         accumulated.x += point.x - previous.x
         accumulated.y += point.y - previous.y
@@ -93,10 +110,14 @@ final class MultiFingerGestureRecognizer {
         }
         let primary = horizontal ? accumulated.x : accumulated.y
         let delta = horizontal ? point.x - previous.x : point.y - previous.y
-        if tracking { onChange?(Double(delta)) }
+        if tracking {
+            onChange?(Double(delta))
+            onMotion?(Double(delta), min(0.25, max(1.0 / 240, timestamp - (lastTimestamp ?? timestamp))))
+        }
         else if abs(primary) >= 8 {
             tracking = true
             onChange?(Double(primary))
+            onMotion?(Double(primary), min(0.25, max(1.0 / 240, timestamp - (firstTimestamp ?? timestamp))))
         }
     }
 }

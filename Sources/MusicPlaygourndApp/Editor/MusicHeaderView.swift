@@ -63,7 +63,7 @@ struct MusicHeaderView: View {
                     Text(model.masterVolume == 0 ? "−∞ dB" : String(format: "%.0f dB", 20 * log10(model.masterVolume)))
                 }.font(.system(size: 8, design: .monospaced)).foregroundStyle(.secondary)
                 Slider(value: $model.masterVolume, in: 0...1)
-                    .background(MultiFingerGestureView { model.masterVolume = min(1, max(0, model.masterVolume + $0 * 0.01)) })
+                    .background(MultiFingerGestureView(onChange: { model.masterVolume = min(1, max(0, model.masterVolume + $0 * 0.01)) }))
                     .controlSize(.small).tint(.gray)
                     .accessibilityLabel("Master volume")
                     .accessibilityIdentifier("master-volume")

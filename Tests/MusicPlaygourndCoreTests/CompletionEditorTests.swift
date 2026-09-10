@@ -8,6 +8,36 @@ extension NativeHostTests {
     @MainActor
     struct CompletionEditorTests {
         @Test(.timeLimit(.minutes(1)))
+        func scratchGestureReportsTimingAndEndsOnLifecycleChanges() {
+            let gesture = MultiFingerGestureRecognizer()
+            var durations: [Double] = []
+            var ended = 0
+            gesture.onMotion = { _, duration in durations.append(duration) }
+            gesture.onEnd = { ended += 1 }
+            gesture.update(point: .zero, touchCount: 2, timestamp: 1)
+            gesture.update(point: NSPoint(x: 10, y: 1), touchCount: 2, timestamp: 1.1)
+            #expect(abs(durations[0] - 0.1) < 0.00001)
+            gesture.update(point: NSPoint(x: 100, y: 100), touchCount: 3, timestamp: 1.2)
+            #expect(ended == 1 && durations.count == 1)
+            gesture.update(point: NSPoint(x: 110, y: 100), touchCount: 3, timestamp: 1.21)
+            #expect(abs(durations[1] - 0.01) < 0.00001)
+            gesture.attach(to: nil)
+            #expect(ended == 2)
+            gesture.reset()
+            #expect(ended == 2)
+            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 100, height: 100),
+                                  styleMask: [.titled], backing: .buffered, defer: false)
+            window.isReleasedWhenClosed = false
+            gesture.attach(to: window.contentView)
+            gesture.update(point: .zero, touchCount: 2, timestamp: 2)
+            gesture.update(point: NSPoint(x: 10, y: 1), touchCount: 2, timestamp: 2.1)
+            NotificationCenter.default.post(name: NSWindow.didResignKeyNotification, object: window)
+            #expect(ended == 3)
+            gesture.attach(to: nil)
+            window.close()
+        }
+
+        @Test(.timeLimit(.minutes(1)))
         func waveGestureUsesOneAxisAndBothDirections() throws {
             let gesture = MultiFingerGestureRecognizer()
             var values: [Double] = []

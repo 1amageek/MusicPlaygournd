@@ -596,6 +596,18 @@ final class SessionModel {
         scheduleEvaluation(immediate: true)
     }
 
+    func scratch(distance: Double, duration: Double) {
+        guard let engine, loop != nil else { return }
+        do {
+            try engine.scratch(bySeconds: distance * 0.05, over: duration)
+        } catch { diagnostic = error.localizedDescription }
+    }
+
+    func endScratch() {
+        engine?.endScratch()
+        refresh()
+    }
+
     func togglePlayback() {
         guard hasOpenDocument || loadedDocument != nil || isPlaying else { return }
         guard let engine else { diagnostic = audioError; return }

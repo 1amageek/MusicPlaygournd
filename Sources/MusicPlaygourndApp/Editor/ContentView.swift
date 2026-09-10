@@ -229,7 +229,7 @@ struct ContentView: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel("Play Mode")
                 .accessibilityValue(playMode ? "On. Press Escape to exit." : "Off")
-                .help("Play Mode: two fingers anywhere adjust crossfade. One finger on left/right edge scratches A/B. Escape exits.")
+                .help("Play Mode: two fingers anywhere adjust crossfade. One finger on left/right edge scratches A/B; bottom edge adjusts crossfade. Escape exits.")
             }
         }
         .padding(.horizontal, 18)

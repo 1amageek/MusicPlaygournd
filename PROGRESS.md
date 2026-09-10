@@ -182,3 +182,6 @@
 
 - [x] FREE-FADE-1 Route two-finger motion anywhere to crossfade, exclusively until all fingers lift; preserve single-contact edge controls `depends:none` `parallel:none`
 - [x] FREE-FADE-INT Four edge tests and release build passed; updated app opened with new help; physical two-finger feel awaits user trial `depends:FREE-FADE-1` `parallel:none`
+
+- [x] WIDE-EDGE-1 Widen side bands to 18 percent while preserving bottom 12 percent crossfade priority and two-finger routing `depends:none` `parallel:none`
+- [x] WIDE-EDGE-INT Four edge tests and release build passed; updated app opened for physical trial `depends:WIDE-EDGE-1` `parallel:none`

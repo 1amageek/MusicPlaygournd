@@ -169,7 +169,22 @@ final class SessionModel {
     private var stemExportTask: Task<StemExportSnapshot, Error>?
     private var stemExportID = UUID()
     private var isShuttingDown = false
-    var loop: PreparedLoop?
+    var loop: PreparedLoop? {
+        didSet {
+            // One bounded overview per adopted PCM buffer; animation only reads these bins.
+            guard let loop else { loopPeaks = []; return }
+            let frames = loop.samples.count / 2
+            let count = min(512, frames)
+            loopPeaks = (0..<count).map { bin in
+                var peak: Float = 0
+                for frame in (bin * frames / count)..<((bin + 1) * frames / count) {
+                    peak = max(peak, abs(loop.samples[frame * 2]), abs(loop.samples[frame * 2 + 1]))
+                }
+                return peak
+            }
+        }
+    }
+    private(set) var loopPeaks: [Float] = []
     var beatPosition = 0.0
     var currentRevision: UInt64?
     var revision: UInt64 = 0

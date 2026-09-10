@@ -13,44 +13,73 @@ struct DeckHeaderView: View {
     @State private var maximumTakeMinutes = 10
 
     var body: some View {
-        HStack(spacing: 16) {
-            deck(workspace.a, index: 0)
-            Divider()
-            VStack(spacing: 5) {
-                HStack(spacing: 8) {
-                    Text("MASTER").font(.system(size: 8, design: .monospaced)).foregroundStyle(.secondary)
-                    Slider(value: $workspace.masterVolume, in: 0...1).controlSize(.mini).tint(.gray)
-                        .accessibilityLabel("Master volume")
-                    Button(action: record) { Image(systemName: workspace.a.isRecording ? "stop.circle" : "record.circle") }
-                        .buttonStyle(.plain).accessibilityLabel("Record master")
-                        .disabled(!workspace.a.isPlaying && !workspace.b.isPlaying && !workspace.a.isRecording)
+        GeometryReader { geometry in
+            let centerWidth = min(280, max(190, geometry.size.width * 0.24))
+            HStack(spacing: 0) {
+                deck(workspace.a, index: 0)
+                Divider()
+                master.frame(width: centerWidth)
+                Divider()
+                deck(workspace.b, index: 1)
+            }
+        }
+        .frame(height: 164)
+        .background(LinearGradient(colors: [Color(red: 0.055, green: 0.07, blue: 0.08), .black.opacity(0.45)], startPoint: .top, endPoint: .bottom))
+    }
+
+    private var master: some View {
+        VStack(spacing: 7) {
+            Button { scopeVisible = true } label: {
+                DeckVectorscopeView(samplesA: workspace.a.deckSamples, samplesB: workspace.b.deckSamples,
+                                    colorA: workspace.colorA, colorB: workspace.colorB)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(.black.opacity(0.3), in: RoundedRectangle(cornerRadius: 5))
+                .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(.white.opacity(0.13)))
+            }.buttonStyle(.plain).accessibilityLabel("A and B vectorscopes")
+                .popover(isPresented: $scopeVisible) {
+                    VectorscopeControlView(samples: workspace.a.deckSamples, balance: workspace.balance,
+                        space: workspace.space, onBalanceChange: { workspace.balance = $0 }, onSpaceChange: { workspace.space = $0 },
+                        samplesB: workspace.b.deckSamples, colorA: workspace.colorA, colorB: workspace.colorB)
+                        .frame(width: 440, height: 360).padding(12)
                 }
-                Button { scopeVisible = true } label: {
-                    VectorscopeView(samples: workspace.a.outputSamples)
-                        .frame(height: 70).frame(maxWidth: .infinity)
-                        .background(.black.opacity(0.4), in: RoundedRectangle(cornerRadius: 6))
-                }.buttonStyle(.plain).accessibilityLabel("Master vectorscope")
-                    .popover(isPresented: $scopeVisible) {
-                        VectorscopeControlView(samples: workspace.a.outputSamples, balance: workspace.balance,
-                            space: workspace.space, onBalanceChange: { workspace.balance = $0 }, onSpaceChange: { workspace.space = $0 })
-                            .frame(width: 440, height: 360).padding(12)
-                    }
-                HStack {
-                    Text("A").foregroundStyle(workspace.colorA)
-                    Slider(value: $workspace.crossfade, in: 0...1).tint(.gray)
-                        .accessibilityLabel("A B crossfader").accessibilityIdentifier("crossfader")
-                    Text("B").foregroundStyle(workspace.colorB)
-                }.font(.system(size: 11, weight: .semibold))
-            }.frame(width: 210)
-            Divider()
-            deck(workspace.b, index: 1)
-        }.padding(.horizontal, 16).padding(.vertical, 10).frame(height: 140)
-            .background(.black.opacity(0.18))
+            HStack(spacing: 10) {
+                Text("A").foregroundStyle(workspace.colorA)
+                GeometryReader { geometry in
+                    let travel = max(1, geometry.size.width - 12)
+                    ZStack(alignment: .leading) {
+                        Capsule().fill(LinearGradient(colors: [workspace.colorA, workspace.colorB], startPoint: .leading, endPoint: .trailing)).frame(height: 5)
+                        Rectangle().fill(.white.opacity(0.4)).frame(width: 1, height: 14).offset(x: geometry.size.width / 2)
+                        RoundedRectangle(cornerRadius: 3).fill(.white.gradient).frame(width: 12, height: 24)
+                            .shadow(color: .black.opacity(0.6), radius: 2, y: 1).offset(x: workspace.crossfade * travel)
+                    }.frame(height: 28).contentShape(Rectangle())
+                        .gesture(DragGesture(minimumDistance: 0).onChanged { workspace.crossfade = min(1, max(0, ($0.location.x - 6) / travel)) })
+                        .onTapGesture(count: 2) { workspace.crossfade = 0.5 }
+                }.frame(height: 28)
+                    .accessibilityElement().accessibilityLabel("A B crossfader")
+                    .accessibilityValue(String(format: "%.0f percent B", workspace.crossfade * 100))
+                    .accessibilityAdjustableAction { direction in
+                        workspace.crossfade = min(1, max(0, workspace.crossfade + (direction == .increment ? 0.05 : -0.05)))
+                    }.accessibilityAction(named: "Center") { workspace.crossfade = 0.5 }
+                    .accessibilityIdentifier("crossfader")
+                Text("B").foregroundStyle(workspace.colorB)
+            }.font(.system(size: 15, weight: .bold))
+            HStack(spacing: 8) {
+                Image(systemName: "speaker.wave.2").font(.system(size: 11)).foregroundStyle(.secondary)
+                Slider(value: $workspace.masterVolume, in: 0...1).controlSize(.mini).tint(.gray)
+                    .background(MultiFingerGestureView(onChange: { workspace.masterVolume = min(1, max(0, workspace.masterVolume + $0 * 0.01)) }))
+                    .frame(maxWidth: .infinity).accessibilityLabel("Master volume")
+                Button(action: record) { Image(systemName: workspace.a.isRecording ? "stop.circle.fill" : "record.circle") }
+                    .buttonStyle(.plain).accessibilityLabel("Record master")
+                    .disabled(!workspace.a.isPlaying && !workspace.b.isPlaying && !workspace.a.isRecording)
+            }
+        }.padding(.horizontal, 12).padding(.vertical, 10)
     }
 
     private func deck(_ model: SessionModel, index: Int) -> some View {
         let color = index == 0 ? workspace.colorA : workspace.colorB
         let name = index == 0 ? "A" : "B"
+        let duration = model.loop?.beatCount ?? 0
+        let position = duration > 0 ? model.beatPosition.truncatingRemainder(dividingBy: duration) / duration : 0
         return VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Menu {
@@ -102,23 +131,20 @@ struct DeckHeaderView: View {
                     }
             }.controlSize(.small)
             Button { compressorDeck = index } label: {
-              Canvas { context, size in
-                let values = model.deckSamples
-                let frames = values.count / 2
-                guard frames > 0 else { return }
-                var wave = Path()
-                let count = max(1, Int(size.width))
-                for x in 0..<count {
-                    let first = x * frames / count
-                    let last = min(frames, (x + 1) * frames / count)
-                    var peak: Float = 0
-                    for frame in first..<last { peak = max(peak, abs(values[frame * 2]), abs(values[frame * 2 + 1])) }
-                    let height = min(1, CGFloat(peak) * 4) * size.height * 0.5
-                    wave.move(to: CGPoint(x: CGFloat(x), y: size.height / 2 - height))
-                    wave.addLine(to: CGPoint(x: CGFloat(x), y: size.height / 2 + height))
-                }
-                context.stroke(wave, with: .color(color), lineWidth: 1)
-              }.frame(height: 25).contentShape(Rectangle())
+                Canvas { context, size in
+                    let values = model.loopPeaks
+                    guard !values.isEmpty, size.width >= 1, size.height > 0 else { return }
+                    var wave = Path()
+                    for x in 0..<max(1, Int(size.width)) {
+                        let peak = Self.waveformPeak(values, at: position + Double(x) / size.width - 0.5)
+                        let height = min(1, CGFloat(peak) * 2) * size.height * 0.5
+                        wave.move(to: CGPoint(x: CGFloat(x), y: size.height / 2 - height))
+                        wave.addLine(to: CGPoint(x: CGFloat(x), y: size.height / 2 + height))
+                    }
+                    context.stroke(wave, with: .linearGradient(Gradient(colors: [color.opacity(0.5), color, color.opacity(0.5)]), startPoint: .zero, endPoint: CGPoint(x: 0, y: size.height)), lineWidth: 1)
+                    let x = size.width / 2
+                    context.fill(Path(CGRect(x: x, y: 0, width: 1, height: size.height)), with: .color(.white))
+                }.frame(height: 36).contentShape(Rectangle())
             }.buttonStyle(.plain).accessibilityLabel("Deck \(name) waveform, open master compressor")
                 .background(MultiFingerGestureView(onMotion: model.scratch, onEnd: model.endScratch))
                 .help("Scratch with two or three fingers, even while paused. Right/up forward, left/down reverse.")
@@ -135,6 +161,14 @@ struct DeckHeaderView: View {
                     .controlSize(.mini).tint(color).frame(width: 85).accessibilityLabel("Deck \(name) gain")
             }
         }.frame(maxWidth: .infinity)
+    }
+
+    static func waveformPeak(_ peaks: [Float], at phase: Double) -> Float {
+        guard !peaks.isEmpty, phase.isFinite else { return 0 }
+        let offset = (phase - floor(phase)) * Double(peaks.count)
+        let index = min(peaks.count - 1, Int(offset))
+        let fraction = Float(offset - Double(index))
+        return peaks[index] + (peaks[(index + 1) % peaks.count] - peaks[index]) * fraction
     }
 
     private func record() {

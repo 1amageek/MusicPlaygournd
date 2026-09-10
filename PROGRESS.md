@@ -128,3 +128,10 @@
 - [x] SCRATCH-1 Signed PCM scratch preserves play/pause intent; native paused output, release and other-deck isolation passed `depends:none` `parallel:none`
 - [x] SCRATCH-2 Wave routes timed motion and cleanup to scratch; gesture duration, release and window deactivation tests passed `depends:SCRATCH-1` `parallel:none`
 - [x] SCRATCH-INT Native paused scratch and 18 regression tests passed; Release built (67.26 s), TranceSet reopened paused with scratch help and zero errors; physical touch delivery not automated `depends:SCRATCH-1,SCRATCH-2` `parallel:none`
+
+- [x] SCOPE-1 Independent waveform/spectrum/vectorscope views and header popovers; Release build and real projection check passed; existing PCM ownership and diagnostics preserved `depends:none` `parallel:none`
+- [x] SCOPE-INT Native independent opening/closing passed; actual stereo PCM rendered through VectorscopeView; live playback UI check interrupted by user interaction, original playing app preserved `depends:SCOPE-1` `parallel:none`
+- [x] SCOPE-1 Shared 3D deck trajectories (c79b1d2) and header routing verified in Release/native UI `depends:none` `parallel:none`
+- [x] SCOPE-INT Both selected deck colors, shared depth trails and master placement visually verified; focused scope test passed `depends:SCOPE-1` `parallel:none`
+- [x] WAVE-1 Centered playhead and interpolated wrapped loop peaks; direction, seam and invalid-input test passed `depends:none` `parallel:none`
+- [x] WAVE-INT Release build passed (62.30 s); native A/B playback showed changing waveforms with fixed center lines and zero errors `depends:WAVE-1,SCOPE-1` `parallel:none`

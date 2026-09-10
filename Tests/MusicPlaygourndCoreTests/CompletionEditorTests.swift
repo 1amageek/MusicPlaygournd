@@ -8,6 +8,21 @@ extension NativeHostTests {
     @MainActor
     struct CompletionEditorTests {
         @Test
+        func waveformScrollsAroundFixedCenter() {
+            let peaks: [Float] = [0, 1, 0, 0]
+            // A peak at phase 0.25 starts right of center, then moves left as transport advances.
+            for (position, screenX) in [(0.0, 0.75), (0.25, 0.5), (0.5, 0.25)] {
+                #expect(DeckHeaderView.waveformPeak(peaks, at: position + screenX - 0.5) == 1)
+            }
+            #expect(DeckHeaderView.waveformPeak(peaks, at: -0.75) == 1)
+            #expect(DeckHeaderView.waveformPeak(peaks, at: 1.25) == 1)
+            #expect(DeckHeaderView.waveformPeak(peaks, at: 0.125) == 0.5)
+            #expect(DeckHeaderView.waveformPeak([1, 0, 0, 0], at: 0.875) == 0.5)
+            #expect(DeckHeaderView.waveformPeak([], at: 0) == 0)
+            #expect(DeckHeaderView.waveformPeak(peaks, at: .nan) == 0)
+        }
+
+        @Test
         func vectorscopeTrailFadesByAudioAge() throws {
             #expect(VectorscopeView.trailOpacity(framesAgo: 0, sampleRate: 44_100) == 1)
             #expect(abs(VectorscopeView.trailOpacity(framesAgo: 3_087, sampleRate: 44_100) - 0.25) < 0.00001)

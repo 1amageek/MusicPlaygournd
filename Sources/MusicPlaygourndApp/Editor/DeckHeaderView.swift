@@ -91,7 +91,7 @@ struct DeckHeaderView: View {
                 TextField("BPM", value: Binding(get: { model.displayedBPM }, set: { model.bpm = $0 }), format: .number.precision(.fractionLength(0)))
                     .font(.system(size: 22, design: .monospaced)).textFieldStyle(.plain).frame(width: 49)
                     .accessibilityLabel("Deck \(name) BPM")
-                    .background(TempoGestureView(onChange: model.adjustTempo))
+                    .background(MultiFingerGestureView(onChange: { model.adjustTempo(by: $0 * 0.25) }))
                 Button("TAP") { workspace.tap(index) }.accessibilityLabel("Deck \(name) tap tempo")
                 Button("Sync") { workspace.sync(index) }.disabled(!(index == 0 ? workspace.b : workspace.a).isPlaying)
                 Button("EQ") { eqDeck = index }

@@ -1,8 +1,8 @@
 import AppKit
 import SwiftUI
 
-/// Limits tempo gestures to the BPM label and field without intercepting clicks.
-struct TempoGestureView: NSViewRepresentable {
+/// Registers a bounded control region without intercepting clicks.
+struct MultiFingerGestureView: NSViewRepresentable {
     var onChange: (Double) -> Void
 
     func makeNSView(context: Context) -> RegionView { RegionView() }
@@ -17,7 +17,7 @@ struct TempoGestureView: NSViewRepresentable {
     }
 
     final class RegionView: NSView {
-        let gesture = TempoGestureRecognizer()
+        let gesture = MultiFingerGestureRecognizer()
 
         override func viewDidMoveToWindow() {
             super.viewDidMoveToWindow()

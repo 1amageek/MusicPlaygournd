@@ -8,6 +8,42 @@ extension NativeHostTests {
     @MainActor
     struct CompletionEditorTests {
         @Test(.timeLimit(.minutes(1)))
+        func waveGestureUsesOneAxisAndBothDirections() throws {
+            let gesture = MultiFingerGestureRecognizer()
+            var values: [Double] = []
+            gesture.onChange = { values.append($0) }
+            gesture.update(point: .zero, touchCount: 3)
+            gesture.update(point: NSPoint(x: 10, y: 9), touchCount: 3)
+            gesture.update(point: NSPoint(x: 6, y: 30), touchCount: 3)
+            #expect(values == [10, -4])
+            gesture.update(point: .zero, touchCount: 2)
+            gesture.update(point: .zero, touchCount: 3)
+            gesture.update(point: NSPoint(x: 1, y: -12), touchCount: 3)
+            gesture.update(point: NSPoint(x: 1, y: -2), touchCount: 3)
+            #expect(values == [10, -4, -12, 10])
+            for count in [2, 3] {
+                for point in [NSPoint(x: 10, y: 1), NSPoint(x: -10, y: 1),
+                              NSPoint(x: 1, y: 10), NSPoint(x: 1, y: -10)] {
+                    gesture.reset()
+                    gesture.update(point: .zero, touchCount: count)
+                    gesture.update(point: point, touchCount: count)
+                    let actual = try #require(values.last)
+                    let expected = Double(abs(point.x) > abs(point.y) ? point.x : point.y)
+                    #expect(actual == expected)
+                }
+            }
+            let previous = values
+            gesture.update(point: NSPoint(x: 100, y: 100), touchCount: 2)
+            #expect(values == previous)
+            for count in [0, 1, 4] {
+                gesture.update(point: .zero, touchCount: count)
+                gesture.update(point: NSPoint(x: 100, y: 100), touchCount: count)
+                #expect(values == previous)
+            }
+
+        }
+
+        @Test(.timeLimit(.minutes(1)))
         func tempoGestureIsLimitedToItsVisibleRegion() throws {
             let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 600, height: 400),
                 styleMask: [.titled], backing: .buffered, defer: false)
@@ -15,7 +51,7 @@ extension NativeHostTests {
             let content = try #require(window.contentView)
             let originalTypes = content.allowedTouchTypes
             let originalResting = content.wantsRestingTouches
-            let region = TempoGestureView.RegionView(frame: NSRect(x: 120, y: 320, width: 60, height: 40))
+            let region = MultiFingerGestureView.RegionView(frame: NSRect(x: 120, y: 320, width: 60, height: 40))
             content.addSubview(region)
             #expect(region.gesture.contains(NSPoint(x: 150, y: 340), in: window))
             #expect(!region.gesture.contains(NSPoint(x: 119, y: 340), in: window))
@@ -27,8 +63,28 @@ extension NativeHostTests {
             region.isHidden = true
             #expect(!region.gesture.contains(NSPoint(x: 150, y: 340), in: window))
             region.isHidden = false
+            let gain = MultiFingerGestureView.RegionView(frame: NSRect(x: 220, y: 320, width: 32, height: 32))
+            content.addSubview(gain)
+            var deltas: [Double] = []
+            gain.gesture.onChange = { deltas.append($0) }
+            gain.gesture.update(point: .zero, touchCount: 3)
+            gain.gesture.update(point: NSPoint(x: 1, y: 10), touchCount: 3)
+            gain.gesture.update(point: NSPoint(x: 1, y: 14), touchCount: 3)
+            #expect(deltas == [10, 4])
+            gain.gesture.update(point: NSPoint(x: 1, y: 20), touchCount: 2)
+            gain.gesture.update(point: NSPoint(x: 1, y: 20), touchCount: 3)
+            #expect(deltas == [10, 4])
+            gain.gesture.update(point: NSPoint(x: 15, y: 20), touchCount: 3)
+            #expect(deltas == [10, 4, 14])
+            gain.gesture.reset()
+            gain.gesture.update(point: .zero, touchCount: 3)
+            gain.gesture.update(point: NSPoint(x: 1, y: -10), touchCount: 3)
+            #expect(deltas == [10, 4, 14, -10])
             region.removeFromSuperview()
             #expect(!region.gesture.contains(NSPoint(x: 150, y: 340), in: window))
+            #expect(content.allowedTouchTypes.contains(.indirect))
+            #expect(gain.gesture.contains(NSPoint(x: 230, y: 330), in: window))
+            gain.removeFromSuperview()
             #expect(content.allowedTouchTypes == originalTypes)
             #expect(content.wantsRestingTouches == originalResting)
             window.close()

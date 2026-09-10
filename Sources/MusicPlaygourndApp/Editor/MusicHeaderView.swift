@@ -36,7 +36,7 @@ struct MusicHeaderView: View {
                         .textFieldStyle(.plain).frame(width: 60)
                         .accessibilityLabel("Tempo in BPM").accessibilityIdentifier("tempo-field")
                 }
-                .background(TempoGestureView(onChange: { model.adjustTempo(by: $0) }))
+                .background(MultiFingerGestureView(onChange: { model.adjustTempo(by: $0 * 0.25) }))
                 VStack(alignment: .leading, spacing: 5) {
                     Text("TIME").fixedSize().font(.system(size: 8, weight: .medium, design: .monospaced)).tracking(1)
                         .foregroundStyle(.secondary)
@@ -63,6 +63,7 @@ struct MusicHeaderView: View {
                     Text(model.masterVolume == 0 ? "−∞ dB" : String(format: "%.0f dB", 20 * log10(model.masterVolume)))
                 }.font(.system(size: 8, design: .monospaced)).foregroundStyle(.secondary)
                 Slider(value: $model.masterVolume, in: 0...1)
+                    .background(MultiFingerGestureView { model.masterVolume = min(1, max(0, model.masterVolume + $0 * 0.01)) })
                     .controlSize(.small).tint(.gray)
                     .accessibilityLabel("Master volume")
                     .accessibilityIdentifier("master-volume")

@@ -1,0 +1,102 @@
+import AppKit
+
+/// Observes region-limited two/three-finger motion without consuming mouse or scroll events.
+@MainActor
+final class MultiFingerGestureRecognizer {
+    private weak var region: NSView?
+    private var monitor: Any?
+    private weak var touchView: NSView?
+    private static var touchUsers: [ObjectIdentifier: (count: Int, types: NSTouch.TouchTypeMask, resting: Bool)] = [:]
+    private var touchKey: ObjectIdentifier?
+    var onChange: ((Double) -> Void)?
+    private var lastPoint: NSPoint?
+    private var accumulated = NSPoint.zero
+    private var lastTouchCount: Int?
+    private var horizontal = false
+    private var tracking = false
+
+    func attach(to view: NSView?) {
+        if let monitor { NSEvent.removeMonitor(monitor) }
+        monitor = nil
+        if let key = touchKey, var users = Self.touchUsers[key] {
+            users.count -= 1
+            if users.count == 0 {
+                touchView?.allowedTouchTypes = users.types
+                touchView?.wantsRestingTouches = users.resting
+                Self.touchUsers.removeValue(forKey: key)
+            } else { Self.touchUsers[key] = users }
+        }
+        touchKey = nil
+        touchView = nil
+        reset()
+        region = view
+        guard let window = view?.window else { return }
+        if let content = window.contentView {
+            touchView = content
+            let key = ObjectIdentifier(content)
+            touchKey = key
+            var users = Self.touchUsers[key] ?? (0, content.allowedTouchTypes, content.wantsRestingTouches)
+            users.count += 1
+            Self.touchUsers[key] = users
+            content.allowedTouchTypes.insert(.indirect)
+            content.wantsRestingTouches = true
+        }
+        monitor = NSEvent.addLocalMonitorForEvents(matching: .gesture) { [weak self, weak window] event in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                guard let window, self.contains(window.mouseLocationOutsideOfEventStream, in: event.window) else {
+                    self.reset()
+                    return
+                }
+                self.update(event)
+            }
+            return event
+        }
+    }
+
+    func contains(_ location: NSPoint, in window: NSWindow?) -> Bool {
+        guard let region, let window, region.window === window,
+              !region.isHiddenOrHasHiddenAncestor else { return false }
+        let point = region.convert(location, from: nil)
+        return region.bounds.contains(point) && region.visibleRect.contains(point)
+    }
+
+    func reset() {
+        lastPoint = nil
+        lastTouchCount = nil
+        accumulated = .zero
+        tracking = false
+        horizontal = false
+    }
+
+    private func update(_ event: NSEvent) {
+        let touches = event.touches(matching: .touching, in: nil)
+        guard touches.count == 2 || touches.count == 3 else { reset(); return }
+        var point = NSPoint.zero
+        for touch in touches {
+            point.x += touch.normalizedPosition.x * touch.deviceSize.width / CGFloat(touches.count)
+            point.y += touch.normalizedPosition.y * touch.deviceSize.height / CGFloat(touches.count)
+        }
+        update(point: point, touchCount: touches.count)
+    }
+
+    func update(point: NSPoint, touchCount: Int) {
+        guard touchCount == 2 || touchCount == 3 else { reset(); return }
+        if lastTouchCount != touchCount { reset() }
+        lastTouchCount = touchCount
+        defer { lastPoint = point }
+        guard let previous = lastPoint else { return }
+        accumulated.x += point.x - previous.x
+        accumulated.y += point.y - previous.y
+        if !tracking {
+            horizontal = abs(accumulated.x) > abs(accumulated.y)
+        }
+        let primary = horizontal ? accumulated.x : accumulated.y
+        let delta = horizontal ? point.x - previous.x : point.y - previous.y
+        if tracking { onChange?(Double(delta)) }
+        else if abs(primary) >= 8 {
+            tracking = true
+            onChange?(Double(primary))
+        }
+    }
+}

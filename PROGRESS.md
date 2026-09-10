@@ -121,3 +121,6 @@
 - [x] SEEK-CORE Implement retained-PCM seek with wrapping and paused-state preservation; real transport PCM test passed `depends:none` `parallel:none`
 - [ ] SEEK-1 Connect Wave-only bidirectional three-finger seek `depends:SEEK-CORE` `parallel:none`
 - [ ] SEEK-INT Build and verify native app integration `depends:SEEK-1` `parallel:none`
+
+- [x] TOUCH-1 Shared two/three-finger dominant-axis adapter and native region/contact tests passed `depends:none` `parallel:none`
+- [ ] TOUCH-INT Verify integrated UI build; retained UI changes remain outside this adapter commit `depends:TOUCH-1` `parallel:none`

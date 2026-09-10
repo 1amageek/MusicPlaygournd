@@ -1,4 +1,5 @@
 import Foundation
+import CryptoKit
 
 /// Mirrors package inputs into evaluator-owned storage without sharing mutable source files.
 struct ProjectWorkspace {
@@ -64,8 +65,11 @@ struct ProjectWorkspace {
         let originalManifest = origin.appending(path: "Package.swift").standardizedFileURL.resolvingSymlinksInPath()
         let original = try request.buffers[originalManifest] ?? String(contentsOf: originalManifest, encoding: .utf8)
         guard original.utf8.count <= 65_536 else { throw EvaluationError.invalidSource("Package.swift exceeds 64 KiB.") }
+        let hostManifest = try Data(contentsOf: host.appending(path: "Package.swift"))
+        let hostIdentity = SHA256.hash(data: hostManifest).map { String(format: "%02x", $0) }.joined()
         let addition = """
 
+        // MusicPlayground host manifest: \(hostIdentity)
         import Foundation
         package.dependencies = package.dependencies.map { dependency in
             if case .fileSystem(let name, let path) = dependency.kind {

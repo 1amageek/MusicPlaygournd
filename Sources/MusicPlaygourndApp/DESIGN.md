@@ -32,3 +32,5 @@ Integration smoke test and visible native app verify the real workflow; command-
 Standalone release packaging uses public SwiftMusic 0.5.0. Generated evaluator and completion manifests use that same URL/version; no adjacent SwiftMusic directory is required. The bundled host package and runtime SDK retain matching source/object/compiler identity. Verify from an independent checkout with real evaluation and SourceKit-LSP.
 
 Semantic highlighting is owned by the existing Evaluation/Editor components alongside completion. Its source-snapshot, language-service and presentation contracts are documented in their linked designs.
+
+The packaged host manifest includes a deterministic source-path inventory digest. Adding or removing a bundled Swift source changes this manifest and invalidates SwiftPM's cached local-dependency build plan; ordinary source edits still use SwiftPM incremental compilation. Rebuilding the same inventory produces the same manifest. This does not modify the user's manifest or force dependency downloads.

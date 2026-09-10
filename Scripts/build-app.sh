@@ -18,6 +18,11 @@ cp -R "$package_root/Tests" "$resources/MusicPlaygournd/"
 import hashlib, json, plistlib, shutil, subprocess, sys
 from pathlib import Path
 app = Path(sys.argv[1])
+# SwiftPM must replan cached local dependencies when a bundled source file is added or removed.
+host = app / 'Contents/Resources/SwiftMusic/MusicPlaygournd'
+inventory = '\n'.join(sorted(str(p.relative_to(host)) for p in (host / 'Sources').rglob('*.swift')))
+manifest = host / 'Package.swift'
+manifest.write_text(manifest.read_text() + '\n// Bundled source inventory: ' + hashlib.sha256(inventory.encode()).hexdigest() + '\n')
 runtime = app / 'Contents/Resources/RuntimeSDK'
 if runtime.exists():
     shutil.rmtree(runtime)

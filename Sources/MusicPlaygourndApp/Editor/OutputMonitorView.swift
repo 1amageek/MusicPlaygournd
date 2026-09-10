@@ -14,6 +14,9 @@ struct OutputMonitorView: View {
     let equalizerResponses: [MasterEqualizerResponse]
     let equalizerBands: [MasterEqualizerBand]
     let onEqualizerChange: (Int, MasterEqualizerBand) -> Void
+    let compressorSettings: MasterCompressorSettings
+    let compressorSnapshot: MasterCompressorSnapshot
+    let onCompressorChange: (MasterCompressorSettings) -> Void
 
     private enum Monitor: String, CaseIterable, Identifiable {
         case wave = "Wave", spectrum = "Spectrum", vectorscope = "Vectorscope"
@@ -56,9 +59,12 @@ struct OutputMonitorView: View {
                             } else if monitor == .vectorscope {
                                 VectorscopeControlView(samples: samples, balance: balance,
                                     space: space, onBalanceChange: onBalanceChange, onSpaceChange: onSpaceChange)
-                            } else { plot(monitor) }
+                            } else {
+                                WaveCompressorView(settings: compressorSettings, snapshot: compressorSnapshot,
+                                    onChange: onCompressorChange)
+                            }
                         }
-                            .frame(height: monitor == .vectorscope ? 360 : 220)
+                            .frame(height: monitor == .vectorscope ? 360 : (monitor == .wave ? 300 : 220))
                             .background(.black.opacity(0.6), in: RoundedRectangle(cornerRadius: 8))
                         if monitor == .wave { meters }
                     }

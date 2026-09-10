@@ -101,6 +101,6 @@
 - [x] WELCOME-FIX-1 Restore 1160×760pt editor size on welcome-to-workspace transition and give welcome action labels readable fixed sizing; retain user resizing after entry `depends:none` `parallel:none`
 - [x] WELCOME-FIX-INT Release build passed; native screenshots verify full welcome labels and FirstLight workspace at 1160×760pt `depends:WELCOME-FIX-1` `parallel:none`
 
-- [x] COMP-1 Live native compressor implemented; 8 focused dynamics/native PCM checks and hardware recording/host-effect check passed; settings validation, aligned bounded telemetry and bypass/reset verified `depends:none` `parallel:none`
-- [ ] COMP-2 Connect Wave threshold drag, Ratio/Attack/Release, bypass/reset, aligned pre/post envelopes and actual gain reduction to accepted playback settings; preserve source and transport `depends:COMP-1` `parallel:none`
-- [ ] COMP-INT Build and visually exercise Wave controls during playback, verify unchanged revisions and record/output routing, then push scoped commits `depends:COMP-1,COMP-2` `parallel:none`
+- [x] COMP-1 f9c0f83: live stereo-linked compressor; focused PCM and native recording checks passed `depends:none` `parallel:none`
+- [x] COMP-2 Wave controls, pre/post traces and bounded telemetry connected; native accessibility changes and reset verified during playback; bundled source inventory and root manifest fingerprint restore existing cached-project builds `depends:COMP-1` `parallel:none`
+- [ ] COMP-INT Release build and existing FirstLight playback passed with zero errors/dropouts; native controls produced 18 dB reduction and reset to bypass; PCM/recording/revision checks passed; physical mouse drag remains unverified because automation coordinates do not reach the popover `depends:COMP-1,COMP-2` `parallel:none`

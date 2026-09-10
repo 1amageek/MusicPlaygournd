@@ -51,6 +51,18 @@ final class SessionModel {
 
     private(set) var equalizerResponses: [MasterEqualizerResponse] = []
     private(set) var equalizerBands = MasterEqualizerBand.defaults
+    private(set) var compressorSettings = MasterCompressorSettings.defaults
+    private(set) var compressorMeter = MasterCompressorSnapshot.empty
+
+    func setCompressor(_ value: MasterCompressorSettings) {
+        do {
+            guard let engine else { throw PlaybackError.audioSetupFailed(audioError) }
+            try engine.setCompressor(value)
+            compressorSettings = engine.compressorSettings
+            compressorMeter = engine.compressorSnapshot()
+        } catch { hostDiagnostic = error.localizedDescription }
+    }
+
 
     func setEqualizerBand(_ index: Int, value: MasterEqualizerBand) {
         do {
@@ -683,6 +695,7 @@ final class SessionModel {
             } catch { hostDiagnostic = error.localizedDescription }
         }
         if let capture = engine?.outputMeter() {
+            compressorMeter = engine?.compressorSnapshot() ?? .empty
             outputSamples = capture.interleavedSamples
             performance = capture.performance
             hostedEffect = engine?.audioEffectSnapshot() ?? .none

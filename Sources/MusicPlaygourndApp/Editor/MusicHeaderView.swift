@@ -52,7 +52,9 @@ struct MusicHeaderView: View {
                 resetDiagnostics: model.resetPerformanceDiagnostics,
                 space: model.displayedReverbMix, onSpaceChange: { model.reverbMix = $0 },
                 balance: model.masterBalance, onBalanceChange: model.setMasterBalance,
-                equalizerResponses: model.equalizerResponses, equalizerBands: model.equalizerBands, onEqualizerChange: model.setEqualizerBand)
+                equalizerResponses: model.equalizerResponses, equalizerBands: model.equalizerBands, onEqualizerChange: model.setEqualizerBand,
+                compressorSettings: model.compressorSettings, compressorSnapshot: model.compressorMeter,
+                onCompressorChange: model.setCompressor)
                 .frame(minWidth: 120, idealWidth: 220, maxWidth: .infinity)
             VStack(spacing: 5) {
                 HStack {

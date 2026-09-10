@@ -286,3 +286,7 @@ The editor requests semantic coloring after committed source edits, coalesces pe
 The Settings preview requests the same token classification through the standalone service. Connection options and host module resolution are owned by [Evaluation](../../MusicPlaygourndCore/Evaluation/DESIGN.md#semantic-source-coloring).
 
 Syntax foreground colors live in text-storage attributes so unchanged ranges retain color during a coalesced edit request. Playback continues to own temporary foreground/background overlays, which can be cleared every beat without recoloring the document. New documents clear previous syntax attributes; applying a matching result changes attributes only and waits for IME composition to end.
+
+### Wave compressor controls
+
+The expanded Wave popover presents time-aligned pre/post compressor min/max envelopes from Playback, a draggable symmetric threshold line, Ratio/Attack/Release controls, an enabled toggle, measured gain reduction and Reset. Header Wave stays an output monitor and opens this popover. Display scale is linear full-scale amplitude so threshold dBFS maps to the actual plotted amplitude. Controls immediately call SessionModel, which publishes engine-accepted settings only and reports errors through Logs. Edits enable compression; Reset restores the bypassed defaults. Source, undo, evaluation revision and playback intent remain unchanged. Native visual verification owns hit regions, labels and accepted-value feedback; Playback owns audible DSP verification.

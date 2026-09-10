@@ -20,6 +20,15 @@ revision/bar adoption + live rate                          balanceMixer -> mainM
 
 ## Contracts and Invariants
 
+Scratch contract: `scratch(bySeconds:over:)` traverses retained stereo PCM in the signed direction over a finite motion interval (0 < interval <= 0.25 seconds). `endScratch()` releases that temporary output. MainActor owns native output activation; the transport Mutex owns scratch step and remaining frame count alongside the existing phase. Ordinary `isPlaying` remains unchanged: paused decks sound only for submitted motion, playing decks resume normal traversal on release. A segment exhausts to silence even if the UI sends no further events; end, pointer exit, contact-count change, window deactivation and view removal release it. Output membership is removed only for a paused deck, preserving the other deck. No buffer allocation/copy, compilation or graph reconstruction occurs in the callback. Source frames account for the existing TimePitch rate; pitch changes arise from signed PCM traversal. Negative phase wraps positively; traversal retains whole-loop displacements instead of reducing them to zero. Scratch suspends beat-clock anchoring and rejects overlap with pending replacement/reservation; replacement entry points reject active scratch. Play/stop/restart explicitly cancel scratch. Tests inspect reverse/forward/fractional PCM, zero motion, idle silence, paused state, release, invalid inputs and native post-FX stereo output with the other deck running.
+
+```text
+Wave motion + duration -> MainActor engine -> Mutex scratch segment
+                                              -> source callback -> existing FX -> shared output
+Wave end/exit/detach   -> endScratch           -> normal playback or silence
+```
+
+
 `seek(bySeconds:)` moves within the retained loop, wrapping at both ends without changing playing state or playback rate. Finite offsets are required. The transport Mutex owns position mutation and clock invalidation; pending code adoption is rescheduled at the next bar. An active replacement/reservation rejects seek explicitly. No compile or buffer copy occurs. PCM seek tests verify forward/backward wrap, paused retention and invalid-input preservation.
 
 Public @MainActor engine: init() throws; beginUpdate(revision: UInt64); submit(loop: PreparedLoop, revision: UInt64) throws; play() throws; stop(); snapshot() -> PlaybackSnapshot. Snapshot fields loop: PreparedLoop?, revision: UInt64?, beatPosition: Double, isPlaying: Bool. New edit clears pending but preserves current. Reject stale/duplicate completions. First loop adopts while stopped. Existing playing loop adopts at next current-meter bar boundary without resetting the accumulated transport clock. Snapshot reports actual adopted PCM. Callback copies bounded PCM, no await/UI/I/O. Immutable buffers retain an off-callback owner to prevent deallocation on callback.
@@ -151,3 +160,5 @@ AudioOutput owns one AVAudioEngine, master compressor, volume, post-mix tap and 
 Crossfade is finite in 0...1, with exact endpoints and equal-power intermediate gains. Gain ramps run on MainActor and use the existing smoother. Transport PCM and clock state remain under the existing Mutex with no conditional platform isolation differences. Recording and compressor state move without changing their existing failure/cancellation contracts. Native offline PCM tests must distinguish source A and B, pause one while the other advances, and verify both crossfade endpoints. This boundary is macOS AVFAudio only; no Embedded path is added.
 
 The shared output applies master stereo balance and reverb after deck mixing and before the compressor. Deck effects retain independent controls. Central scope controls own only this shared stage; reset is balance zero and reverb zero. Master recording and scope samples include these effects. Native PCM checks cover balance extremes and invalid-value preservation.
+
+Scratch state is macOS AVFoundation transport state: storage `Mutex<State>`, reads `isScratching`/snapshot, writes scratch/end/play/stop/render, lifetime retained by the source callback and engine. This component has no WASM/Embedded implementation or target-dependent synchronization branches.

@@ -124,3 +124,7 @@
 
 - [x] TOUCH-1 Shared two/three-finger dominant-axis adapter and native region/contact tests passed `depends:none` `parallel:none`
 - [ ] TOUCH-INT Verify integrated UI build; retained UI changes remain outside this adapter commit `depends:TOUCH-1` `parallel:none`
+
+- [x] SCRATCH-1 Signed PCM scratch preserves play/pause intent; native paused output, release and other-deck isolation passed `depends:none` `parallel:none`
+- [ ] SCRATCH-2 Route Wave motion duration and end lifecycle to scratch output `depends:SCRATCH-1` `parallel:none`
+- [ ] SCRATCH-INT Native output and 18 regression tests passed; Release integration pending `depends:SCRATCH-1,SCRATCH-2` `parallel:none`

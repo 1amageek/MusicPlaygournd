@@ -134,7 +134,7 @@ public final class AudioLoopEngine: AudioUnitHosting, MasterRecording {
     public func cancelRecording() async throws { try await output.cancelRecording() }
 
     public func deckMeter() -> OutputMeterSnapshot {
-        if !transport.snapshot().isPlaying { deckMeterStore.clear() }
+        if !transport.snapshot().isPlaying && !transport.isScratching { deckMeterStore.clear() }
         return deckMeterStore.snapshot()
     }
 
@@ -261,6 +261,27 @@ public final class AudioLoopEngine: AudioUnitHosting, MasterRecording {
         }
     }
 
+    /// Auditions signed PCM motion without changing the play/pause intent.
+    public func scratch(bySeconds seconds: Double, over duration: Double) throws {
+        let starting = !transport.isScratching
+        try transport.scratch(bySeconds: seconds, over: duration)
+        guard starting else { return }
+        deckMeterStore.activate()
+        do { try output.start(deckIndex) }
+        catch {
+            endScratch()
+            throw PlaybackError.audioStartFailed(String(describing: error))
+        }
+    }
+
+    public func endScratch() {
+        transport.endScratch()
+        if !transport.snapshot().isPlaying {
+            deckMeterStore.clear()
+            output.stop(deckIndex)
+        }
+    }
+
     public func seek(bySeconds seconds: Double) throws {
         try transport.seek(bySeconds: seconds)
     }
@@ -277,7 +298,7 @@ public final class AudioLoopEngine: AudioUnitHosting, MasterRecording {
         let position = transport.positionSnapshot()
         let rawSnapshot = position.playback
         pruneRetainedLoops()
-        guard rawSnapshot.isPlaying,
+        guard rawSnapshot.isPlaying, !transport.isScratching,
               let loop = rawSnapshot.loop else {
             return rawSnapshot
         }
@@ -667,6 +688,11 @@ final class AudioTransport: Sendable {
         let beat: Double
     }
 
+    private struct Scratch: Sendable {
+        var step: Double
+        var remaining: Int
+    }
+
     private struct State: Sendable {
         var switchLoops: [PreparedLoop] = []
         var switchRevision: UInt64?
@@ -689,6 +715,7 @@ final class AudioTransport: Sendable {
         var beatPosition = 0.0
         var framePosition = 0
         var pendingBoundary: Double?
+        var scratch: Scratch?
         var isPlaying = false
         var clockSample: ClockSample?
         var lastHostTime: UInt64?
@@ -723,7 +750,7 @@ final class AudioTransport: Sendable {
         try state.withLock { state in
             guard state.currentRevision == revision else { throw PlaybackError.staleRevision(revision) }
             guard loops.indices.contains(initialIndex), state.currentPerformanceGeneration == 0 else { throw PlaybackError.incompatibleReplacement }
-            guard state.currentGeneration == expectedGeneration, state.fade == nil,
+            guard state.scratch == nil, state.currentGeneration == expectedGeneration, state.fade == nil,
                   state.replacement == nil, state.pending == nil, state.reservation == nil else {
                 throw PlaybackError.replacementInProgress
             }
@@ -741,7 +768,7 @@ final class AudioTransport: Sendable {
             }
             guard state.switchLoops.indices.contains(index), state.currentPerformanceGeneration == 0 else { throw PlaybackError.incompatibleReplacement }
             guard generation > state.latestGeneration else { throw PlaybackError.staleOverrideGeneration(generation) }
-            guard state.reservation == nil, state.pending == nil,
+            guard state.scratch == nil, state.reservation == nil, state.pending == nil,
                   state.currentPerformanceGeneration == state.publishedPerformanceGeneration else {
                 throw PlaybackError.replacementInProgress
             }
@@ -771,7 +798,7 @@ final class AudioTransport: Sendable {
             guard generation > state.latestPerformanceGeneration else {
                 throw PlaybackError.staleOverrideGeneration(generation)
             }
-            guard state.reservation == nil, state.fade == nil, state.pending == nil,
+            guard state.scratch == nil, state.reservation == nil, state.fade == nil, state.pending == nil,
                   state.replacement == nil, state.retired == nil else {
                 throw PlaybackError.replacementInProgress
             }
@@ -819,7 +846,7 @@ final class AudioTransport: Sendable {
             guard generation > state.latestGeneration else {
                 throw PlaybackError.staleOverrideGeneration(generation)
             }
-            guard state.reservation == nil,
+            guard state.scratch == nil, state.reservation == nil,
                   state.currentPerformanceGeneration == state.publishedPerformanceGeneration else {
                 throw PlaybackError.replacementInProgress
             }
@@ -894,7 +921,7 @@ final class AudioTransport: Sendable {
                 throw PlaybackError.duplicateRevision(revision)
             }
 
-            guard state.reservation == nil,
+            guard state.scratch == nil, state.reservation == nil,
                   state.currentPerformanceGeneration == state.publishedPerformanceGeneration else {
                 throw PlaybackError.replacementInProgress
             }
@@ -928,6 +955,7 @@ final class AudioTransport: Sendable {
                 state.lastHostTime = nil
                 state.clockDiscontinuous = false
             }
+            state.scratch = nil
             state.isPlaying = true
         }
     }
@@ -942,7 +970,37 @@ final class AudioTransport: Sendable {
             state.lastHostTime = nil
             state.clockDiscontinuous = false
             state.pendingBoundary = state.pending == nil ? nil : Double(current.beatsPerBar)
+            state.scratch = nil
             state.isPlaying = true
+        }
+    }
+
+    var isScratching: Bool { state.withLock { $0.scratch != nil } }
+
+    func scratch(bySeconds seconds: Double, over duration: Double) throws {
+        guard seconds.isFinite, duration.isFinite, duration > 0, duration <= 0.25 else {
+            throw PlaybackError.invalidScratchMotion
+        }
+        try state.withLock { state in
+            guard let current = state.current else { throw PlaybackError.noCurrentLoop }
+            guard state.reservation == nil, state.replacement == nil, state.fade == nil,
+                  state.pending == nil else { throw PlaybackError.replacementInProgress }
+            let distance = seconds * (current.bpm / 60)
+            guard distance.isFinite else { throw PlaybackError.invalidScratchMotion }
+            let frames = max(1, Int(duration * current.sampleRate * state.clockRate))
+            state.scratch = Scratch(step: distance / Double(frames), remaining: frames)
+            state.synchronization = nil
+            state.clockSample = nil
+            state.lastHostTime = nil
+            state.clockDiscontinuous = false
+        }
+    }
+
+    func endScratch() {
+        state.withLock { state in
+            state.scratch = nil
+            state.clockSample = nil
+            state.lastHostTime = nil
         }
     }
 
@@ -950,7 +1008,7 @@ final class AudioTransport: Sendable {
         guard seconds.isFinite else { throw PlaybackError.invalidSeekOffset }
         try state.withLock { state in
             guard let current = state.current else { throw PlaybackError.noCurrentLoop }
-            guard state.reservation == nil, state.replacement == nil, state.fade == nil else {
+            guard state.scratch == nil, state.reservation == nil, state.replacement == nil, state.fade == nil else {
                 throw PlaybackError.replacementInProgress
             }
             let duration = current.beatCount * 60 / current.bpm
@@ -970,6 +1028,7 @@ final class AudioTransport: Sendable {
 
     func stopPlayback() {
         state.withLock { state in
+            state.scratch = nil
             state.isPlaying = false
             state.synchronization = nil
             state.clockSample = nil
@@ -1042,7 +1101,7 @@ final class AudioTransport: Sendable {
         guard anchor.isPlaying else { throw PlaybackClockError.unavailable }
         let latency = try PlaybackClockAnchor.hostTicks(forSeconds: presentationLatency)
         try state.withLock { state in
-            guard state.current != nil, state.isPlaying else { throw PlaybackClockError.unavailable }
+            guard state.current != nil, state.isPlaying, state.scratch == nil else { throw PlaybackClockError.unavailable }
             guard state.pending == nil, state.reservation == nil, state.replacement == nil,
                   state.fade == nil else { throw PlaybackError.replacementInProgress }
             state.synchronization = (anchor, latency)
@@ -1063,8 +1122,9 @@ final class AudioTransport: Sendable {
     }
 
     func clockAnchor(presentationLatency: Double, now: UInt64 = mach_absolute_time()) throws -> PlaybackClockAnchor {
-        let values = state.withLock { state in
-            (state.current?.bpm, state.current?.beatCount, state.currentRevision,
+        let values = try state.withLock { state in
+            guard state.scratch == nil else { throw PlaybackClockError.unavailable }
+            return (state.current?.bpm, state.current?.beatCount, state.currentRevision,
              state.currentGeneration, state.isPlaying, state.beatPosition, state.clockRate,
              state.clockSample, state.clockDiscontinuous)
         }
@@ -1097,10 +1157,27 @@ final class AudioTransport: Sendable {
                 $0.mNumberChannels == 1 && $0.mData != nil &&
                 Int($0.mDataByteSize) / MemoryLayout<Float>.stride >= frameCount
             }) else { return kAudio_ParamError }
-            guard state.isPlaying, state.current != nil else {
+            guard state.isPlaying || state.scratch != nil, state.current != nil else {
                 for buffer in buffers {
                     if let data = buffer.mData { memset(data, 0, frameCount * MemoryLayout<Float>.stride) }
                 }
+                return noErr
+            }
+
+            if var scratch = state.scratch, let current = state.current {
+                for offset in 0..<frameCount {
+                    if scratch.remaining > 0 && scratch.step != 0 {
+                        let value = sample(at: state.beatPosition, in: current)
+                        write(buffers: buffers, frame: offset, left: value.0, right: value.1)
+                        let beat = (state.beatPosition + scratch.step).truncatingRemainder(dividingBy: current.beatCount)
+                        state.beatPosition = beat < 0 ? beat + current.beatCount : beat
+                        state.framePosition = frame(for: state.beatPosition, in: current)
+                        scratch.remaining -= 1
+                    } else {
+                        write(buffers: buffers, frame: offset, left: 0, right: 0)
+                    }
+                }
+                state.scratch = scratch
                 return noErr
             }
 

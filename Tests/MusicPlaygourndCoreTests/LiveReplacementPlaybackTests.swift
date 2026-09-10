@@ -115,6 +115,58 @@ struct LiveReplacementPlaybackTests {
         #expect(abs(transport.snapshot().beatPosition - before.beatPosition) < 0.00001)
     }
 
+    @Test(.timeLimit(.minutes(1)))
+    func scratchRendersReversePCMWhilePausedAndRestoresTransportIntent() throws {
+        let transport = AudioTransport()
+        #expect(throws: PlaybackError.noCurrentLoop) { try transport.scratch(bySeconds: 0.1, over: 0.1) }
+        let source = loop(scale: 0.8)
+        transport.beginUpdate(revision: 1)
+        try transport.submit(loop: source, revision: 1)
+        try transport.scratch(bySeconds: -8.0 / 44_100, over: 4.0 / 44_100)
+        #expect(!transport.snapshot().isPlaying && transport.isScratching)
+        let reverse = try render(transport, frames: 4)
+        for (index, frame) in [0, 88_198, 88_196, 88_194].enumerated() {
+            #expect(abs(reverse[index] - source.samples[frame * 2]) < 0.00001)
+        }
+        #expect(try render(transport, frames: 8).allSatisfy { $0 == 0 })
+        let before = transport.snapshot()
+        for interval in [0.0, -1, .infinity, 0.3] {
+            #expect(throws: PlaybackError.invalidScratchMotion) {
+                try transport.scratch(bySeconds: 1, over: interval)
+            }
+        }
+        #expect(throws: PlaybackError.invalidScratchMotion) {
+            try transport.scratch(bySeconds: .nan, over: 0.1)
+        }
+        #expect(transport.snapshot() == before)
+        #expect(throws: PlaybackClockError.unavailable) { try transport.clockAnchor(presentationLatency: 0) }
+        #expect(throws: PlaybackError.replacementInProgress) {
+            try transport.replace(loop: source, revision: 1, generation: 1)
+        }
+        try transport.scratch(bySeconds: 0, over: 0.1)
+        #expect(try render(transport, frames: 8).allSatisfy { $0 == 0 })
+        transport.endScratch()
+        #expect(!transport.snapshot().isPlaying && !transport.isScratching)
+        #expect(try render(transport, frames: 8).allSatisfy { $0 == 0 })
+        try transport.startPlayback()
+        try transport.scratch(bySeconds: 2.0 / 44_100, over: 4.0 / 44_100)
+        let forward = try render(transport, frames: 4)
+        #expect(abs(forward[0] - source.samples[88_192 * 2]) < 0.00001)
+        #expect(abs(forward[1] - (source.samples[88_192 * 2] + source.samples[88_193 * 2]) / 2) < 0.00001)
+        #expect(transport.snapshot().isPlaying)
+        transport.endScratch()
+        let resumed = try render(transport, frames: 2)
+        #expect(abs(resumed[0] - source.samples[88_194 * 2]) < 0.00002)
+        #expect(abs(resumed[1] - source.samples[88_195 * 2]) < 0.00002)
+        try transport.scratch(bySeconds: 0.1, over: 0.1)
+        transport.stopPlayback()
+        #expect(!transport.isScratching)
+        #expect(try render(transport, frames: 8).allSatisfy { $0 == 0 })
+        try transport.scratch(bySeconds: 2, over: 0.1)
+        #expect(try render(transport, frames: 4).contains { abs($0) > 0.01 })
+        transport.endScratch()
+    }
+
     private func loop(scale: Float, bpm: Double = 120) -> PreparedLoop {
         var samples = [Float](repeating: 0, count: 88_200 * 2)
         for frame in 0..<88_200 {

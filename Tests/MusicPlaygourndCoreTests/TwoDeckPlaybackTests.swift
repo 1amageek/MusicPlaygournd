@@ -6,6 +6,57 @@ extension NativeHostTests {
     @MainActor
     struct TwoDeckPlaybackTests {
         @Test(.timeLimit(.minutes(1)))
+        func pausedScratchReachesNativeOutputAndReleasePreservesOtherDeck() async throws {
+            let output = try AudioOutput()
+            let a = try AudioLoopEngine(output: output)
+            let b = try AudioLoopEngine(output: output)
+            defer { a.stop(); b.stop() }
+            var samples = [Float](repeating: 0, count: 176_400)
+            for frame in 0..<88_200 {
+                samples[frame * 2] = Float(sin(Double(frame) * 2 * .pi * 440 / 44_100)) * 0.3
+            }
+            for (index, engine) in [a, b].enumerated() {
+                var pcm = samples
+                if index == 1 {
+                    for frame in 0..<88_200 { pcm[frame * 2] = 0; pcm[frame * 2 + 1] = 0.2 }
+                }
+                engine.beginUpdate(revision: 1)
+                try engine.submit(loop: PreparedLoop(sampleRate: 44_100, bpm: 120,
+                    beatsPerBar: 4, beatCount: 4, samples: pcm, events: []), revision: 1)
+            }
+            try a.scratch(bySeconds: -0.2, over: 0.25)
+            try await Task.sleep(for: .milliseconds(350))
+            #expect(!a.snapshot().isPlaying)
+            #expect(a.deckMeter().interleavedSamples.contains { abs($0) > 0.01 })
+            a.endScratch()
+            #expect(!output.audioEngine.isRunning)
+            try a.prepareOfflineRenderingForTests()
+            try output.setCrossfade(0.5)
+            try a.setPlaybackRate(1.25)
+            try b.play()
+            try a.scratch(bySeconds: -0.15, over: 0.2)
+            var pcm = try a.renderOfflineForTests(frameCount: 4_096)
+            #expect(!a.snapshot().isPlaying && b.snapshot().isPlaying)
+            #expect(stride(from: 0, to: pcm.count, by: 2).contains { abs(pcm[$0]) > 0.01 })
+            #expect(abs(pcm[pcm.count - 1]) > 0.1)
+            let bPosition = b.snapshot().beatPosition
+            a.endScratch()
+            for _ in 0..<3 { pcm = try b.renderOfflineForTests(frameCount: 4_096) }
+            #expect(stride(from: 0, to: pcm.count, by: 2).allSatisfy { abs(pcm[$0]) < 0.0001 })
+            #expect(b.snapshot().beatPosition > bPosition && b.snapshot().isPlaying)
+            #expect(abs(pcm[pcm.count - 1]) > 0.1)
+            #expect(a.masterParametersForTests.rate == 1.25)
+            b.stop()
+            try a.scratch(bySeconds: 0.15, over: 0.2)
+            #expect(output.audioEngine.isRunning)
+            pcm = try a.renderOfflineForTests(frameCount: 4_096)
+            #expect(pcm.contains { abs($0) > 0.01 })
+            a.endScratch()
+            #expect(!output.audioEngine.isRunning)
+            #expect(!a.snapshot().isPlaying && !b.snapshot().isPlaying)
+        }
+
+        @Test(.timeLimit(.minutes(1)))
         func nativeSyncAlignsIndependentDeckClocks() async throws {
             let output = try AudioOutput()
             let a = try AudioLoopEngine(output: output)

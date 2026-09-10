@@ -51,13 +51,13 @@ struct SwitchBankDiscovery {
         let cases: [(name: String, start: Int, end: Int)]
     }
 
-    static func discover(ast: Data, source: String, prefixBytes: Int) throws -> Result {
+    static func discover(ast: Data, source: String, prefixBytes: Int, entryType: String = "Session") throws -> Result {
         guard let root = try JSONSerialization.jsonObject(with: ast) as? [String: Any],
               root["_kind"] as? String == "source_file" else {
             throw EvaluationError.invalidResult("Unsupported Swift AST format for switch discovery.")
         }
 
-        if sessionConformsToPerformanceEntry(root) {
+        if sessionConformsToPerformanceEntry(root, entryType: entryType) {
             return Result(
                 controls: [],
                 issues: ["Swift switch banks are unavailable for PerformanceEntry sessions."]
@@ -65,7 +65,7 @@ struct SwitchBankDiscovery {
         }
 
         let enums = collectEnums(root)
-        let properties = collectSessionProperties(root)
+        let properties = collectSessionProperties(root, entryType: entryType)
         var rawSites = [RawSite]()
         var issues = [String]()
         var seenSites = Set<String>()
@@ -138,12 +138,12 @@ struct SwitchBankDiscovery {
         return Result(controls: controls, issues: Array(Set(issues)).sorted())
     }
 
-    private static func sessionConformsToPerformanceEntry(_ root: [String: Any]) -> Bool {
+    private static func sessionConformsToPerformanceEntry(_ root: [String: Any], entryType: String) -> Bool {
         var result = false
         walk(root) { object in
             guard !result,
                   object["_kind"] as? String == "struct_decl",
-                  baseName(object["name"]) == "Session",
+                  baseName(object["name"]) == entryType,
                   let inheritance = object["inherits"] as? [String: Any],
                   let conformances = inheritance["conformances"] as? [Any] else { return }
             result = conformances.contains { value in
@@ -185,7 +185,7 @@ struct SwitchBankDiscovery {
         return result
     }
 
-    private static func collectSessionProperties(_ root: [String: Any]) -> [String: StoredProperty] {
+    private static func collectSessionProperties(_ root: [String: Any], entryType: String) -> [String: StoredProperty] {
         struct Declaration {
             let usr: String
             let name: String
@@ -197,7 +197,7 @@ struct SwitchBankDiscovery {
         }
         var declarations = [Declaration]()
         walk(root, context: nil) { object, context in
-            guard context == "Session",
+            guard context == entryType,
                   object["_kind"] as? String == "var_decl",
                   let usr = object["usr"] as? String,
                   let name = baseName(object["name"]),

@@ -223,7 +223,12 @@ public actor SourceEvaluator {
     }
 
     public func evaluateRetained(source: String, bpm: Double, beatsPerBar: Int,
-                                 revision: UInt64, project: ProjectEvaluationRequest? = nil, progress: (@Sendable (String) async -> Void)? = nil) async throws -> RetainedEvaluation {
+                                 revision: UInt64, project: ProjectEvaluationRequest? = nil, entryType: String = "Session", progress: (@Sendable (String) async -> Void)? = nil) async throws -> RetainedEvaluation {
+        guard !entryType.isEmpty, entryType.utf8.count <= 128,
+              entryType.unicodeScalars.allSatisfy({ CharacterSet.alphanumerics.contains($0) || $0 == "_" }),
+              entryType.first?.isNumber == false else {
+            throw EvaluationError.invalidSource("Choose a top-level Music type name.")
+        }
         // An actor may reenter at every await. This slot also protects the incremental workspace.
         while busy {
             try await Task.sleep(for: .milliseconds(40))
@@ -287,7 +292,7 @@ public actor SourceEvaluator {
             beatsPerBar: beatsPerBar,
             maximumLiveBeats: maximumLiveBeats,
             output: output,
-            discovery: nil
+            discovery: nil, entryType: entryType
         )
         try wrapper.write(to: entryFile, atomically: true, encoding: .utf8)
         let environment = try await resolveCompilerEnvironment()
@@ -343,7 +348,7 @@ public actor SourceEvaluator {
         let discovery = try SwitchBankDiscovery.discover(
             ast: ast,
             source: source,
-            prefixBytes: prefix.utf8.count
+            prefixBytes: prefix.utf8.count, entryType: entryType
         )
         if discovery.isSupported {
             let switchedWrapper = Self.makeWrapper(
@@ -353,7 +358,7 @@ public actor SourceEvaluator {
                 beatsPerBar: beatsPerBar,
                 maximumLiveBeats: maximumLiveBeats,
                 output: output,
-                discovery: discovery
+                discovery: discovery, entryType: entryType
             )
             try switchedWrapper.write(to: entryFile, atomically: true, encoding: .utf8)
             do {
@@ -944,10 +949,10 @@ public actor SourceEvaluator {
         beatsPerBar: Int,
         maximumLiveBeats: Int,
         output: URL,
-        discovery: SwitchBankDiscovery.Result?
+        discovery: SwitchBankDiscovery.Result?, entryType: String
     ) -> String {
         let supportedDiscovery = discovery.flatMap { $0.isSupported ? $0 : nil }
-        let factory = supportedDiscovery.map(makeSwitchFactory) ?? ""
+        let factory = supportedDiscovery.map { makeSwitchFactory($0, entryType: entryType) } ?? ""
         let preparation: String
         if let supportedDiscovery {
             let selections = switchSelections(for: supportedDiscovery.controls)
@@ -956,7 +961,7 @@ public actor SourceEvaluator {
             let controlLiteral = supportedDiscovery.controls.map(makeSwitchControl).joined(separator: ",\n                ")
             preparation = """
                         let selections: [[Int]] = [\(selectionLiteral)]
-                        let session = Session()
+                        let session = \(entryType)()
                         let initialSelection = session.__swiftMusicSwitchInitialSelection()
                         guard let initialIndex = selections.firstIndex(of: initialSelection) else {
                             throw EvaluationError.invalidResult("Session switch defaults are outside the prepared bank.")
@@ -1025,7 +1030,7 @@ public actor SourceEvaluator {
         } else {
             preparation = """
                         try EvaluationEntry.makePreparation(
-                            Session(),
+                            \(entryType)(),
                             bounds: bounds,
                             fallbackBPM: \(bpm),
                             beatsPerBar: \(beatsPerBar),
@@ -1109,7 +1114,7 @@ public actor SourceEvaluator {
         """
     }
 
-    private static func makeSwitchFactory(_ result: SwitchBankDiscovery.Result) -> String {
+    private static func makeSwitchFactory(_ result: SwitchBankDiscovery.Result, entryType: String) -> String {
         let assignments = result.controls.enumerated().map { index, control in
             let cases = control.cases.enumerated().map { caseIndex, name in
                 "            case \(caseIndex): self.\(escapedProjectedIdentifier(control.propertyName)).wrappedValue = .\(escapedIdentifier(name))"
@@ -1132,7 +1137,7 @@ public actor SourceEvaluator {
             """
         }.joined(separator: ",\n")
         return """
-        extension Session {
+        extension \(entryType) {
             @MainActor
             func __swiftMusicSwitchApply(_ selection: [Int]) {
                 guard selection.count == \(result.controls.count) else {

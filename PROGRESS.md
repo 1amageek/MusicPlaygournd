@@ -110,7 +110,7 @@
 - [x] REL020-INT Remote main and peeled 0.2.0 tag matched 260a49b at publication; published preview notes, app 0.2.0 (2), runtime digests and signing verified `depends:REL020-1,REL020-2` `parallel:none`
 
 - [x] DJ-1 Defined shared-document, independent-deck and single-output contracts (e05e6d4) `depends:none` `parallel:none`
-- [x] DJ-2 Native PCM verified crossfade endpoints, pause isolation, master balance/reset; hardware clocks verified Sync across different rates and deck taps `depends:DJ-1` `parallel:none`
-- [ ] DJ-3 Separate editing tabs from loaded Music entry and independent worker/State lifetimes; verify shared-source edits, failed-load retention and cache isolation `depends:DJ-2` `parallel:none`
-- [ ] DJ-4 Integrate A/B tabs, TAP/Sync, configurable colors and centered master scope/crossfader; preserve editing and recording workflows `depends:DJ-3` `parallel:none`
+- [x] DJ-2 Shared output implemented (43e08e4); native PCM verified crossfade endpoints, pause isolation, master balance/reset; hardware clocks verified Sync across different rates and deck taps `depends:DJ-1` `parallel:none`
+- [x] DJ-3 Separate workers/caches verified same-file State isolation, explicit Alternate entry and failed-load retention; shared-buffer edits/save/discard/tab-close and TAP checks passed `depends:DJ-2` `parallel:none`
+- [ ] DJ-4 Integrate A/B tabs, TAP/Sync, configurable colors and centered master scope/crossfader; Release builds pass, native UI verification blocked by locked Mac `depends:DJ-3` `parallel:none`
 - [ ] DJ-INT Build and exercise both decks using the same and different sources, state changes, mixing, reset, persistence and shutdown; review scoped changes and push main `depends:DJ-1,DJ-2,DJ-3,DJ-4` `parallel:none`

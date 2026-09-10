@@ -9,6 +9,12 @@ public struct SwiftPackageProject: Sendable, Equatable {
         public let sources: [String]
         public let entry: String
         public var id: String { name }
+        public func selectingEntry(_ file: String) throws -> Self {
+            guard sources.contains(file), file.hasSuffix(".swift") else {
+                throw EvaluationError.invalidSource("The selected file is not a Swift source in this target.")
+            }
+            return Self(name: name, moduleName: moduleName, path: path, sources: sources, entry: file)
+        }
     }
 
     public struct Dependency: Sendable, Equatable, Decodable, Identifiable {
@@ -68,14 +74,11 @@ public struct SwiftPackageProject: Sendable, Equatable {
                 throw EvaluationError.invalidResult("SwiftPM returned incomplete source metadata for \(target.name).")
             }
             let entries = sources.filter { URL(fileURLWithPath: $0).lastPathComponent == "Session.swift" }
-            guard !entries.isEmpty else { return nil }
-            guard entries.count == 1, let entry = entries.first else {
-                throw EvaluationError.invalidSource("Target \(target.name) must have exactly one Session.swift entry.")
-            }
+            guard let entry = entries.first ?? sources.first(where: { $0.hasSuffix(".swift") }) else { return nil }
             return Target(name: target.name, moduleName: module, path: path, sources: sources, entry: entry)
         }.sorted { $0.name < $1.name }
         guard !targets.isEmpty else {
-            throw EvaluationError.invalidSource("The package needs a Swift library target containing Session.swift with Session: Music.")
+            throw EvaluationError.invalidSource("The package needs a Swift library target containing a Music entry.")
         }
         return Self(root: root.standardizedFileURL.resolvingSymlinksInPath(), name: description.name, targets: targets, dependencies: description.dependencies ?? [])
     }

@@ -11,13 +11,19 @@ final class SessionModel {
     private(set) var fileBrowser = SessionFileBrowser()
     private(set) var project: SwiftPackageProject?
     var projectTarget: SwiftPackageProject.Target?
+    private var deckIdentity = ""
     private var loadedManifest: String?
     private var projectCompletion: ProjectCompletionService?
     private var projectTask: Task<Void, Never>?
     private var projectRequestID = UUID()
 
+    var documentStore: SessionDocumentStore?
+    private(set) var loadedDocument: SessionDocument?
+    private(set) var loadedType = "Session"
+
     private var projectBuffers: [URL: String] {
-        Dictionary(uniqueKeysWithValues: documents.compactMap { document in
+        if let documentStore { return documentStore.buffers }
+        return Dictionary(uniqueKeysWithValues: documents.compactMap { document in
             guard !document.isReadOnly, let url = document.fileURL else { return nil }
             return (url, document.source)
         })
@@ -74,7 +80,7 @@ final class SessionModel {
 
     private var outputVolume = 1.0
     var masterVolume: Double {
-        get { outputVolume }
+        get { engine.map { Double($0.output.masterVolume) } ?? outputVolume }
         set {
             do {
                 guard let engine else { throw EvaluationError.invalidResult(audioError) }
@@ -150,6 +156,7 @@ final class SessionModel {
         }
     }
     var outputSamples = [Float]()
+    var deckSamples = [Float]()
     var beatsPerBar = 4
     var diagnostic = "" { didSet { diagnosticRange = nil } }
     var status = "No project open"
@@ -354,8 +361,10 @@ final class SessionModel {
     private var requiresEvaluatorReset = false
     private var evaluatorResetTask: Task<Void, Never>?
 
-    init() {
-        hostStateStore = DocumentHostStateStore()
+    init(output: AudioOutput? = nil, deckID: String = "", documents store: SessionDocumentStore? = nil, audioEnabled: Bool = true) {
+        documentStore = store
+        deckIdentity = deckID
+        hostStateStore = DocumentHostStateStore(directory: FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appending(path: "MusicPlaygournd/HostState" + deckID))
         let bundle = Bundle.main
         let package = bundle.resourceURL?.appending(path: "SwiftMusic/MusicPlaygournd")
         let sourcePackage = URL(fileURLWithPath: #filePath)
@@ -364,20 +373,23 @@ final class SessionModel {
         let packageURL = package.flatMap { FileManager.default.fileExists(atPath: $0.appending(path: "Package.swift").path) ? $0 : nil } ?? sourcePackage
         // Workers remain process-local; SwiftPM build products survive app restarts.
         let cache = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appending(path: "MusicPlaygournd/Evaluation-\(ProcessInfo.processInfo.processIdentifier)")
+            .appending(path: "MusicPlaygournd/Evaluation-\(ProcessInfo.processInfo.processIdentifier)-\(deckID)")
         let swift = bundle.object(forInfoDictionaryKey: "SwiftExecutable") as? String ?? "/usr/bin/swift"
         evaluator = SourceEvaluator(packageURL: packageURL, workspace: cache, swiftExecutable: swift,
             runtimeSDK: bundle.object(forInfoDictionaryKey: "SwiftExecutable") == nil ? nil : bundle.resourceURL?.appending(path: "RuntimeSDK"),
             projectBuildCache: FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
-                .appending(path: "MusicPlaygournd/ProjectBuild"))
+                .appending(path: "MusicPlaygournd/ProjectBuild" + deckID))
         completionService = SwiftCompletionService(packageURL: packageURL,
-            workspace: cache.deletingLastPathComponent().appending(path: "Completion-\(ProcessInfo.processInfo.processIdentifier)"),
+            workspace: cache.deletingLastPathComponent().appending(path: "Completion-\(ProcessInfo.processInfo.processIdentifier)-\(deckID)"),
             sourceKitLSPExecutable: URL(fileURLWithPath: swift).deletingLastPathComponent().appending(path: "sourcekit-lsp").path,
             hostModuleDirectory: bundle.object(forInfoDictionaryKey: "SwiftExecutable") == nil
                 ? bundle.executableURL?.deletingLastPathComponent() : bundle.resourceURL?.appending(path: "RuntimeSDK"))
         do { analyzer = try SpectrumAnalyzer() }
         catch { diagnostic = "Spectrum analyzer could not initialize: \(error)" }
-        do { engine = try AudioLoopEngine() }
+        do {
+            guard audioEnabled else { throw PlaybackError.audioSetupFailed("Shared output is unavailable.") }
+            engine = try output.map { try AudioLoopEngine(output: $0) } ?? AudioLoopEngine()
+        }
         catch { audioError = error.localizedDescription; diagnostic = audioError }
     }
 
@@ -424,11 +436,52 @@ final class SessionModel {
         return try await completionService.completions(source: source, utf16Offset: utf16Offset)
     }
 
+    func sharedSourceChanged(_ document: SessionDocument) {
+        guard document.name != "Package.swift" else { return }
+        if document === loadedDocument || document.fileURL.map({ url in project.map { url.path.hasPrefix($0.root.path + "/") } ?? false }) == true {
+            scheduleEvaluation()
+        }
+    }
+
+    func loadIntoDeck(_ document: SessionDocument, type: String = "Session") throws {
+        guard !document.isReadOnly, let url = document.fileURL, url.pathExtension == "swift" else {
+            throw EvaluationError.invalidSource("Select a writable Swift Music source.")
+        }
+        if let project {
+            guard let target = project.targets.first(where: { url.path.hasPrefix(project.root.appending(path: $0.path).path + "/") }) else {
+                throw EvaluationError.invalidSource("The file is outside this project's Swift targets.")
+            }
+            let relative = String(url.path.dropFirst(project.root.appending(path: target.path).path.count + 1))
+            projectTarget = try target.selectingEntry(relative)
+        }
+        if loadedDocument !== document || loadedType != type { loadHostSettings(for: url) }
+        loadedDocument = document
+        loadedType = type
+        documentStore?.membershipDidChange?()
+        rememberProjectNavigation()
+        scheduleEvaluation(immediate: true)
+    }
+
+    func synchronize(to reference: SessionModel) throws {
+        guard let engine, let other = reference.engine else { throw PlaybackClockError.unavailable }
+        guard performanceBPMControlID == nil else {
+            throw EvaluationError.invalidSource("Sync requires deck tempo; this Music controls its own BPM.")
+        }
+        try engine.synchronize(to: other)
+        masterBPM = reference.displayedBPM
+    }
+
+    func setDeckGain(_ value: Double) throws {
+        guard let engine else { throw PlaybackError.audioSetupFailed(audioError) }
+        try engine.setDeckGain(Float(value))
+    }
+
     func sourceChanged() {
         guard !activeDocument.isReadOnly else { return }
         hasUnsavedChanges = true
         updateRowLines()
-        if !isProjectManifest(activeDocument) { scheduleEvaluation() }
+        if let documentStore { documentStore.sourceDidChange?(activeDocument) }
+        else if !isProjectManifest(activeDocument) { scheduleEvaluation() }
     }
 
     private func isProjectManifest(_ document: SessionDocument) -> Bool {
@@ -437,7 +490,7 @@ final class SessionModel {
     }
 
     func scheduleEvaluation(immediate: Bool = false) {
-        guard hasOpenDocument, !activeDocument.isReadOnly || project != nil else { return }
+        guard hasOpenDocument || loadedDocument != nil, loadedDocument != nil || !activeDocument.isReadOnly || project != nil else { return }
         if requiresEvaluatorReset {
             deferredEvaluation = true
             deferredEvaluationImmediate = deferredEvaluationImmediate || immediate
@@ -466,22 +519,25 @@ final class SessionModel {
         let projectRequest: ProjectEvaluationRequest?
         let text: String
         do {
-            if isProjectDocument, let project, let target = projectTarget {
+            if (isProjectDocument || documentStore != nil), let project, let target = projectTarget {
                 let entry = project.entryURL(for: target)
                 text = try projectBuffers[entry] ?? String(contentsOf: entry, encoding: .utf8)
                 projectRequest = try ProjectEvaluationRequest(project: project, target: target, buffers: projectBuffers)
-                revisionDocuments[requested] = documents.first(where: { $0.fileURL == entry })?.id
+                revisionDocuments[requested] = loadedDocument?.id ?? documents.first(where: { $0.fileURL == entry })?.id
             } else {
-                guard fileURL == nil || fileURL?.pathExtension == "swift" else {
+                let entryURL = loadedDocument?.fileURL ?? fileURL
+                guard entryURL == nil || entryURL?.pathExtension == "swift" else {
                     isPreparing = false
                     status = "Select a Swift session to play"
                     return
                 }
-                text = source
+                text = loadedDocument?.source ?? source
+                revisionDocuments[requested] = loadedDocument?.id ?? activeDocumentID
                 projectRequest = nil
             }
         } catch { diagnostic = error.localizedDescription; isPreparing = false; return }
         let tempo = 120.0
+        let entryType = loadedType
         let meter = beatsPerBar
         diagnostic = ""
         diagnosticRange = nil
@@ -492,7 +548,7 @@ final class SessionModel {
             do {
                 if !immediate { try await Task.sleep(for: .milliseconds(150)) }
                 await self?.adoptionTask?.value
-                let evaluation = try await evaluator.evaluateRetained(source: text, bpm: tempo, beatsPerBar: meter, revision: requested, project: projectRequest, progress: { [weak self] message in
+                let evaluation = try await evaluator.evaluateRetained(source: text, bpm: tempo, beatsPerBar: meter, revision: requested, project: projectRequest, entryType: entryType, progress: { [weak self] message in
                     await MainActor.run {
                         guard let self, self.revision == requested, !self.isOpeningPackage else { return }
                         self.preparationProgress = message
@@ -541,7 +597,7 @@ final class SessionModel {
     }
 
     func togglePlayback() {
-        guard hasOpenDocument || isPlaying else { return }
+        guard hasOpenDocument || loadedDocument != nil || isPlaying else { return }
         guard let engine else { diagnostic = audioError; return }
         if isPlaying {
             wantsPlayback = false
@@ -561,6 +617,7 @@ final class SessionModel {
     func refresh() {
         guard let snapshot = engine?.snapshot() else { return }
         isPlaying = snapshot.isPlaying
+        isRecording = engine?.isRecording ?? false
         beatPosition = snapshot.beatPosition
         if currentRevision != snapshot.revision {
             hostRestoreTask?.cancel()
@@ -697,10 +754,11 @@ final class SessionModel {
         if let capture = engine?.outputMeter() {
             compressorMeter = engine?.compressorSnapshot() ?? .empty
             outputSamples = capture.interleavedSamples
+            deckSamples = engine?.deckMeter().interleavedSamples ?? []
             performance = capture.performance
             hostedEffect = engine?.audioEffectSnapshot() ?? .none
             if let analyzer {
-                spectrum = analyzer.analyze(interleavedSamples: outputSamples,
+                spectrum = analyzer.analyze(interleavedSamples: documentStore == nil ? outputSamples : deckSamples,
                     sampleRate: capture.sampleRate, isPlaying: isPlaying)
             }
         }
@@ -1251,16 +1309,20 @@ final class SessionModel {
                 guard projectRequestID == request else { return }
                 let listing = SessionFileBrowser()
                 try listing.load(loaded.root)
-                let selectedPath = UserDefaults.standard.string(forKey: "project.selected." + loaded.root.path)
-                let restored = UserDefaults.standard.stringArray(forKey: "project.tabs." + loaded.root.path) ?? []
-                let entry = loaded.entryURL(for: loaded.targets[0])
+                let selectedPath = UserDefaults.standard.string(forKey: "project.selected." + deckIdentity + loaded.root.path)
+                let restored = UserDefaults.standard.stringArray(forKey: "project.tabs." + deckIdentity + loaded.root.path) ?? []
+                let savedEntry = UserDefaults.standard.string(forKey: "deck.entry." + deckIdentity + loaded.root.path)
+                let entry = savedEntry.flatMap { path -> URL? in
+                    let url = URL(fileURLWithPath: path).standardizedFileURL.resolvingSymlinksInPath()
+                    return loaded.targets.contains { target in target.sources.contains { loaded.root.appending(path: target.path).appending(path: $0) == url } } ? url : nil
+                } ?? loaded.entryURL(for: loaded.targets[0])
                 var requestedURLs = restored.filter { $0.hasPrefix(loaded.root.path + "/") && FileManager.default.fileExists(atPath: $0) }.map { URL(fileURLWithPath: $0).resolvingSymlinksInPath() }
                 if !requestedURLs.contains(entry) { requestedURLs.append(entry) }
                 var newDocuments: [SessionDocument] = []
                 for url in requestedURLs where !documents.contains(where: { $0.fileURL == url }) {
                     let text = try String(contentsOf: url, encoding: .utf8)
                     guard text.utf8.count <= 65_536 else { throw EvaluationError.invalidSource("Source exceeds 64 KiB.") }
-                    newDocuments.append(SessionDocument(source: text, fileURL: url))
+                    newDocuments.append(try documentStore?.open(url) ?? SessionDocument(source: text, fileURL: url))
                 }
                 guard documents.count + newDocuments.count <= Self.maximumOpenDocuments else { throw DocumentFailure.tabLimit }
                 if let sources = listing.entries.first(where: { $0.url.lastPathComponent == "Sources" }) {
@@ -1286,6 +1348,12 @@ final class SessionModel {
                 documents.append(contentsOf: newDocuments)
                 let selected = selectedPath.flatMap { path in documents.first(where: { $0.fileURL?.path == path }) }
                     ?? documents.first(where: { $0.fileURL == entry })
+                if loadedDocument?.fileURL != entry { loadHostSettings(for: entry) }
+                loadedDocument = documents.first { $0.fileURL == entry }
+                if let target = loaded.targets.first(where: { entry.path.hasPrefix(loaded.root.appending(path: $0.path).path + "/") }) {
+                    projectTarget = try target.selectingEntry(String(entry.path.dropFirst(loaded.root.appending(path: target.path).path.count + 1)))
+                }
+                loadedType = UserDefaults.standard.string(forKey: "deck.type." + deckIdentity + loaded.root.path) ?? "Session"
                 if let selected { selectDocument(selected.id) }
                 scheduleEvaluation(immediate: true)
             } catch is CancellationError { }
@@ -1296,8 +1364,12 @@ final class SessionModel {
     private func rememberProjectNavigation() {
         guard let root = project?.root else { return }
         let paths = documents.filter { !$0.isReadOnly }.compactMap(\.fileURL).filter { $0.path.hasPrefix(root.path + "/") }.map(\.path)
-        UserDefaults.standard.set(paths, forKey: "project.tabs." + root.path)
-        if isProjectDocument { UserDefaults.standard.set(fileURL?.path, forKey: "project.selected." + root.path) }
+        UserDefaults.standard.set(paths, forKey: "project.tabs." + deckIdentity + root.path)
+        if let loadedDocument, let url = loadedDocument.fileURL {
+            UserDefaults.standard.set(url.path, forKey: "deck.entry." + deckIdentity + root.path)
+            UserDefaults.standard.set(loadedType, forKey: "deck.type." + deckIdentity + root.path)
+        }
+        if isProjectDocument { UserDefaults.standard.set(fileURL?.path, forKey: "project.selected." + deckIdentity + root.path) }
     }
 
     func newProject() {
@@ -1430,7 +1502,7 @@ final class SessionModel {
         guard documents.count < Self.maximumOpenDocuments else { throw DocumentFailure.tabLimit }
         let text = try String(contentsOf: identity, encoding: .utf8)
         guard text.utf8.count <= 65_536 else { throw EvaluationError.invalidSource("Source exceeds 64 KiB.") }
-        let document = SessionDocument(source: text, fileURL: identity, isReadOnly: readOnly)
+        let document = try documentStore?.open(identity, readOnly: readOnly) ?? SessionDocument(source: text, fileURL: identity, isReadOnly: readOnly)
         documents.append(document)
         selectDocument(document.id)
     }
@@ -1438,7 +1510,7 @@ final class SessionModel {
     func selectDocument(_ id: UUID) {
         guard let index = documents.firstIndex(where: { $0.id == id }), index != activeDocumentIndex else { return }
         let sameProject = isProjectManifest(documents[index]) || (isProjectDocument && (documents[index].isReadOnly || documents[index].fileURL.map { $0.path.hasPrefix(project!.root.path + "/") } == true))
-        if !sameProject { abortPerformanceForDocumentChange() }
+        if !sameProject && documentStore == nil { abortPerformanceForDocumentChange() }
         activeDocumentIndex = index
         if !sameProject { lineMaps = [:] }
         rowLines = [:]
@@ -1446,12 +1518,12 @@ final class SessionModel {
         completionSites = []
         completionSource = ""
         completionStatus = ""
-        diagnostic = ""
+        if documentStore == nil { diagnostic = "" }
         selectionRange = nil
         selectionLine = nil
         controlVisualization = nil
         visualizationTask?.cancel()
-        if !sameProject {
+        if !sameProject && documentStore == nil {
             loadHostSettings(for: fileURL)
             scheduleEvaluation(immediate: true)
         }
@@ -1461,7 +1533,7 @@ final class SessionModel {
 
     enum CloseDecision { case save, cancel, discard }
 
-    private func closeDecision(for document: SessionDocument) -> CloseDecision {
+    func closeDecision(for document: SessionDocument) -> CloseDecision {
         let alert = NSAlert()
         alert.messageText = "Save changes to \(document.name)?"
         alert.informativeText = "Your unsaved Swift code will be lost."
@@ -1485,15 +1557,24 @@ final class SessionModel {
             switch decision ?? closeDecision(for: document) {
             case .save: guard saveDocument(document) else { return false }
             case .cancel: return false
-            case .discard: break
+            case .discard:
+                if documentStore != nil, let url = document.fileURL {
+                    do {
+                        document.source = try String(contentsOf: url, encoding: .utf8)
+                        document.isDirty = false
+                        documentStore?.sourceDidChange?(document)
+                    } catch { diagnostic = error.localizedDescription; return false }
+                }
             }
         }
         let wasActive = id == activeDocumentID
         let retainedID = activeDocumentID
         if documents.count == 1 { documents.append(SessionDocument(source: Self.initialSource)) }
-        if wasActive, let replacement = documents.first(where: { $0.id != id }) { selectDocument(replacement.id) }
+        if wasActive, let replacement = documents.first(where: { $0.id != id && ($0.fileURL != nil || $0.isDirty) })
+            ?? documents.first(where: { $0.id != id }) { selectDocument(replacement.id) }
         let selectedID = wasActive ? activeDocumentID : retainedID
         documents.removeAll { $0.id == id }
+        documentStore?.membershipDidChange?()
         activeDocumentIndex = documents.firstIndex { $0.id == selectedID } ?? 0
         rememberProjectNavigation()
         if affectsProject { scheduleEvaluation(immediate: true) }
@@ -1501,7 +1582,10 @@ final class SessionModel {
     }
 
     func confirmAllDocuments(decision: ((SessionDocument) -> CloseDecision)? = nil) -> Bool {
-        for document in documents where document.isDirty {
+        let retained = documents + [loadedDocument].compactMap { value in
+            value.flatMap { document in documents.contains(where: { $0.id == document.id }) ? nil : document }
+        }
+        for document in retained where document.isDirty {
             switch decision?(document) ?? closeDecision(for: document) {
             case .save: guard saveDocument(document) else { return false }
             case .cancel: return false
@@ -1544,6 +1628,7 @@ final class SessionModel {
         guard let destination = destination?.standardizedFileURL.resolvingSymlinksInPath() else { return false }
         do {
             guard !documents.contains(where: { $0.id != document.id && $0.fileURL == destination }) else { throw DocumentFailure.duplicateDestination }
+            try documentStore?.validateSave(document, to: destination)
             let isManifest = project?.root.appending(path: "Package.swift") == destination
             let unchanged: Bool
             if isManifest, FileManager.default.fileExists(atPath: destination.path) {
@@ -1553,11 +1638,13 @@ final class SessionModel {
             }
             if !unchanged { try document.source.write(to: destination, atomically: true, encoding: .utf8) }
             document.fileURL = destination
-            if document.id == activeDocumentID { try saveHostSettings(for: destination) }
+            documentStore?.didSave(document)
+            if documentStore == nil ? document.id == activeDocumentID : document.id == audibleDocumentID { try saveHostSettings(for: destination) }
             document.isDirty = false
             if let root = project?.root, isManifest, document.source != loadedManifest {
                 rememberProjectNavigation()
                 openProject(at: root, resolveDependencies: true)
+                documentStore?.manifestDidSave?(self, root)
             }
             return true
         } catch { diagnostic = error.localizedDescription; return false }

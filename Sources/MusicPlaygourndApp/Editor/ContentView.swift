@@ -3,6 +3,7 @@ import SwiftUI
 
 struct ContentView: View {
     @Bindable var model: SessionModel
+    var deckWorkspace: DeckWorkspace? = nil
     @State private var lineRects: [Int: CGRect] = [:]
     @State private var timelineScroll: CGFloat = 0
     @State private var logsExpanded = false
@@ -10,7 +11,7 @@ struct ContentView: View {
 
     var body: some View {
         Group {
-            if model.project == nil && !model.hasOpenDocument {
+            if model.project == nil && !model.hasOpenDocument && (deckWorkspace == nil || (deckWorkspace?.a.project == nil && deckWorkspace?.b.project == nil && deckWorkspace?.a.hasOpenDocument == false && deckWorkspace?.b.hasOpenDocument == false)) {
                 WelcomeView(model: model)
             } else {
                 editorWorkspace
@@ -26,6 +27,10 @@ struct ContentView: View {
                     .navigationSplitViewColumnWidth(min: 160, ideal: 220, max: 320)
             } detail: {
                 VStack(spacing: 0) {
+                    if let deckWorkspace {
+                        DeckHeaderView(workspace: deckWorkspace)
+                        Divider()
+                    }
                     workspace
                     Divider()
                     logs
@@ -33,7 +38,9 @@ struct ContentView: View {
             }
             .navigationSplitViewStyle(.balanced)
             .toolbar {
-                ToolbarItem(placement: .principal) { MusicHeaderView(model: model) }
+                if deckWorkspace == nil {
+                    ToolbarItem(placement: .principal) { MusicHeaderView(model: model) }
+                }
             }
         }
         .background(Color(red: 0.06, green: 0.07, blue: 0.08))
@@ -42,7 +49,7 @@ struct ContentView: View {
         .background(WorkspaceWindowSizeView())
         .task {
             while !Task.isCancelled {
-                model.refresh()
+                if let deckWorkspace { deckWorkspace.refresh() } else { model.refresh() }
                 do { try await Task.sleep(for: .milliseconds(33)) }
                 catch { break }
             }
@@ -51,9 +58,17 @@ struct ContentView: View {
 
     private var workspace: some View {
         VStack(spacing: 0) {
-            if model.hasOpenDocument {
+            if model.hasOpenDocument || deckWorkspace != nil {
                 HStack(spacing: 0) {
-                    FileTabsView(model: model)
+                    if let deckWorkspace {
+                        FileTabsView(model: deckWorkspace.a, accent: deckWorkspace.colorA,
+                            deckName: "A", editing: deckWorkspace.selectedDeck == 0,
+                            activate: { deckWorkspace.selectedDeck = 0 }, load: { deckWorkspace.loadSelected(0) })
+                        Divider()
+                        FileTabsView(model: deckWorkspace.b, accent: deckWorkspace.colorB,
+                            deckName: "B", editing: deckWorkspace.selectedDeck == 1,
+                            activate: { deckWorkspace.selectedDeck = 1 }, load: { deckWorkspace.loadSelected(1) })
+                    } else { FileTabsView(model: model) }
                     layoutMenu.padding(.horizontal, 6)
                 }
                 .frame(height: 30)
@@ -133,7 +148,7 @@ struct ContentView: View {
                 mutedTracks: model.rowMuteStates, onToggleTrackMute: model.toggleTrackMute,
                 onFormat: { try await model.formatSource($0) },
                 onFormatFailure: { model.hostDiagnostic = $0 }, selectionRange: model.selectionRange, visualization: model.editorLoop == nil ? nil : model.controlVisualization,
-                documentID: model.activeDocumentID, editorState: model.activeDocument.editorState, openDocumentIDs: Set(model.documents.map(\.id)),
+                documentID: model.activeDocumentID, editorState: model.activeDocument.editorState, openDocumentIDs: Set((deckWorkspace.map { $0.a.documents + $0.b.documents } ?? model.documents).map(\.id)),
                 onEditorStateChange: { id, state in model.documents.first { $0.id == id }?.editorState = state })
         }.frame(minWidth: 350, minHeight: 220)
 

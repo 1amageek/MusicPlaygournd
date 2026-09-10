@@ -4,12 +4,17 @@ import SwiftUI
 @main
 struct MusicPlaygourndApp: App {
     @NSApplicationDelegateAdaptor(ApplicationDelegate.self) private var delegate
-    @State private var model = SessionModel()
+    @State private var workspace = DeckWorkspace()
+    private var model: SessionModel { workspace.active }
 
     var body: some Scene {
         Window("MusicPlaygournd", id: "editor") {
-            ContentView(model: model)
-                .onAppear { delegate.model = model; model.prepareInitialSource(); NSApplication.shared.activate(ignoringOtherApps: true) }
+            ContentView(model: model, deckWorkspace: workspace)
+                .onAppear { delegate.workspace = workspace; delegate.model = model; model.prepareInitialSource(); NSApplication.shared.activate(ignoringOtherApps: true) }
+                .onChange(of: workspace.selectedDeck) { _, _ in delegate.model = model }
+                .onChange(of: workspace.a.project?.root) { _, root in
+                    if let root, workspace.b.project == nil { workspace.b.openProject(at: root) }
+                }
         }
         .defaultSize(width: 1160, height: 760)
         .windowResizability(.contentSize)
@@ -34,7 +39,7 @@ struct MusicPlaygourndApp: App {
             }
             CommandMenu("Session") {
                 Button("Apply Edit") { model.scheduleEvaluation(immediate: true) }.keyboardShortcut("r").disabled(!model.hasOpenDocument)
-                Button("Play / Pause", action: model.togglePlayback).disabled(!model.hasOpenDocument && !model.isPlaying)
+                Button("Play / Pause", action: model.togglePlayback).disabled(!model.hasOpenDocument && model.loadedDocument == nil && !model.isPlaying)
                 Divider()
                 Button("Inline Results") { model.inlineLayout = true }
                 Button("Side Timeline") { model.inlineLayout = false; model.bottomLayout = false }

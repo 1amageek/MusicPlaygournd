@@ -25,6 +25,18 @@ Choose **Create a new project**, enter its name and location, and start from the
 
 Sessions run local Swift with your account's permissions. Open code you trust.
 
+## Two decks (main branch)
+
+The development branch adds independent A/B decks. Build `main` to use this workspace; the 0.2.0 tag above retains the single-deck release.
+
+- Left and right tab groups share file contents and undo, but select independently. Selecting a tab changes the wide editor, not the playing music.
+- Use the deck's file menu or a tab's **Load into Deck** action, then enter the top-level `Music` type name (`Session` by default). The same file and type can run on both decks with independent State, sliders, mute and playback.
+- **TAP** sets that deck's tempo. **Sync** matches a playing deck's BPM and beat phase; both decks must be prepared and playing. A Music-controlled BPM must use its own control instead.
+- **EQ** and **GAIN** affect one deck. The central crossfader mixes A/B into the master output. Click the central vectorscope for master balance/reverb, or either waveform for the shared master compressor. Recording captures the resulting mix.
+- Click each deck's A/B label to choose a persistent preset or a custom accent. Editor syntax themes remain separate.
+
+Each deck keeps its last good audio after a failed load or edit. First preparation uses separate A/B build caches; subsequent runs reuse them.
+
 ## Compose with reusable sounds
 
 `Music` describes the session. Its `body` combines `Sound` values, which can contain other sounds. Siblings play in parallel; `Track` adds a name and a mixing boundary.

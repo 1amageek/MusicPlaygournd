@@ -3,6 +3,7 @@ import AppKit
 @MainActor
 final class ApplicationDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     var model: SessionModel?
+    var workspace: DeckWorkspace?
     private var discardConfirmed = false
     private var playbackKeyMonitor: Any?
 
@@ -11,7 +12,7 @@ final class ApplicationDelegate: NSObject, NSApplicationDelegate, NSWindowDelega
         playbackKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             let consumed = MainActor.assumeIsolated {
                 guard let self, let model = self.model,
-                      model.hasOpenDocument || model.isPlaying,
+                      model.hasOpenDocument || model.loadedDocument != nil || model.isPlaying,
                       Self.handlesPlaybackSpace(event) else { return false }
                 if !event.isARepeat { model.togglePlayback() }
                 return true
@@ -36,15 +37,17 @@ final class ApplicationDelegate: NSObject, NSApplicationDelegate, NSWindowDelega
     }
 
     func windowShouldClose(_ sender: NSWindow) -> Bool {
-        guard model?.confirmAllDocuments() != false else { return false }
+        guard (workspace?.confirmAllDocuments() ?? model?.confirmAllDocuments()) != false else { return false }
         discardConfirmed = true
         return true
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        guard discardConfirmed || model?.confirmAllDocuments() != false else { return .terminateCancel }
+        guard discardConfirmed || (workspace?.confirmAllDocuments() ?? model?.confirmAllDocuments()) != false else { return .terminateCancel }
         Task {
-            do { try await model?.shutdown() }
+            do {
+                if let workspace { try await workspace.shutdown() } else { try await model?.shutdown() }
+            }
             catch { NSLog("MusicPlaygournd scratch cleanup failed: %@", error.localizedDescription) }
             sender.reply(toApplicationShouldTerminate: true)
         }

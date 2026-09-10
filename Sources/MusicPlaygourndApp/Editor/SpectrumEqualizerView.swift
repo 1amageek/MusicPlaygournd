@@ -7,15 +7,19 @@ struct SpectrumEqualizerView: View {
     let bands: [MasterEqualizerBand]
     let responses: [MasterEqualizerResponse]
     let onChange: (Int, MasterEqualizerBand) -> Void
+    var compact = false
+    var tint: Color? = nil
     @State private var selected: Int? = 1
     private let colors: [Color] = [.mint, .cyan, .purple]
 
     var body: some View {
         GeometryReader { geometry in
             let width = max(1, geometry.size.width - 24)
-            let height = max(1, geometry.size.height - 48)
+            let top = compact ? 8.0 : 24.0
+            let height = max(1, geometry.size.height - (compact ? 24 : 48))
             ZStack {
-                SpectrumView(bands: spectrum, isPlaying: isPlaying).padding(.horizontal, 12)
+                SpectrumView(bands: spectrum, isPlaying: isPlaying, tint: tint).padding(.horizontal, 12)
+                    .padding(.top, top).padding(.bottom, compact ? 16 : 24)
                     .opacity(0.6).allowsHitTesting(false)
                 Canvas { context, size in
                     for bandIndex in 0..<(responses.isEmpty ? 0 : responses.count + 1) {
@@ -26,10 +30,10 @@ struct SpectrumEqualizerView: View {
                             let db = bandIndex == responses.count
                                 ? responses.reduce(0) { $0 + $1.decibels(at: frequency) }
                                 : responses[bandIndex].decibels(at: frequency)
-                            let point = CGPoint(x: 12 + fraction * width, y: 24 + (12 - db) / 24 * height)
+                            let point = CGPoint(x: 12 + fraction * width, y: top + (12 - db) / 24 * height)
                             if step == 0 { path.move(to: point) } else { path.addLine(to: point) }
                         }
-                        let color = bandIndex == responses.count ? Color.white : colors[bandIndex % colors.count]
+                        let color = bandIndex == responses.count ? Color.white : (tint ?? colors[bandIndex % colors.count])
                         context.stroke(path, with: .color(color.opacity(0.8)), lineWidth: bandIndex == responses.count ? 1.5 : 1)
                     }
                 }.clipped().allowsHitTesting(false)
@@ -38,6 +42,7 @@ struct SpectrumEqualizerView: View {
                     path.addLine(to: CGPoint(x: geometry.size.width - 12, y: geometry.size.height / 2))
                 }.stroke(.white.opacity(0.25), style: StrokeStyle(lineWidth: 1, dash: [3, 4]))
                     .allowsHitTesting(false)
+                if !compact {
                 VStack {
                     HStack {
                         Text("EQ  +12 dB")
@@ -67,15 +72,25 @@ struct SpectrumEqualizerView: View {
                     }
                 }.font(.system(size: 9, design: .monospaced)).foregroundStyle(.secondary)
                     .padding(8)
+                } else {
+                    VStack {
+                        Spacer()
+                        HStack {
+                            Text("20"); Spacer(); Text("200"); Spacer(); Text("2k"); Spacer(); Text("20k")
+                            Button { for index in bands.indices { onChange(index, MasterEqualizerBand.defaults[index]) } } label: { Image(systemName: "arrow.counterclockwise") }
+                                .buttonStyle(.plain).accessibilityLabel("Reset all EQ bands")
+                        }.font(.system(size: 7, design: .monospaced)).foregroundStyle(.secondary)
+                    }.padding(.horizontal, 8).padding(.bottom, 1)
+                }
                 ForEach(bands.indices, id: \.self) { index in
                     let band = bands[index]
-                    let color = colors[index % colors.count]
+                    let color = tint ?? colors[index % colors.count]
                     Button { selected = index } label: {
                         ZStack {
                             Circle().fill(color.opacity(0.25)).frame(width: 28, height: 28).blur(radius: 5)
-                            Circle().fill(color).frame(width: 12, height: 12)
+                            Circle().fill(color).frame(width: compact ? 8 : 12, height: compact ? 8 : 12)
                                 .overlay(Circle().stroke(.white.opacity(0.8), lineWidth: 1))
-                        }.frame(width: 32, height: 32).contentShape(Circle())
+                        }.frame(width: compact ? 22 : 32, height: compact ? 22 : 32).contentShape(Circle())
                     }
                     .buttonStyle(.plain)
                     .onKeyPress(.leftArrow) {
@@ -98,11 +113,11 @@ struct SpectrumEqualizerView: View {
                         .onChanged { gesture in
                             selected = index
                             let x = min(1, max(0, (gesture.location.x - 12) / width))
-                            let y = min(1, max(0, (gesture.location.y - 24) / height))
+                            let y = min(1, max(0, (gesture.location.y - top) / height))
                             onChange(index, .init(frequency: Float(20 * pow(1_000, x)), gain: Float(12 - y * 24), q: band.q))
                         })
                     .position(x: 12 + log10(Double(band.frequency) / 20) / 3 * width,
-                              y: 24 + (12 - Double(band.gain)) / 24 * height)
+                              y: top + (12 - Double(band.gain)) / 24 * height)
                     .accessibilityLabel("EQ band \(index + 1)")
                     .accessibilityValue(String(format: "%.0f hertz, %+.1f decibels, Q %.2f", band.frequency, band.gain, band.q))
                     .accessibilityAdjustableAction { direction in
@@ -110,9 +125,13 @@ struct SpectrumEqualizerView: View {
                         onChange(index, .init(frequency: band.frequency, gain: min(12, max(-12, band.gain + delta)), q: band.q))
                     }
                     .contextMenu {
+                        ControlGroup {
+                            Button("Narrower Q") { onChange(index, .init(frequency: band.frequency, gain: band.gain, q: min(20, band.q * 1.25))) }
+                            Button("Wider Q") { onChange(index, .init(frequency: band.frequency, gain: band.gain, q: max(0.2, band.q / 1.25))) }
+                        }
                         Button("Reset Band") { onChange(index, MasterEqualizerBand.defaults[index]) }
                     }
-                    .help("Drag horizontally for frequency, vertically for gain. Select a band to adjust Q below. Right-click to reset this band.")
+                    .help("Drag horizontally for frequency, vertically for gain. Right-click for Q and reset. The expanded view also provides a Q stepper.")
                 }
             }
             .coordinateSpace(name: "master-eq")

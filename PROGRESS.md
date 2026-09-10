@@ -136,6 +136,8 @@
 - [x] WAVE-1 Centered playhead and interpolated wrapped loop peaks; direction, seam and invalid-input test passed `depends:none` `parallel:none`
 - [x] WAVE-INT Release build passed (62.30 s); native A/B playback showed changing waveforms with fixed center lines and zero errors `depends:WAVE-1,SCOPE-1` `parallel:none`
 
+
 - [x] MIXUI-1 Native bipolar filter and delay timing added; LP/HP attenuation, center reset, retained invalid values and three-band EQ regression passed (2 tests, 0.909 s) `depends:none` `parallel:none`
-- [ ] MIXUI-2 Implement approved compact controller-above-Wave header and always-visible deck-colored spectrum/EQ; preserve gesture, reset and editor routes `depends:MIXUI-1` `parallel:none`
-- [ ] MIXUI-INT Run focused native audio/UI checks, build and compare running app with approved design `depends:MIXUI-1,MIXUI-2` `parallel:none`
+- [x] MIXUI-2 Compact EQ above Wave and existing Filter-Space XY integrated; native EQ drag, independent deck values and pad reset verified `depends:MIXUI-1` `parallel:none`
+- [x] MIXUI-TOP Native top safe area reclaims 52 points; sidebar collapse/expand preserves window controls `depends:MIXUI-1` `parallel:none`
+- [ ] MIXUI-INT Final Release build passed (27.86 s); native EQ, XY/reset and header geometry verified; CUE scope question remains unanswered `depends:MIXUI-1,MIXUI-2,MIXUI-TOP` `parallel:none`

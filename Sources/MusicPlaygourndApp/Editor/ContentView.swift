@@ -35,8 +35,10 @@ struct ContentView: View {
                     Divider()
                     logs
                 }
+                .ignoresSafeArea(.container, edges: deckWorkspace != nil && columnVisibility != .detailOnly ? .top : [])
             }
             .navigationSplitViewStyle(.balanced)
+            .toolbarBackgroundVisibility(deckWorkspace == nil ? .automatic : .hidden, for: .windowToolbar)
             .toolbar {
                 if deckWorkspace == nil {
                     ToolbarItem(placement: .principal) { MusicHeaderView(model: model) }

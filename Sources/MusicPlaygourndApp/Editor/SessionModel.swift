@@ -130,6 +130,17 @@ final class SessionModel {
         bpm = min(range.upperBound, max(range.lowerBound, value + delta))
     }
 
+    private(set) var djFilter = 0.0
+    private var djDelayBPM: Double?
+
+    func setDJFilter(_ value: Double) {
+        do {
+            guard let engine else { throw PlaybackError.audioSetupFailed(audioError) }
+            try engine.setDJFilter(Float(value))
+            djFilter = value
+        } catch { hostDiagnostic = error.localizedDescription }
+    }
+
     var lowPass = 20_000.0 {
         didSet {
             do { try engine?.setLowPass(cutoff: lowPass >= 19_999 ? nil : Float(lowPass)); masterControlValues.removeValue(forKey: .lowPassCutoff) }
@@ -226,6 +237,7 @@ final class SessionModel {
     private let completionService: SwiftCompletionService
     private var evaluationTask: Task<Void, Never>?
     private var wantsPlayback = false
+    var isPlaybackQueued: Bool { wantsPlayback && !isPlaying }
     private(set) var controlCatalog: LiveControlCatalog?
     private(set) var controlsAvailable = false
     private(set) var overrideGeneration: UInt64 = 0
@@ -773,6 +785,11 @@ final class SessionModel {
             }
         }
         if snapshot.loop != nil, let engine {
+            if djDelayBPM != displayedBPM {
+                do { try engine.setDelayTime(seconds: 60 / displayedBPM); djDelayBPM = displayedBPM }
+                catch { hostDiagnostic = error.localizedDescription }
+            }
+
             do {
                 let responses = try engine.equalizerResponses()
                 if responses != equalizerResponses { equalizerResponses = responses }

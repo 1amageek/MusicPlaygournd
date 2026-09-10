@@ -5,16 +5,15 @@ import UniformTypeIdentifiers
 
 struct DeckHeaderView: View {
     @Bindable var workspace: DeckWorkspace
-    @State private var colorDeck: Int?
-    @State private var eqDeck: Int?
-    @State private var compressorDeck: Int?
+    @State private var colorDeck = [false, false]
+    @State private var compressorDeck = [false, false]
     @State private var scopeVisible = false
-    @State private var controlsDeck: Int?
+    @State private var controlsDeck = [false, false]
     @State private var maximumTakeMinutes = 10
 
     var body: some View {
         GeometryReader { geometry in
-            let centerWidth = min(280, max(190, geometry.size.width * 0.24))
+            let centerWidth = min(260, max(170, geometry.size.width * 0.22))
             HStack(spacing: 0) {
                 deck(workspace.a, index: 0)
                 Divider()
@@ -23,7 +22,7 @@ struct DeckHeaderView: View {
                 deck(workspace.b, index: 1)
             }
         }
-        .frame(height: 164)
+        .frame(height: 208)
         .background(LinearGradient(colors: [Color(red: 0.055, green: 0.07, blue: 0.08), .black.opacity(0.45)], startPoint: .top, endPoint: .bottom))
     }
 
@@ -80,57 +79,61 @@ struct DeckHeaderView: View {
         let name = index == 0 ? "A" : "B"
         let duration = model.loop?.beatCount ?? 0
         let position = duration > 0 ? model.beatPosition.truncatingRemainder(dividingBy: duration) / duration : 0
-        return VStack(alignment: .leading, spacing: 8) {
-            HStack {
+        return VStack(alignment: .leading, spacing: 7) {
+            HStack(spacing: 7) {
+                Button { colorDeck[index] = true } label: {
+                    Text(name).font(.system(size: 12, weight: .bold)).foregroundStyle(.black)
+                        .frame(width: 21, height: 24).background(color, in: RoundedRectangle(cornerRadius: 4))
+                }.buttonStyle(.plain).accessibilityLabel("Deck \(name) color")
+                    .popover(isPresented: $colorDeck[index]) {
+                        ColorPicker("Deck \(name)", selection: Binding(get: { index == 0 ? workspace.colorA : workspace.colorB }, set: { workspace.setColor($0, deck: index) }), supportsOpacity: false)
+                            .padding(16).frame(width: 220)
+                    }
                 Menu {
-                    Button("Blue") { workspace.setColor(.blue, deck: index) }
-                    Button("Mint") { workspace.setColor(.mint, deck: index) }
-                    Button("Violet") { workspace.setColor(.purple, deck: index) }
-                    Button("Amber") { workspace.setColor(Color(red: 0.86, green: 0.62, blue: 0.25), deck: index) }
-                    Button("Rose") { workspace.setColor(.pink, deck: index) }
-                    Divider()
-                    Button("Custom…") { colorDeck = index }
-                } label: {
-                    Text(name).fontWeight(.bold).foregroundStyle(color)
-                }
-                .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
-                .accessibilityLabel("Deck \(name) color")
-                .popover(isPresented: Binding(get: { colorDeck == index }, set: { if !$0 { colorDeck = nil } })) {
-                    ColorPicker("Deck \(name)", selection: Binding(get: { color }, set: { workspace.setColor($0, deck: index) }), supportsOpacity: false)
-                        .padding(16).frame(width: 220)
-                }
-                Menu {
-                    Button("Load selected file…") { workspace.loadSelected(index) }
+                    Button("Load selected file") { workspace.loadSelected(index) }
                     Button("Open file…") { workspace.selectedDeck = index; model.openDocument() }
                 } label: {
-                    Text(model.loadedDocument?.name ?? "Load a Music file").lineLimit(1)
-                }.menuStyle(.borderlessButton).fixedSize(horizontal: false, vertical: true)
-                Spacer(minLength: 0)
-                Button { controlsDeck = index } label: { Image(systemName: "slider.horizontal.3") }
-                    .buttonStyle(.plain).accessibilityLabel("Deck \(name) controls")
-                    .popover(isPresented: Binding(get: { controlsDeck == index }, set: { if !$0 { controlsDeck = nil } })) {
+                    Text(model.loadedDocument == nil ? "Load…" : (model.loadedType == "Session" ? (model.project?.name ?? model.loadedType) : model.loadedType))
+                        .font(.system(size: 11, weight: .medium)).lineLimit(1).frame(maxWidth: .infinity, alignment: .leading)
+                }.menuStyle(.borderlessButton).menuIndicator(.hidden)
+                    .help(model.loadedDocument?.fileURL?.path ?? "Drop a Swift Music file here")
+                Button { model.togglePlayback() } label: {
+                    Image(systemName: model.isPlaying || model.isPlaybackQueued ? "pause.fill" : "play.fill")
+                        .font(.system(size: 13)).frame(width: 30, height: 30)
+                        .overlay(Circle().strokeBorder(.white.opacity(0.85), lineWidth: 1.3)).contentShape(Circle())
+                }.buttonStyle(.plain).accessibilityLabel("Deck \(name) play pause")
+                    .accessibilityValue(model.isPlaybackQueued ? "Preparing playback" : (model.isPlaying ? "Playing" : "Paused"))
+                TextField("BPM", value: Binding(get: { model.displayedBPM }, set: { model.bpm = $0 }), format: .number.precision(.fractionLength(0)))
+                    .font(.system(size: 22, weight: .medium, design: .rounded)).monospacedDigit()
+                    .textFieldStyle(.plain).frame(width: 43).accessibilityLabel("Deck \(name) BPM")
+                    .background(MultiFingerGestureView(onChange: { model.adjustTempo(by: $0 * 0.25) }))
+                    .help("BPM — use two or three fingers to adjust tempo")
+                Button { workspace.tap(index) } label: { Text("TAP").frame(width: 26, height: 24) }
+                    .accessibilityLabel("Deck \(name) tap tempo")
+                Button { workspace.sync(index) } label: { Text("SYNC").frame(width: 31, height: 24) }
+                    .disabled(!(index == 0 ? workspace.b : workspace.a).isPlaying)
+                Button { controlsDeck[index] = true } label: {
+                    if model.isPreparing { ProgressView().controlSize(.mini) }
+                    else { Image(systemName: "ellipsis").frame(width: 14, height: 24) }
+                }.buttonStyle(.plain).accessibilityLabel("Deck \(name) controls")
+                    .popover(isPresented: $controlsDeck[index]) {
                         LiveControlsView(model: model, maximumTakeMinutes: $maximumTakeMinutes).frame(width: 780, height: 420)
                     }
-            }.font(.system(size: 11))
+            }.font(.system(size: 8, weight: .medium)).buttonStyle(.borderless).frame(height: 32)
             HStack(spacing: 8) {
-                Button { model.togglePlayback() } label: {
-                    Image(systemName: model.isPlaying ? "pause.fill" : "play.fill").font(.system(size: 17))
-                        .frame(width: 34, height: 34).background(.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 7))
-                }.buttonStyle(.plain).accessibilityLabel("Deck \(name) play pause")
-                TextField("BPM", value: Binding(get: { model.displayedBPM }, set: { model.bpm = $0 }), format: .number.precision(.fractionLength(0)))
-                    .font(.system(size: 22, design: .monospaced)).textFieldStyle(.plain).frame(width: 49)
-                    .accessibilityLabel("Deck \(name) BPM")
-                    .background(MultiFingerGestureView(onChange: { model.adjustTempo(by: $0 * 0.25) }))
-                Button("TAP") { workspace.tap(index) }.accessibilityLabel("Deck \(name) tap tempo")
-                Button("Sync") { workspace.sync(index) }.disabled(!(index == 0 ? workspace.b : workspace.a).isPlaying)
-                Button("EQ") { eqDeck = index }
-                    .popover(isPresented: Binding(get: { eqDeck == index }, set: { if !$0 { eqDeck = nil } })) {
-                        SpectrumEqualizerView(spectrum: model.spectrum, isPlaying: model.isPlaying,
-                            bands: model.equalizerBands, responses: model.equalizerResponses, onChange: model.setEqualizerBand)
-                            .frame(width: 440, height: 260).padding(12)
-                    }
-            }.controlSize(.small)
-            Button { compressorDeck = index } label: {
+                DeckGainControl(value: index == 0 ? $workspace.gainA : $workspace.gainB, color: color, name: name,
+                                valueLabel: (index == 0 ? workspace.gainA : workspace.gainB) == 0 ? "−∞" : String(format: "%.0f dB", 20 * log10(index == 0 ? workspace.gainA : workspace.gainB)))
+                    .frame(width: 36)
+                SpectrumEqualizerView(spectrum: model.spectrum, isPlaying: model.isPlaying,
+                    bands: model.equalizerBands, responses: model.equalizerResponses, onChange: model.setEqualizerBand,
+                    compact: true, tint: color)
+                    .frame(maxWidth: .infinity).frame(height: 82)
+                    .background(.black.opacity(0.4), in: RoundedRectangle(cornerRadius: 3))
+                    .accessibilityIdentifier("deck-\(name)-equalizer")
+                HeaderXYPad(model: model, bipolar: true, tint: color, name: "Deck \(name)")
+                    .frame(width: 104, height: 82)
+            }.frame(height: 92)
+            Button { compressorDeck[index] = true } label: {
                 Canvas { context, size in
                     let values = model.loopPeaks
                     guard !values.isEmpty, size.width >= 1, size.height > 0 else { return }
@@ -148,19 +151,12 @@ struct DeckHeaderView: View {
             }.buttonStyle(.plain).accessibilityLabel("Deck \(name) waveform, open master compressor")
                 .background(MultiFingerGestureView(onMotion: model.scratch, onEnd: model.endScratch))
                 .help("Scratch with two or three fingers, even while paused. Right/up forward, left/down reverse.")
-                .popover(isPresented: Binding(get: { compressorDeck == index }, set: { if !$0 { compressorDeck = nil } })) {
+                .popover(isPresented: $compressorDeck[index]) {
                     WaveCompressorView(settings: workspace.a.compressorSettings, snapshot: workspace.a.compressorMeter, onChange: workspace.a.setCompressor)
                         .frame(width: 460, height: 300).padding(12)
                 }
-            HStack {
-                Text(!model.diagnostic.isEmpty || !model.hostDiagnostic.isEmpty ? "Issue · open Logs" : model.isPreparing ? "Preparing…" : String(format: "BEAT %.1f", model.beatPosition))
-                    .font(.system(size: 8, design: .monospaced)).foregroundStyle(.secondary)
-                Spacer()
-                Text("GAIN").font(.system(size: 8)).foregroundStyle(.secondary)
-                Slider(value: index == 0 ? $workspace.gainA : $workspace.gainB, in: 0...1)
-                    .controlSize(.mini).tint(color).frame(width: 85).accessibilityLabel("Deck \(name) gain")
-            }
-        }.frame(maxWidth: .infinity)
+        }.padding(.horizontal, 10).padding(.vertical, 10).frame(maxWidth: .infinity)
+            .contentShape(Rectangle())
     }
 
     static func waveformPeak(_ peaks: [Float], at phase: Double) -> Float {

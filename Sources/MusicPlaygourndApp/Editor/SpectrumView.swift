@@ -3,6 +3,7 @@ import SwiftUI
 struct SpectrumView: View {
     let bands: [Float]
     let isPlaying: Bool
+    var tint: Color? = nil
 
     var body: some View {
         Canvas { context, size in
@@ -19,7 +20,7 @@ struct SpectrumView: View {
                 let height = max(0, Double(db + 90) / 90 * plotHeight)
                 let rect = CGRect(x: Double(index) * width, y: plotHeight - height, width: max(1, width - 2), height: height)
                 context.fill(Path(roundedRect: rect, cornerRadius: 1), with: .linearGradient(
-                    Gradient(colors: [.cyan.opacity(0.25), .mint]), startPoint: CGPoint(x: 0, y: plotHeight), endPoint: .zero))
+                    Gradient(colors: [(tint ?? .cyan).opacity(0.25), tint ?? .mint]), startPoint: CGPoint(x: 0, y: plotHeight), endPoint: .zero))
             }
 
         }

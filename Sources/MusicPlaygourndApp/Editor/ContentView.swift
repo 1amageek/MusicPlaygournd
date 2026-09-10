@@ -39,6 +39,7 @@ struct ContentView: View {
         .background(Color(red: 0.06, green: 0.07, blue: 0.08))
         .preferredColorScheme(.dark)
         .frame(minWidth: 850, minHeight: 540)
+        .background(WorkspaceWindowSizeView())
         .task {
             while !Task.isCancelled {
                 model.refresh()

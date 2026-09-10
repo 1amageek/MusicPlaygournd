@@ -97,3 +97,6 @@
 
 - [x] WELCOME-1 Match the observed Xcode welcome hierarchy with a compact 480×360pt startup view; preserve existing new/open/cancel/error routes and independently resizable editor content `depends:none` `parallel:none`
 - [x] WELCOME-INT Release build passed; native startup is 480×360pt content (480×388pt including title bar), New Project cancellation retains welcome, FirstLight opens at editor minimum with toolbar restored `depends:WELCOME-1` `parallel:none`
+
+- [x] WELCOME-FIX-1 Restore 1160×760pt editor size on welcome-to-workspace transition and give welcome action labels readable fixed sizing; retain user resizing after entry `depends:none` `parallel:none`
+- [x] WELCOME-FIX-INT Release build passed; native screenshots verify full welcome labels and FirstLight workspace at 1160×760pt `depends:WELCOME-FIX-1` `parallel:none`

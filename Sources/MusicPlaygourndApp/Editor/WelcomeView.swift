@@ -16,17 +16,22 @@ struct WelcomeView: View {
                     Text("Version \(version)").font(.system(size: 12)).foregroundStyle(.secondary)
                 }
             }
-            HStack(spacing: 8) {
-                Button("Open…", action: model.chooseProject)
-                    .keyboardShortcut("o", modifiers: [.command, .shift])
-                    .accessibilityLabel("Open an existing project…")
-                Button("New Project…", action: model.newProject)
-                    .keyboardShortcut("n", modifiers: [.command, .shift])
-                    .accessibilityLabel("Create a new project…")
+            VStack(spacing: 10) {
+                Button(action: model.newProject) {
+                    Label("Create a new project…", systemImage: "plus.square")
+                        .fixedSize()
+                        .frame(width: 264, height: 28, alignment: .leading)
+                }
+                .keyboardShortcut("n", modifiers: [.command, .shift])
+                Button(action: model.chooseProject) {
+                    Label("Open an existing project…", systemImage: "folder")
+                        .fixedSize()
+                        .frame(width: 264, height: 28, alignment: .leading)
+                }
+                .keyboardShortcut("o", modifiers: [.command, .shift])
             }
-            .controlSize(.large)
+            .font(.system(size: 13))
             .buttonStyle(.bordered)
-            .buttonBorderShape(.capsule)
             if model.isOpeningPackage {
                 HStack(spacing: 8) {
                     ProgressView().controlSize(.small)

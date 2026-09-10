@@ -152,8 +152,9 @@ final class TrackpadEdgeController {
         onModeChange?(false)
     }
 
-    private func handle(_ event: NSEvent) {
-        for touch in event.touches(matching: .began, in: nil) where !touch.isResting {
+    func handle(_ event: NSEvent) {
+        // Resting contacts do not receive a second began event when they become active.
+        for touch in event.touches(matching: .began, in: nil) {
             begin(identity: touch.identity, point: touch.normalizedPosition, timestamp: event.timestamp)
         }
         for touch in event.touches(matching: .moved, in: nil) {

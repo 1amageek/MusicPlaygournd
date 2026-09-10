@@ -191,3 +191,6 @@
 
 - [x] BOTTOM-20-1 Expand bottom crossfade band to 20 percent, preserving side widths and concurrent routing `depends:none` `parallel:none`
 - [x] BOTTOM-20-INT Three edge tests and release build passed; updated app launched `depends:BOTTOM-20-1` `parallel:none`
+
+- [x] REST-EDGE-1 Preserve resting touch begins so a bottom contact can move while another edge remains active `depends:none` `parallel:none`
+- [x] REST-EDGE-INT Native event regression failed before fix and passed after; four edge tests and release build passed; LiveSet0911 reopened for physical trial `depends:REST-EDGE-1` `parallel:none`

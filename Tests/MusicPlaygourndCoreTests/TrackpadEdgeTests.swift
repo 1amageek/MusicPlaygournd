@@ -6,6 +6,27 @@ extension NativeHostTests {
     @MainActor
     struct TrackpadEdgeTests {
         @Test(.timeLimit(.minutes(1)))
+        func restingBottomContactMovesAlongsideActiveSideContact() {
+            let controller = TrackpadEdgeController()
+            var fades: [Double] = []
+            var scratches: [Double] = []
+            controller.onCrossfadeDelta = { fades.append($0) }
+            controller.onScratch = { _, distance, _ in scratches.append(distance) }
+            controller.handle(EdgeEvent([
+                EdgeTouch(1, .began, NSPoint(x: 0.1, y: 0.5), resting: false),
+                EdgeTouch(2, .began, NSPoint(x: 0.5, y: 0.1), resting: true)
+            ], time: 1))
+            #expect(fades.isEmpty && scratches.isEmpty)
+            controller.handle(EdgeEvent([
+                EdgeTouch(1, .moved, NSPoint(x: 0.1, y: 0.6), resting: false),
+                EdgeTouch(2, .moved, NSPoint(x: 0.6, y: 0.1), resting: false)
+            ], time: 1.1))
+            #expect(scratches.count == 1)
+            #expect(fades.count == 1)
+            #expect(abs((fades.first ?? 0) - 0.3) < 0.0001)
+        }
+
+        @Test(.timeLimit(.minutes(1)))
         func edgeRoutingLocksContactsAndSeparatesReleaseFromCancellation() {
             let controller = TrackpadEdgeController()
             var fades: [Double] = []
@@ -92,5 +113,41 @@ extension NativeHostTests {
             TrackpadTouchDelivery.release(view)
             #expect(view.allowedTouchTypes.isEmpty && !view.wantsRestingTouches)
         }
+    }
+}
+
+// Immutable snapshots emulate AppKit's new touch object for each event.
+private final class EdgeTouch: NSTouch, @unchecked Sendable {
+    let token: NSNumber
+    let touchPhase: NSTouch.Phase
+    let point: NSPoint
+    let restingFlag: Bool
+    init(_ id: Int, _ phase: NSTouch.Phase, _ point: NSPoint, resting: Bool) {
+        token = NSNumber(value: id)
+        touchPhase = phase
+        self.point = point
+        self.restingFlag = resting
+        super.init()
+    }
+    override var identity: any NSObjectProtocol & NSCopying { token }
+    override var phase: NSTouch.Phase { touchPhase }
+    override var normalizedPosition: NSPoint { point }
+    override var isResting: Bool { restingFlag }
+    override var deviceSize: NSSize { NSSize(width: 140, height: 100) }
+}
+
+// The event owns immutable, Sendable touch snapshots.
+private final class EdgeEvent: NSEvent, @unchecked Sendable {
+    let snapshots: Set<NSTouch>
+    let time: Double
+    init(_ touches: Set<NSTouch>, time: Double) {
+        snapshots = touches
+        self.time = time
+        super.init()
+    }
+    required init?(coder: NSCoder) { return nil }
+    override var timestamp: TimeInterval { time }
+    override func touches(matching phase: NSTouch.Phase, in view: NSView?) -> Set<NSTouch> {
+        snapshots.filter { !phase.intersection($0.phase).isEmpty }
     }
 }

@@ -9,24 +9,21 @@ public final class AudioLoopEngine: AudioUnitHosting, MasterRecording {
     private let sourceNode: AVAudioSourceNode
     private let timePitch: AVAudioUnitTimePitch
     private let balanceMixer: AVAudioMixerNode
-    private let compressor: AVAudioUnitEffect
-    private let compressorKernel: MasterCompressorKernel
-    public private(set) var compressorSettings = MasterCompressorSettings.defaults
+    public let output: AudioOutput
+    private let deckIndex: Int
+    private let deckGain = AVAudioMixerNode()
+    private let deckMeterStore = OutputMeterStore()
+    public var compressorSettings: MasterCompressorSettings { output.compressorSettings }
     private let equalizer: AVAudioUnitEQ
     public private(set) var masterBalance: Float = 0
     public private(set) var equalizerBands = MasterEqualizerBand.defaults
     private let delay: AVAudioUnitDelay
     private let reverb: AVAudioUnitReverb
     private let transport: AudioTransport
-    private let recordingCapture: MasterRecordingCapture
-    private final class RecordingTake {
-        let task: Task<MasterRecordingResult, Error>
-        var cancelled = false
-        var cleaned = false
-        init(task: Task<MasterRecordingResult, Error>) { self.task = task }
+    internal var recordingDidPublish: (@Sendable () async -> Void)? {
+        get { output.recordingDidPublish }
+        set { output.recordingDidPublish = newValue }
     }
-    private var recordingTake: RecordingTake?
-    internal var recordingDidPublish: (@Sendable () async -> Void)?
     private let meterStore: OutputMeterStore
     private let audioFormat: AVAudioFormat
     private var retainedLoops: [AudioTransport.Identity: PreparedLoop] = [:]
@@ -44,7 +41,14 @@ public final class AudioLoopEngine: AudioUnitHosting, MasterRecording {
         try self.init(parameterSmoother: MasterParameterSmoother())
     }
 
-    internal init(parameterSmoother: MasterParameterSmoother) throws {
+    public convenience init(output: AudioOutput) throws {
+        try self.init(parameterSmoother: MasterParameterSmoother(), output: output)
+    }
+
+    internal init(parameterSmoother: MasterParameterSmoother, output: AudioOutput? = nil) throws {
+        let output = try output ?? AudioOutput(parameterSmoother: parameterSmoother)
+        try output.validateAttachment()
+        self.output = output
         self.parameterSmoother = parameterSmoother
         guard let format = AVAudioFormat(
             standardFormatWithSampleRate: PreparedLoop.requiredSampleRate,
@@ -56,14 +60,10 @@ public final class AudioLoopEngine: AudioUnitHosting, MasterRecording {
         let transport = AudioTransport()
         let timePitch = AVAudioUnitTimePitch()
         let balanceMixer = AVAudioMixerNode()
-        let compressor = MasterCompressorAudioUnit.makeNode()
-        guard let compressorUnit = compressor.auAudioUnit as? MasterCompressorAudioUnit else {
-            throw PlaybackError.audioSetupFailed("Cannot instantiate the master compressor.")
-        }
         let equalizer = AVAudioUnitEQ(numberOfBands: 4)
         let delay = AVAudioUnitDelay()
         let reverb = AVAudioUnitReverb()
-        let meterStore = OutputMeterStore()
+        let meterStore = output.meterStore
 
         let filter = equalizer.bands[0]
         filter.filterType = .lowPass
@@ -96,11 +96,11 @@ public final class AudioLoopEngine: AudioUnitHosting, MasterRecording {
                 duration: Double(frameCount) / PreparedLoop.requiredSampleRate, failed: status != noErr)
             return status
         }
-        let audioEngine = AVAudioEngine()
+        let audioEngine = output.audioEngine
         audioEngine.attach(sourceNode)
         audioEngine.attach(timePitch)
         audioEngine.attach(balanceMixer)
-        audioEngine.attach(compressor)
+        audioEngine.attach(deckGain)
         audioEngine.attach(equalizer)
         audioEngine.attach(delay)
         audioEngine.attach(reverb)
@@ -109,25 +109,16 @@ public final class AudioLoopEngine: AudioUnitHosting, MasterRecording {
         audioEngine.connect(equalizer, to: delay, format: format)
         audioEngine.connect(delay, to: reverb, format: format)
         audioEngine.connect(reverb, to: balanceMixer, format: format)
-        audioEngine.connect(balanceMixer, to: compressor, format: format)
-        audioEngine.connect(compressor, to: audioEngine.mainMixerNode, format: format)
-        audioEngine.mainMixerNode.outputVolume = 1
-        let recordingCapture = MasterRecordingCapture()
-        self.recordingCapture = recordingCapture
-        audioEngine.mainMixerNode.installTap(
-            onBus: 0,
-            bufferSize: AVAudioFrameCount(OutputMeterStore.captureFrameCapacity),
-            format: nil
-        ) { @Sendable [meterStore, recordingCapture] buffer, time in
-            recordingCapture.capture(buffer, at: time)
-            meterStore.capture(buffer, at: time)
+        audioEngine.connect(balanceMixer, to: deckGain, format: format)
+        deckIndex = try output.attach(deckGain, format: format)
+        let deckMeter = deckMeterStore
+        deckGain.installTap(onBus: 0, bufferSize: 512, format: format) { @Sendable [deckMeter] buffer, time in
+            deckMeter.capture(buffer, at: time)
         }
         self.transport = transport
         self.sourceNode = sourceNode
         self.timePitch = timePitch
         self.balanceMixer = balanceMixer
-        self.compressor = compressor
-        self.compressorKernel = compressorUnit.kernel
         self.equalizer = equalizer
         self.delay = delay
         self.reverb = reverb
@@ -136,53 +127,22 @@ public final class AudioLoopEngine: AudioUnitHosting, MasterRecording {
         self.audioEngine = audioEngine
     }
 
-    public var isRecording: Bool { recordingTake != nil }
-    internal var recordingCancellationRequested: Bool { recordingTake?.cancelled ?? false }
+    public var isRecording: Bool { output.isRecording }
+    internal var recordingCancellationRequested: Bool { output.recordingCancellationRequested }
+    public func startRecording(_ request: MasterRecordingRequest) throws { try output.startRecording(request) }
+    public func stopRecording() async throws -> MasterRecordingResult { try await output.stopRecording() }
+    public func cancelRecording() async throws { try await output.cancelRecording() }
 
-    public func startRecording(_ request: MasterRecordingRequest) throws {
-        guard recordingTake == nil else { throw MasterRecordingError.alreadyRecording }
-        guard !FileManager.default.fileExists(atPath: request.destination.path) else { throw MasterRecordingError.destinationExists }
-        let format = audioEngine.mainMixerNode.outputFormat(forBus: 0)
-        try recordingCapture.begin(format: format, maximumFrames: request.maximumFrames)
-        do {
-            let writer = try MasterRecordingWriter(request: request, capture: recordingCapture, format: format, didPublish: recordingDidPublish)
-            recordingTake = RecordingTake(task: Task { try await writer.run() })
-        } catch {
-            recordingCapture.finish()
-            throw error
-        }
+    public func deckMeter() -> OutputMeterSnapshot {
+        if !transport.snapshot().isPlaying { deckMeterStore.clear() }
+        return deckMeterStore.snapshot()
     }
 
-    public func stopRecording() async throws -> MasterRecordingResult {
-        guard let take = recordingTake else { throw MasterRecordingError.notRecording }
-        recordingCapture.finish()
-        defer { if recordingTake === take { recordingTake = nil } }
-        let task = take.task
-        let result = try await withTaskCancellationHandler { try await task.value } onCancel: { task.cancel() }
-        if take.cancelled || Task.isCancelled {
-            try removeCancelledRecording(result, take: take)
-            throw CancellationError()
-        }
-        return result
-    }
-
-    public func cancelRecording() async throws {
-        guard let take = recordingTake else { return }
-        take.cancelled = true
-        recordingCapture.finish()
-        take.task.cancel()
-        defer { if recordingTake === take { recordingTake = nil } }
-        do { try removeCancelledRecording(try await take.task.value, take: take) }
-        catch is CancellationError { return }
-    }
-
-    private func removeCancelledRecording(_ result: MasterRecordingResult, take: RecordingTake) throws {
-        guard !take.cleaned else { return }
-        do {
-            if FileManager.default.fileExists(atPath: result.destination.path) { try FileManager.default.removeItem(at: result.destination) }
-            take.cleaned = true
-        }
-        catch { throw MasterRecordingError.fileFailure(error.localizedDescription) }
+    public func setDeckGain(_ value: Float) throws {
+        guard value.isFinite, (0...1).contains(value) else { throw PlaybackError.invalidMasterVolume(value) }
+        let mixer = deckGain
+        parameterSmoother.set(.volume, from: mixer.outputVolume, to: value,
+                              immediate: !transport.snapshot().isPlaying) { value, _ in mixer.outputVolume = value }
     }
 
     public func beginUpdate(revision: UInt64) {
@@ -270,18 +230,13 @@ public final class AudioLoopEngine: AudioUnitHosting, MasterRecording {
 
     public func play() throws {
         try transport.startPlayback()
-        meterStore.activate()
+        deckMeterStore.activate()
         do {
-            if !audioEngine.isRunning {
-                if !audioEngine.isInManualRenderingMode {
-                    audioEngine.prepare()
-                }
-                try audioEngine.start()
-            }
+            try output.start(deckIndex)
         } catch {
             transport.stopPlayback()
-            audioEngine.stop()
-            meterStore.clear()
+            deckMeterStore.clear()
+            output.stop(deckIndex)
             throw PlaybackError.audioStartFailed(String(describing: error))
         }
     }
@@ -291,11 +246,26 @@ public final class AudioLoopEngine: AudioUnitHosting, MasterRecording {
         try play()
     }
 
+    /// Aligns this deck's next source buffer to a running reference's audible beat clock.
+    public func synchronize(to reference: AudioLoopEngine) throws {
+        let anchor = try reference.playbackClockAnchor()
+        guard anchor.isPlaying, let current = transport.snapshot().loop else { throw PlaybackClockError.unavailable }
+        let rate = Float(anchor.beatsPerMinute / current.bpm)
+        try Self.validateMasterControl(.playbackRate, value: rate)
+        try transport.synchronize(to: anchor, presentationLatency: sourceNode.outputPresentationLatency)
+        let unit = timePitch
+        let transport = transport
+        parameterSmoother.set(.rate, from: unit.rate, to: rate, immediate: true) { value, _ in
+            unit.rate = value
+            transport.setClockRate(Double(value))
+        }
+    }
+
     public func stop() {
         transport.stopPlayback()
-        audioEngine.stop()
+        deckMeterStore.clear()
+        output.stop(deckIndex)
         parameterSmoother.finishAll()
-        meterStore.clear()
         pruneRetainedLoops()
     }
 
@@ -437,16 +407,7 @@ public final class AudioLoopEngine: AudioUnitHosting, MasterRecording {
         }
     }
 
-    public func setMasterVolume(_ volume: Float) throws {
-        guard volume.isFinite, (0...1).contains(volume) else {
-            throw PlaybackError.invalidMasterVolume(volume)
-        }
-        let mixer = audioEngine.mainMixerNode
-        parameterSmoother.set(.volume, from: mixer.outputVolume, to: volume,
-                              immediate: !transport.snapshot().isPlaying) { value, _ in
-            mixer.outputVolume = value
-        }
-    }
+    public func setMasterVolume(_ volume: Float) throws { try output.setMasterVolume(volume) }
 
     public func setReverb(mix: Float) throws {
         try Self.validateMasterControl(.reverbMix, value: mix)
@@ -463,23 +424,10 @@ public final class AudioLoopEngine: AudioUnitHosting, MasterRecording {
                 delay.wetDryMix / 100, reverb.wetDryMix / 100)
     }
 
-    public func setCompressor(_ value: MasterCompressorSettings) throws {
-        try compressorKernel.configure(value)
-        compressorSettings = value
-    }
-
-    public func compressorSnapshot() -> MasterCompressorSnapshot {
-        transport.snapshot().isPlaying ? compressorKernel.snapshot() : .empty
-    }
-
-    public func resetDiagnostics() { meterStore.resetDiagnostics() }
-
-    public func outputMeter() -> OutputMeterSnapshot {
-        if !transport.snapshot().isPlaying {
-            meterStore.clear()
-        }
-        return meterStore.snapshot()
-    }
+    public func setCompressor(_ value: MasterCompressorSettings) throws { try output.setCompressor(value) }
+    public func compressorSnapshot() -> MasterCompressorSnapshot { output.compressorSnapshot() }
+    public func resetDiagnostics() { output.resetDiagnostics() }
+    public func outputMeter() -> OutputMeterSnapshot { output.outputMeter() }
 
     /// Enables native offline rendering for focused Core tests without changing the public app API.
     internal func prepareOfflineRenderingForTests() throws {
@@ -673,13 +621,10 @@ public final class AudioLoopEngine: AudioUnitHosting, MasterRecording {
     }
 
     isolated deinit {
-        recordingCapture.finish()
-        recordingTake?.task.cancel()
         audioUnitRequest?.cancel()
         parameterSmoother.cancelAll()
-        audioEngine.mainMixerNode.removeTap(onBus: 0)
-        audioEngine.stop()
-        if let hostedAudioUnit { audioEngine.detach(hostedAudioUnit) }
+        transport.stopPlayback()
+        output.stop(deckIndex)
     }
 }
 
@@ -745,6 +690,7 @@ final class AudioTransport: Sendable {
         var lastHostTime: UInt64?
         var clockDiscontinuous = false
         var clockRate = 1.0
+        var synchronization: (anchor: PlaybackClockAnchor, latency: UInt64)?
     }
 
     private let state = Mutex(State())
@@ -799,7 +745,8 @@ final class AudioTransport: Sendable {
             let candidate = Candidate(loop: state.switchLoops[index], revision: revision,
                                       generation: generation, switchIndex: index)
             if !state.isPlaying {
-                state.current = candidate.loop
+                state.synchronization = nil
+        state.current = candidate.loop
                 state.currentGeneration = generation
                 state.currentSwitchIndex = index
                 state.publishedSwitchIndex = index
@@ -914,6 +861,7 @@ final class AudioTransport: Sendable {
         guard let current = state.current, let revision = state.currentRevision else { return }
         state.fade = Fade(old: Candidate(loop: current, revision: revision, generation: state.currentGeneration,
             performanceGeneration: state.currentPerformanceGeneration, switchIndex: state.currentSwitchIndex))
+        state.synchronization = nil
         state.current = candidate.loop
         state.currentGeneration = candidate.generation
         state.currentPerformanceGeneration = candidate.performanceGeneration
@@ -983,6 +931,7 @@ final class AudioTransport: Sendable {
     func restartFromBeginning() throws {
         try state.withLock { state in
             guard let current = state.current else { throw PlaybackError.noCurrentLoop }
+            state.synchronization = nil
             state.framePosition = 0
             state.beatPosition = 0
             state.clockSample = nil
@@ -996,6 +945,7 @@ final class AudioTransport: Sendable {
     func stopPlayback() {
         state.withLock { state in
             state.isPlaying = false
+            state.synchronization = nil
             state.clockSample = nil
             if let replacement = state.replacement {
                 state.current = replacement.loop
@@ -1062,6 +1012,17 @@ final class AudioTransport: Sendable {
         return local >= 0 ? local : local + loopBeatCount
     }
 
+    func synchronize(to anchor: PlaybackClockAnchor, presentationLatency: Double) throws {
+        guard anchor.isPlaying else { throw PlaybackClockError.unavailable }
+        let latency = try PlaybackClockAnchor.hostTicks(forSeconds: presentationLatency)
+        try state.withLock { state in
+            guard state.current != nil, state.isPlaying else { throw PlaybackClockError.unavailable }
+            guard state.pending == nil, state.reservation == nil, state.replacement == nil,
+                  state.fade == nil else { throw PlaybackError.replacementInProgress }
+            state.synchronization = (anchor, latency)
+        }
+    }
+
     func invalidateClock() {
         state.withLock { $0.clockSample = nil }
     }
@@ -1117,6 +1078,21 @@ final class AudioTransport: Sendable {
                 return noErr
             }
 
+            if let sync = state.synchronization, let hostTime, let current = state.current {
+                let (presentation, overflow) = hostTime.addingReportingOverflow(sync.latency)
+                guard !overflow else { return kAudio_ParamError }
+                do {
+                    let beat = try sync.anchor.beat(atHostTime: presentation)
+                    state.beatPosition = beat
+                    state.framePosition = frame(for: beat, in: current)
+                    state.clockSample = nil
+                    state.lastHostTime = nil
+                    state.synchronization = nil
+                } catch {
+                    state.synchronization = nil
+                    return kAudio_ParamError
+                }
+            }
             if let hostTime, hostTime > 0 {
                 state.clockDiscontinuous = state.lastHostTime.map { hostTime <= $0 } ?? false
                 state.clockSample = state.clockDiscontinuous ? nil
@@ -1175,6 +1151,7 @@ final class AudioTransport: Sendable {
     }
 
     private func adopt(_ candidate: Candidate, into state: inout State) {
+        state.synchronization = nil
         state.current = candidate.loop
         state.currentRevision = candidate.revision
         state.currentSwitchIndex = nil

@@ -4,6 +4,7 @@ import Foundation
 @MainActor
 internal final class MasterParameterSmoother {
     internal enum Parameter: CaseIterable, Hashable, Sendable {
+        case crossfadeA, crossfadeB
         case volume
         case balance
         case rate

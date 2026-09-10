@@ -69,15 +69,20 @@ struct ContentView: View {
                     if let deckWorkspace {
                         FileTabsView(model: deckWorkspace.a, accent: deckWorkspace.colorA,
                             deckName: "A", editing: deckWorkspace.selectedDeck == 0,
-                            activate: { deckWorkspace.selectedDeck = 0 }, load: { deckWorkspace.loadSelected(0) })
+                            activate: { deckWorkspace.selectedDeck = 0 }, load: { deckWorkspace.load($0, into: $1) })
                         Divider()
-                        FileTabsView(model: deckWorkspace.b, accent: deckWorkspace.colorB,
-                            deckName: "B", editing: deckWorkspace.selectedDeck == 1,
-                            activate: { deckWorkspace.selectedDeck = 1 }, load: { deckWorkspace.loadSelected(1) })
-                    } else { FileTabsView(model: model) }
-                    layoutMenu.padding(.horizontal, 6)
+                        HStack(spacing: 0) {
+                            FileTabsView(model: deckWorkspace.b, accent: deckWorkspace.colorB,
+                                deckName: "B", editing: deckWorkspace.selectedDeck == 1,
+                                activate: { deckWorkspace.selectedDeck = 1 }, load: { deckWorkspace.load($0, into: $1) })
+                            layoutMenu.padding(.horizontal, 6)
+                        }.frame(maxWidth: .infinity)
+                    } else {
+                        FileTabsView(model: model)
+                        layoutMenu.padding(.horizontal, 6)
+                    }
                 }
-                .frame(height: 30)
+                .frame(height: 28)
                 Divider()
             }
             Group {
@@ -117,7 +122,7 @@ struct ContentView: View {
         } label: {
             Image(systemName: "rectangle.3.group")
                 .font(.system(size: 13, weight: .medium))
-                .frame(width: 36, height: 30)
+                .frame(width: 30, height: 26)
         }
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)

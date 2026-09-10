@@ -577,7 +577,7 @@ final class SessionModel {
                 revisionDocuments[requested] = loadedDocument?.id ?? activeDocumentID
                 projectRequest = nil
             }
-        } catch { diagnostic = error.localizedDescription; isPreparing = false; return }
+        } catch { diagnostic = error.localizedDescription; isPreparing = false; if loop == nil { wantsPlayback = false }; return }
         let tempo = 120.0
         let entryType = loadedType
         let meter = beatsPerBar
@@ -624,6 +624,7 @@ final class SessionModel {
             } catch {
                 guard let self, requested == self.revision else { return }
                 self.isPreparing = false
+                if self.loop == nil { self.wantsPlayback = false }
                 self.diagnostic = error.localizedDescription
                 if case EvaluationError.compilerDiagnostic(_, let range) = error, self.source == text {
                     self.diagnosticRange = range?.utf16Range
@@ -655,7 +656,7 @@ final class SessionModel {
     func togglePlayback() {
         guard hasOpenDocument || loadedDocument != nil || isPlaying else { return }
         guard let engine else { diagnostic = audioError; return }
-        if isPlaying {
+        if isPlaying || wantsPlayback {
             wantsPlayback = false
             engine.stop()
         } else {
@@ -806,7 +807,6 @@ final class SessionModel {
                 do { try engine.setDelayTime(seconds: 60 / displayedBPM); djDelayBPM = displayedBPM }
                 catch { hostDiagnostic = error.localizedDescription }
             }
-
             do {
                 let responses = try engine.equalizerResponses()
                 if responses != equalizerResponses { equalizerResponses = responses }

@@ -8,12 +8,12 @@ MusicPlayground is a native macOS live music editor powered by [SwiftMusic](http
 
 ## Get started
 
-Current source preview: **0.2.0**, powered by **SwiftMusic 0.5.0**.
+Current source preview: **0.3.0**, powered by **SwiftMusic 0.5.0**.
 
 Requires **Swift 6.4**, **macOS 15 or later**, and Xcode command-line tools. Swift 6.4 operation was verified on September 10, 2026.
 
 ```sh
-git clone --branch 0.2.0 https://github.com/1amageek/MusicPlaygournd.git
+git clone --branch 0.3.0 https://github.com/1amageek/MusicPlaygournd.git
 cd MusicPlaygournd
 ./Scripts/build-app.sh
 open .build/MusicPlaygournd.app
@@ -25,18 +25,24 @@ Choose **Create a new project**, enter its name and location, and start from the
 
 Sessions run local Swift with your account's permissions. Open code you trust.
 
-## Two decks (main branch)
+## Two decks
 
-The development branch adds independent A/B decks. Build `main` to use this workspace; the 0.2.0 tag above retains the single-deck release.
+Version 0.3.0 includes independent A/B decks.
 
 - New projects include **Session.swift** for A and **Trance.swift** for B. Trance adapts the lead, bass and ducking arrangement from [Switch Angel’s performance](https://www.youtube.com/watch?v=iu5rnQkfO6M) into editable synthesized music, with acid/level sliders and stereo panning. It does not include the original recording or voiceover.
 - Left and right tab groups share file contents and undo, but select independently. Selecting a tab changes the wide editor, not the playing music.
-- Use the deck's file menu or a tab's **Load into Deck** action, then enter the top-level `Music` type name (`Session` by default). The same file and type can run on both decks with independent State, sliders, mute and playback.
+- Drop a Swift file onto a deck, or choose **Load into Deck A/B** from its sidebar or tab menu. The compiler finds its `Music` entry automatically; a picker appears only when the file contains multiple entries. The same file and type can run on both decks with independent State, sliders, mute and playback.
 - **TAP** sets that deck's tempo. **Sync** matches a playing deck's BPM and beat phase; both decks must be prepared and playing. A Music-controlled BPM must use its own control instead.
-- **EQ** and **GAIN** affect one deck. The central crossfader mixes A/B into the master output. Click the central vectorscope for master balance/reverb, or either waveform for the shared master compressor. Recording captures the resulting mix. Move two or three fingers over a deck waveform to scratch forward or backward, including while paused; releasing restores normal playback or silence.
-- Click each deck's A/B label to choose a persistent preset or a custom accent. Editor syntax themes remain separate.
+- **EQ** and **GAIN** affect one deck. BPM, Gain and master volume accept two- or three-finger movement over their controls (right/up increases, left/down decreases). Adjust Gain also by dragging its knob; double-click resets it. The central crossfader mixes A/B into the master output. Click the central vectorscope for master balance/reverb, or either waveform for the shared master compressor. Recording captures the resulting mix. Move two or three fingers over a deck waveform to scratch forward or backward, including while paused; releasing restores normal playback or silence.
+- Click each deck's A/B badge to choose a persistent preset or a custom accent. Editor syntax themes remain separate.
 
 Each deck keeps its last good audio after a failed load or edit. First preparation uses separate A/B build caches; subsequent runs reuse them.
+
+## Play Mode
+
+Enable **Play Mode** in the log bar to use the trackpad as independent performance regions. The left/right 18% edges scratch A/B; the bottom 20% controls the crossfader at 3x sensitivity. Bottom corners belong to the crossfader. Different edge contacts operate simultaneously; the initial region stays assigned until lift. There is no whole-pad two-finger fader gesture.
+
+Space controls both decks. Tap left/right Command alone to control A/B transport; tap left/right Option alone for A/B headphone CUE. The cursor is hidden during Play Mode; **Escape** or leaving the application restores it. Physical touch recognition depends on the trackpad and macOS contact classification.
 
 ## Compose with reusable sounds
 

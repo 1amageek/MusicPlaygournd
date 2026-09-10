@@ -28,6 +28,20 @@ extension NativeHostTests {
         }
 
         @Test(.timeLimit(.minutes(1)))
+        func queuedPlaybackCanBeCancelledWithoutRestartingPreparation() async throws {
+            let model = SessionModel()
+            model.fileURL = FileManager.default.temporaryDirectory.appending(path: "QueuedPlayback.swift")
+            model.isPreparing = true
+            model.togglePlayback()
+            #expect(model.isPlaybackQueued)
+            #expect(!model.isPlaying)
+            model.togglePlayback()
+            #expect(!model.isPlaybackQueued)
+            #expect(model.isPreparing)
+            try await model.shutdown()
+        }
+
+        @Test(.timeLimit(.minutes(1)))
         func tapsAndSharedDocumentsKeepSelectionIndependentOfLoading() async throws {
             var taps = TapTempo()
             #expect(taps.tap(at: 0) == nil)

@@ -112,35 +112,36 @@
 - [x] DJ-1 Defined shared-document, independent-deck and single-output contracts (e05e6d4) `depends:none` `parallel:none`
 - [x] DJ-2 Shared output implemented (43e08e4); native PCM verified crossfade endpoints, pause isolation, master balance/reset; hardware clocks verified Sync across different rates and deck taps `depends:DJ-1` `parallel:none`
 - [x] DJ-3 Independent editing/evaluation implemented (d60e6e4); separate workers/caches verified same-file State isolation, explicit Alternate entry and failed-load retention; shared-buffer edits/save/discard/tab-close and TAP checks passed `depends:DJ-2` `parallel:none`
-- [x] DJ-4 DJ workspace integrated (bef2a62); Release built, live same-file State isolation, pause, Sync, EQ/reset, scope/reset and color persistence visually verified `depends:DJ-3` `parallel:none`
-- [x] DJ-INT Integrated Release build/signature and live DualDeck playback passed; same-file independent sliders, different-rate Sync, A/B pause, scope/EQ reset and persisted Mint/Violet colors verified; focused PCM/worker/document evidence retained, no source changes after verification `depends:DJ-1,DJ-2,DJ-3,DJ-4` `parallel:none`
+- [ ] DJ-4 Complete accepted visuals and automatic file loading; scope output measured at correlation 0.999834 and Side/Mid -35.7 dB; scope now uses the existing 8192-frame history and horizontal A/B gradient, native verification pending; compact tabs updated to 28 pt with 17 pt A/B badges, packaged Release build and native DualDeck visual check passed; uniform vertical three-finger BPM/Gain/master input implemented, native region/lifecycle and upward/downward/horizontal rejection check passed (0.147 s), Release app built (61.56 s) and DualDeck reopened; physical touch and native file drop still require confirmation; prior partial implementation (bef2a62). DJ workspace integrated (bef2a62); Release built, live same-file State isolation, pause, Sync, EQ/reset, scope/reset and color persistence visually verified `depends:DJ-3` `parallel:none`
+- [ ] DJ-INT Reopened after comparison with the accepted mockup; verify corrected design and file loading before completion. Previous integrated Release build/signature and live DualDeck playback passed; same-file independent sliders, different-rate Sync, A/B pause, scope/EQ reset and persisted Mint/Violet colors verified; focused PCM/worker/document evidence retained, no source changes after verification `depends:DJ-1,DJ-2,DJ-3,DJ-4` `parallel:none`
 
 - [x] TRANCE-1 Add the credited G-minor B template; preserve A and saved deck choices; verify live-loop PCM (5 tracks, 2 sliders, peak 0.603, Side/Mid -15.96 dB) `depends:none` `parallel:none`
 - [x] TRANCE-INT Release app built; native project generation, B entry selection, playback and scope verified with zero errors `depends:TRANCE-1` `parallel:none`
 
+- [ ] PLAY-1 Implemented central MASTER removal and full-circle transport hit targets; queued-play cancellation check passed (0.103 s); awaiting integration into the outstanding DJ UI commit `depends:none` `parallel:none`
+- [ ] PLAY-INT Release built (29.59 s); previously missed edge coordinates now stop/start B, prepared playback and MASTER removal visually verified; zero errors; commit pending `depends:PLAY-1` `parallel:none`
+
 - [x] SEEK-CORE Implement retained-PCM seek with wrapping and paused-state preservation; real transport PCM test passed `depends:none` `parallel:none`
-- [ ] SEEK-1 Connect Wave-only bidirectional three-finger seek `depends:SEEK-CORE` `parallel:none`
-- [ ] SEEK-INT Build and verify native app integration `depends:SEEK-1` `parallel:none`
+- [ ] SEEK-1 Add Wave-only bidirectional three-finger seek; preserve playback state and deck isolation; verify PCM and gesture direction; three focused tests passed; Release build passed (65.90 s), TranceSet reopened; UI commit pending with existing gesture refactor `depends:SEEK-CORE` `parallel:none`
+- [ ] SEEK-INT Native app built and seek path reviewed; physical three-finger input remains unverified `depends:SEEK-1` `parallel:none`
 
-- [x] TOUCH-1 Shared two/three-finger dominant-axis adapter and native region/contact tests passed `depends:none` `parallel:none`
-- [ ] TOUCH-INT Verify integrated UI build; retained UI changes remain outside this adapter commit `depends:TOUCH-1` `parallel:none`
+- [x] TOUCH-1 Shared gesture adapter committed (89c16d4); two/three contacts, four directions, contact transitions and region lifecycle tests passed `depends:none` `parallel:none`
+- [ ] TOUCH-INT Integrated Release build passed (64.22 s), TranceSet reopened; physical trackpad input unverified and older UI integration remains uncommitted `depends:TOUCH-1` `parallel:none`
 
-- [x] SCRATCH-1 Signed PCM scratch preserves play/pause intent; native paused output, release and other-deck isolation passed `depends:none` `parallel:none`
-- [x] SCRATCH-2 Wave routes timed motion and cleanup to scratch; gesture duration, release and window deactivation tests passed `depends:SCRATCH-1` `parallel:none`
-- [x] SCRATCH-INT Native paused scratch and 18 regression tests passed; Release built (67.26 s), TranceSet reopened paused with scratch help and zero errors; physical touch delivery not automated `depends:SCRATCH-1,SCRATCH-2` `parallel:none`
+- [x] SCRATCH-1 Signed PCM output and paused/native behavior verified (81e0b77) `depends:none` `parallel:none`
+- [x] SCRATCH-2 Timed Wave motion and lifecycle cleanup connected (fa8651b) `depends:SCRATCH-1` `parallel:none`
+- [x] SCRATCH-INT Native paused output, 18 regressions and Release build (67.26 s) passed; reopened paused, zero errors; physical touch delivery not automated `depends:SCRATCH-1,SCRATCH-2` `parallel:none`
 
-- [x] SCOPE-1 Independent waveform/spectrum/vectorscope views and header popovers; Release build and real projection check passed; existing PCM ownership and diagnostics preserved `depends:none` `parallel:none`
-- [x] SCOPE-INT Native independent opening/closing passed; actual stereo PCM rendered through VectorscopeView; live playback UI check interrupted by user interaction, original playing app preserved `depends:SCOPE-1` `parallel:none`
 - [x] SCOPE-1 Shared 3D deck trajectories (c79b1d2) and header routing verified in Release/native UI `depends:none` `parallel:none`
 - [x] SCOPE-INT Both selected deck colors, shared depth trails and master placement visually verified; focused scope test passed `depends:SCOPE-1` `parallel:none`
+
 - [x] WAVE-1 Centered playhead and interpolated wrapped loop peaks; direction, seam and invalid-input test passed `depends:none` `parallel:none`
 - [x] WAVE-INT Release build passed (62.30 s); native A/B playback showed changing waveforms with fixed center lines and zero errors `depends:WAVE-1,SCOPE-1` `parallel:none`
-
 
 - [x] MIXUI-1 Native bipolar filter and delay timing added; LP/HP attenuation, center reset, retained invalid values and three-band EQ regression passed (2 tests, 0.909 s) `depends:none` `parallel:none`
 - [x] MIXUI-2 Compact EQ above Wave and existing Filter-Space XY integrated; native EQ drag, independent deck values and pad reset verified `depends:MIXUI-1` `parallel:none`
 - [x] MIXUI-TOP Native top safe area reclaims 52 points; sidebar collapse/expand preserves window controls `depends:MIXUI-1` `parallel:none`
-- [ ] MIXUI-INT Final Release build passed (27.86 s); native EQ, XY/reset and header geometry verified; CUE scope question remains unanswered `depends:MIXUI-1,MIXUI-2,MIXUI-TOP` `parallel:none`
+- [ ] MIXUI-INT Final Release build passed (27.86 s); native EQ, XY/reset and header geometry verified; CUE implementation authorized; independent output integration pending `depends:MIXUI-1,MIXUI-2,MIXUI-TOP` `parallel:none`
 
 - [x] DROPSELECT-1 Native NSItemProvider delivery selects the receiving deck and source before discovery; failed opens preserve selection (0.126 s); real compiler discovery passed (1.452 s), Release built (25.19 s); physical drag automation did not complete `depends:none` `parallel:none`
 
@@ -148,13 +149,13 @@
 - [x] CUE-2 Rounded TAP/SYNC/CUE buttons and shared Audio settings verified in the Release app; main device switch/restore and unconfigured cue popover exercised `depends:CUE-1` `parallel:none`
 - [x] CUE-INT Release build and native UI passed; main/cue PCM separation and output switching verified; physical headphone listening unavailable because headphones are disconnected `depends:CUE-1,CUE-2` `parallel:none`
 
-- [x] HIGHLIGHT-1 Fresh language connection and bounded highlight retry; native NSTextStorage recovery and stale-document regressions passed `depends:none` `parallel:none`
-- [x] HIGHLIGHT-INT Release build passed; Trance.swift in Deck B visibly colors keywords, comments, types and strings `depends:HIGHLIGHT-1` `parallel:none`
-
 - [x] INERTIA-1 Sample-clock decay, paused PCM/output release and return to playback verified by native tests `depends:none` `parallel:none`
 - [x] INERTIA-2 Wave release/coast/recontact/cancel callbacks verified; existing two/three-finger and axis checks passed `depends:INERTIA-1` `parallel:none`
 - [x] SPECTRUM-READABILITY Removed compounded transparency; selected deck tint and EQ remain readable during native playback `depends:none` `parallel:none`
 - [x] INERTIA-INT Six focused tests passed (0.301 s), Release built and updated app launched with zero playback errors; physical trackpad inertia feel remains unverified `depends:INERTIA-1,INERTIA-2,SPECTRUM-READABILITY` `parallel:none`
+
+- [x] HIGHLIGHT-1 Fresh language connection and bounded highlight retry; native NSTextStorage recovery and stale-document regressions passed `depends:none` `parallel:none`
+- [x] HIGHLIGHT-INT Release build passed; Trance.swift in Deck B visibly colors keywords, comments, types and strings `depends:HIGHLIGHT-1` `parallel:none`
 
 - [x] PALETTE-1 Restore 12-swatch deck palette and compressor tint; native Cyan selection and Magenta restoration verified `depends:none` `parallel:none`
 - [x] PALETTE-INT Release build and native palette/settings verification passed; paused compressor tint verified; live waveform check interrupted by app closure `depends:PALETTE-1` `parallel:none`
@@ -194,3 +195,6 @@
 
 - [x] REST-EDGE-1 Preserve resting touch begins so a bottom contact can move while another edge remains active `depends:none` `parallel:none`
 - [x] REST-EDGE-INT Native event regression failed before fix and passed after; four edge tests and release build passed; LiveSet0911 reopened for physical trial `depends:REST-EDGE-1` `parallel:none`
+
+- [x] RELEASE-030-1 Review and commit current production changes and 0.3.0 preview metadata; retain local trial projects outside release `depends:none` `parallel:none`
+- [ ] RELEASE-030-INT Verify deck/audio/editor/template tests and packaged app, push main, publish source preview tag and verify remote identities `depends:RELEASE-030-1` `parallel:none`

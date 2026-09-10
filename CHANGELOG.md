@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.3.0 — Preview — 2026-09-11
+
+Source release using SwiftMusic 0.5.0.
+
+- Independent A/B decks, shared source documents, separate tabs and evaluation workers, TAP/Sync, and a central equal-power crossfader.
+- Two generated musical starters, per-deck EQ/Gain and Filter/Space controls, selectable deck palettes, and shared 3D vectorscope trails.
+- Bidirectional Wave scratching while playing or paused, inertial release, and a centered scrolling waveform.
+- Selectable main/headphone outputs and independent deck CUE.
+- Play Mode with independent left/right 18% scratch regions and a bottom 20% crossfader region at 3x sensitivity. Resting touch starts remain tracked so subsequent motion can operate alongside another edge.
+- Space toggles both decks; standalone left/right Command and Option taps control deck transport and headphone CUE. Escape restores the cursor.
+- Compact tabs with cross-deck loading and file dragging, editor viewport clipping, queued-play cancellation, semantic-service recovery, and more readable controls and monitor colors.
+
+Validation: 26 focused tests passed, covering generated SwiftPM projects, independent evaluation workers, shared document editing, native deck mixing/Sync/CUE, scratch inertia, transport keys and edge contact routing.
+
+This remains a source preview requiring Swift 6.4 and Xcode command-line tools. No notarized binary is provided. Physical multi-contact trackpad behavior is not fully verified: the resting-contact fix passes a native-event regression, but still needs hardware confirmation. Earlier broad editor tests reported string/comment highlighting and restored horizontal-scroll failures; these remain known issues outside this release's focused validation.
+
 ## 0.2.0 — Preview — 2026-09-10
 
 Source release using SwiftMusic 0.5.0.

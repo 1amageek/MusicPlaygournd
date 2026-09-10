@@ -188,3 +188,6 @@
 
 - [x] EDGE-SIM-1 Remove whole-pad two-finger capture and restore independent concurrent edges, retaining widths and sensitivity `depends:none` `parallel:none`
 - [x] EDGE-SIM-INT Three edge tests and release build passed; updated app launched for physical simultaneous-control trial `depends:EDGE-SIM-1` `parallel:none`
+
+- [x] BOTTOM-20-1 Expand bottom crossfade band to 20 percent, preserving side widths and concurrent routing `depends:none` `parallel:none`
+- [x] BOTTOM-20-INT Three edge tests and release build passed; updated app launched `depends:BOTTOM-20-1` `parallel:none`

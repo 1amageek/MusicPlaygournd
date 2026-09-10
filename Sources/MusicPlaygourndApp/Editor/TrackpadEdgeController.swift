@@ -34,7 +34,7 @@ final class TrackpadEdgeController {
     static func region(at point: NSPoint) -> Region? {
         guard point.x.isFinite, point.y.isFinite,
               (0...1).contains(point.x), (0...1).contains(point.y) else { return nil }
-        if point.y <= 0.12 { return .crossfade }
+        if point.y <= 0.20 { return .crossfade }
         if point.x <= 0.18 { return .a }
         if point.x >= 0.82 { return .b }
         return nil

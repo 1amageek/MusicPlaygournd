@@ -7,6 +7,43 @@ extension NativeHostTests {
     @MainActor
     struct MasterEqualizerTests {
         @Test(.timeLimit(.minutes(1)))
+        func bipolarDJFilterChangesNativePCMAndResets() async throws {
+            let sound = try SoundCompiler().compile(Synthesizer(.sine).notes("C4 C4 C4 C4"))
+            let loop = try LoopRenderer().render(sound, bpm: 120, beatsPerBar: 4)
+            let engine = try AudioLoopEngine()
+            defer { engine.stop() }
+            engine.beginUpdate(revision: 1)
+            try engine.submit(loop: loop, revision: 1)
+            try engine.prepareOfflineRenderingForTests()
+            try engine.play()
+            func energy() async throws -> Double {
+                try await Task.sleep(for: .milliseconds(60))
+                var result = 0.0
+                for _ in 0..<6 {
+                    result = try engine.renderOfflineForTests(frameCount: 2_048).reduce(0) { $0 + Double($1 * $1) }
+                }
+                return result
+            }
+            let dry = try await energy()
+            try engine.setDJFilter(-1)
+            let low = try await energy()
+            try engine.setDJFilter(1)
+            let high = try await energy()
+            try engine.setDJFilter(0)
+            let reset = try await energy()
+            #expect(dry > 0 && low < dry * 0.01 && high < dry * 0.01)
+            #expect(abs(reset / dry - 1) < 0.1)
+            #expect(try engine.equalizerResponses().count == 3)
+            #expect(throws: PlaybackError.invalidDJFilter(2)) { try engine.setDJFilter(2) }
+            #expect(engine.masterParametersForTests.lowPass == nil)
+            try engine.setDelayTime(seconds: 60 / 140)
+            #expect(abs(engine.delayTimeForTests - 60 / 140) < 0.001)
+            #expect(throws: PlaybackError.invalidDelayTime(3)) { try engine.setDelayTime(seconds: 3) }
+            #expect(abs(engine.delayTimeForTests - 60 / 140) < 0.001)
+            #expect(engine.snapshot().isPlaying && engine.snapshot().revision == 1)
+        }
+
+        @Test(.timeLimit(.minutes(1)))
         func liveBandCutsNativePCMAndRejectsInvalidValues() async throws {
             let sound = try SoundCompiler().compile(Synthesizer(.sine).notes("C4 C4 C4 C4"))
             let loop = try LoopRenderer().render(sound, bpm: 120, beatsPerBar: 4)

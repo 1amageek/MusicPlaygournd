@@ -21,6 +21,8 @@ public enum PlaybackError: Error, Sendable, Equatable, CustomStringConvertible, 
     case invalidMasterBalance(Float)
     case equalizerResponseFailed(Int32)
     case invalidCompressorSettings
+    case invalidDJFilter(Float)
+    case invalidDelayTime(Double)
     case invalidEqualizerBand
     case invalidDelayMix(Float)
     case invalidReverbMix(Float)
@@ -46,6 +48,8 @@ public enum PlaybackError: Error, Sendable, Equatable, CustomStringConvertible, 
         case .invalidMasterBalance(let value): "Master balance \(value) is outside -1...1"
         case .equalizerResponseFailed(let status): "Cannot read native EQ response: \(status)"
         case .invalidCompressorSettings: "Compressor requires threshold -60...0 dB, ratio 1...20, attack 0.1...200 ms and release 10...2000 ms"
+        case .invalidDJFilter(let value): "DJ filter \(value) is outside -1...1"
+        case .invalidDelayTime(let value): "Delay time \(value) is outside 0.01...2 seconds"
         case .invalidEqualizerBand: "EQ requires band 0...2, frequency 20...20000 Hz and gain -12...12 dB and Q 0.2...20"
         case .invalidDelayMix(let mix): "Delay mix \(mix) is outside 0...1"
         case .invalidReverbMix(let mix): "Reverb mix \(mix) is outside 0...1"

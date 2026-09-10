@@ -8,6 +8,7 @@ internal final class MasterParameterSmoother {
         case volume
         case balance
         case rate
+        case highPass
         case lowPass
         case delay
         case reverb

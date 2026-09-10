@@ -60,7 +60,7 @@ public final class AudioLoopEngine: AudioUnitHosting, MasterRecording {
         let transport = AudioTransport()
         let timePitch = AVAudioUnitTimePitch()
         let balanceMixer = AVAudioMixerNode()
-        let equalizer = AVAudioUnitEQ(numberOfBands: 4)
+        let equalizer = AVAudioUnitEQ(numberOfBands: 5)
         let delay = AVAudioUnitDelay()
         let reverb = AVAudioUnitReverb()
         let meterStore = output.meterStore
@@ -77,6 +77,9 @@ public final class AudioLoopEngine: AudioUnitHosting, MasterRecording {
             band.bandwidth = 1
             band.bypass = false
         }
+        equalizer.bands[4].filterType = .highPass
+        equalizer.bands[4].frequency = 20
+        equalizer.bands[4].bypass = true
         timePitch.rate = 1
         delay.delayTime = 0.25
         delay.feedback = 30
@@ -371,6 +374,26 @@ public final class AudioLoopEngine: AudioUnitHosting, MasterRecording {
         }
     }
 
+    public func setDJFilter(_ value: Float) throws {
+        guard value.isFinite, (-1...1).contains(value) else { throw PlaybackError.invalidDJFilter(value) }
+        try setLowPass(cutoff: value < 0 ? 20_000 * pow(1_000, value) : nil)
+        let filter = equalizer.bands[4]
+        let disabling = value <= 0
+        if !disabling, filter.bypass { filter.frequency = 20; filter.bypass = false }
+        parameterSmoother.set(.highPass, from: filter.frequency, to: disabling ? 20 : 20 * pow(1_000, value),
+                              immediate: !transport.snapshot().isPlaying) { frequency, final in
+            filter.frequency = frequency
+            filter.bypass = disabling && final
+        }
+    }
+
+    public func setDelayTime(seconds: Double) throws {
+        guard seconds.isFinite, (0.01...2).contains(seconds) else { throw PlaybackError.invalidDelayTime(seconds) }
+        delay.delayTime = seconds
+    }
+
+    internal var delayTimeForTests: Double { delay.delayTime }
+
     public func setEqualizerBand(_ index: Int, value: MasterEqualizerBand) throws {
         guard equalizerBands.indices.contains(index), value.frequency.isFinite,
               (20...20_000).contains(value.frequency), value.gain.isFinite,
@@ -392,7 +415,7 @@ public final class AudioLoopEngine: AudioUnitHosting, MasterRecording {
 
     public func equalizerResponses() throws -> [MasterEqualizerResponse] {
         if !equalizer.auAudioUnit.renderResourcesAllocated { audioEngine.prepare() }
-        var coefficients = [Double](repeating: 0, count: 20)
+        var coefficients = [Double](repeating: 0, count: 25)
         var size = UInt32(coefficients.count * MemoryLayout<Double>.stride)
         // The native call borrows this owned, contiguous buffer synchronously and does not retain it.
         let status = coefficients.withUnsafeMutableBytes { bytes in
@@ -400,7 +423,7 @@ public final class AudioLoopEngine: AudioUnitHosting, MasterRecording {
                                  kAudioUnitScope_Global, 0, bytes.baseAddress!, &size)
         }
         guard status == noErr else { throw PlaybackError.equalizerResponseFailed(status) }
-        guard size == 20 * MemoryLayout<Double>.stride, coefficients.allSatisfy({ $0.isFinite }) else {
+        guard size == 25 * MemoryLayout<Double>.stride, coefficients.allSatisfy({ $0.isFinite }) else {
             throw PlaybackError.equalizerResponseFailed(kAudioUnitErr_InvalidPropertyValue)
         }
         return (1...3).map { index in

@@ -167,3 +167,6 @@
 
 - [x] EDGE-1 Add explicit edge mode with contact-locked routing, cursor capture and Esc/focus-loss teardown; preserve regular gestures outside mode `depends:none` `parallel:none`
 - [x] EDGE-INT Six tests and release build passed; user verified cursor capture/Esc restoration; TranceSet opened for physical edge trial `depends:EDGE-1` `parallel:none`
+
+- [x] EDITOR-CLIP-1 Confine native editor drawing to its viewport while retaining document scrolling and header/tab/log layout `depends:none` `parallel:none`
+- [x] EDITOR-CLIP-INT Two native tests and release build passed; app scroll down/up preserves header, tabs, EDGE and logs `depends:EDITOR-CLIP-1` `parallel:none`

@@ -6,6 +6,41 @@ import Testing
 extension NativeHostTests {
     @MainActor
     struct EditorTabsIntegrationTests {
+        @Test(.timeLimit(.minutes(1)))
+        func longDocumentDrawingStaysInsideViewport() async throws {
+            let root = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+            try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false)
+            defer { do { try FileManager.default.removeItem(at: root) } catch { Issue.record(error) } }
+            let file = root.appending(path: "Long.swift")
+            try (0..<200).map { "// Line \($0)" }.joined(separator: "\n").write(to: file, atomically: true, encoding: .utf8)
+            let model = SessionModel(audioEnabled: false)
+            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1160, height: 760),
+                styleMask: [.titled], backing: .buffered, defer: false)
+            let hosting = NSHostingView(rootView: ContentView(model: model))
+            window.contentView = hosting
+            do {
+                try model.openDocument(at: file)
+                try await settle(hosting)
+                let editor = try #require(findEditor(hosting))
+                let scroll = try #require(editor.enclosingScrollView)
+                let clip = scroll.contentView
+                clip.scroll(to: NSPoint(x: 0, y: 500))
+                scroll.reflectScrolledClipView(clip)
+                try await settle(hosting)
+                let visible = editor.convert(editor.visibleRect, to: clip)
+                #expect(clip.bounds.insetBy(dx: -1, dy: -1).contains(visible), "Visible document \(visible) escaped viewport \(clip.bounds)")
+                #expect(editor.frame.height > clip.bounds.height)
+                #expect(clip.bounds.minY >= 499)
+                #expect(scroll.convert(scroll.bounds, to: hosting).height < hosting.bounds.height)
+                window.contentView = nil
+                try await model.shutdown()
+            } catch {
+                window.contentView = nil
+                try await model.shutdown()
+                throw error
+            }
+        }
+
         @Test(.timeLimit(.minutes(2)))
         func productionEditorKeepsTwoDirtyTabsAndTheirUndo() async throws {
             let root = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)

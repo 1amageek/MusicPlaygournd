@@ -63,6 +63,8 @@ struct CodeEditor: NSViewRepresentable {
 
     func makeNSView(context: Context) -> NSScrollView {
         let scroll = NSScrollView()
+        scroll.clipsToBounds = true
+        scroll.contentView.clipsToBounds = true
         scroll.hasVerticalScroller = true
         scroll.hasHorizontalScroller = true
         scroll.autohidesScrollers = true

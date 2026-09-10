@@ -7,6 +7,7 @@ struct ContentView: View {
     @State private var lineRects: [Int: CGRect] = [:]
     @State private var timelineScroll: CGFloat = 0
     @State private var logsExpanded = false
+    @State private var playMode = false
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
 
     var body: some View {
@@ -49,6 +50,9 @@ struct ContentView: View {
         .preferredColorScheme(.dark)
         .frame(minWidth: 850, minHeight: 540)
         .background(WorkspaceWindowSizeView())
+        .background {
+            if let deckWorkspace { TrackpadEdgeView(enabled: $playMode, workspace: deckWorkspace) }
+        }
         .task {
             while !Task.isCancelled {
                 if let deckWorkspace { deckWorkspace.refresh() } else { model.refresh() }
@@ -211,6 +215,21 @@ struct ContentView: View {
                 Text(diagnosticCountLabel)
                     .font(.system(size: 10, design: .monospaced))
                     .foregroundStyle(diagnosticCount == 0 ? Color.secondary : Color.orange)
+                    .padding(.trailing, deckWorkspace == nil ? 0 : 96)
+            }
+        }
+        .overlay(alignment: .topTrailing) {
+            if deckWorkspace != nil {
+                Button { playMode.toggle() } label: {
+                    Text("Play Mode").font(.system(size: 11, weight: .medium))
+                        .padding(.horizontal, 9).frame(height: 20)
+                        .background(playMode ? Color.orange : Color.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 4))
+                        .foregroundStyle(playMode ? .black : .primary)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Play Mode")
+                .accessibilityValue(playMode ? "On. Press Escape to exit." : "Off")
+                .help("Play Mode: left edge A, right edge B, bottom crossfader. Escape exits.")
             }
         }
         .padding(.horizontal, 18)

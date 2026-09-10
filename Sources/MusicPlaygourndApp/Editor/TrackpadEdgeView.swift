@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
 
-/// Keeps edge-mode capture tied to the header's native view lifetime.
+/// Keeps edge-mode capture tied to the workspace's native view lifetime.
 struct TrackpadEdgeView: NSViewRepresentable {
     @Binding var enabled: Bool
     let workspace: DeckWorkspace

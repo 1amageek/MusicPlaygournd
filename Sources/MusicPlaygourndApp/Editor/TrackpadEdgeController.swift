@@ -82,7 +82,7 @@ final class TrackpadEdgeController {
         guard !active else { return }
         guard Self.owner == nil, NSApp.isActive, window.isKeyWindow,
               let content = window.contentView else {
-            onError?("Edge mode requires the active project window (app active: \(NSApp.isActive), window key: \(window.isKeyWindow), existing capture: \(Self.owner != nil)).")
+            onError?("Play Mode requires the active project window (app active: \(NSApp.isActive), window key: \(window.isKeyWindow), existing capture: \(Self.owner != nil)).")
             onModeChange?(false)
             return
         }

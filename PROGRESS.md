@@ -170,3 +170,6 @@
 
 - [x] EDITOR-CLIP-1 Confine native editor drawing to its viewport while retaining document scrolling and header/tab/log layout `depends:none` `parallel:none`
 - [x] EDITOR-CLIP-INT Two native tests and release build passed; app scroll down/up preserves header, tabs, EDGE and logs `depends:EDITOR-CLIP-1` `parallel:none`
+
+- [x] PLAY-MODE-1 Rename the control and move it to the log bar; keep capture lifecycle owned by the workspace view `depends:none` `parallel:none`
+- [x] PLAY-MODE-INT Release build passed; native screenshots verify log bar placement in collapsed/expanded states and removal of the center button `depends:PLAY-MODE-1` `parallel:none`

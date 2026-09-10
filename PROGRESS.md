@@ -176,3 +176,6 @@
 
 - [x] PLAY-KEY-1 Route Space to combined transport and standalone left/right Command/Option taps to deck transport/CUE in Play Mode; preserve typing and shortcuts `depends:none` `parallel:none`
 - [x] PLAY-KEY-INT Three focused tests and release build passed; native Space starts and pauses both decks; unrelated color/scroll suite failures remain outside scope `depends:PLAY-KEY-1` `parallel:none`
+
+- [x] FADE-SENS-1 Increase bottom-edge crossfade sensitivity threefold with relative motion and no touch-down jump `depends:none` `parallel:none`
+- [x] FADE-SENS-INT Three native edge tests and release build passed; physical sensitivity remains for user trial `depends:FADE-SENS-1` `parallel:none`

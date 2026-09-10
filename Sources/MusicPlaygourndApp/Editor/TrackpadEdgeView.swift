@@ -11,7 +11,7 @@ struct TrackpadEdgeView: NSViewRepresentable {
     func updateNSView(_ view: CaptureView, context: Context) {
         view.controller.onModeChange = { enabled = $0 }
         view.controller.onError = { workspace.active.hostDiagnostic = $0 }
-        view.controller.onCrossfade = { workspace.crossfade = $0 }
+        view.controller.onCrossfadeDelta = { workspace.crossfade = min(1, max(0, workspace.crossfade + $0)) }
         view.controller.onScratch = { region, distance, duration in
             (region == .a ? workspace.a : workspace.b).scratch(distance: distance, duration: duration)
         }

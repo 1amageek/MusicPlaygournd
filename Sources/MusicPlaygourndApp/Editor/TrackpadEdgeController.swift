@@ -13,12 +13,13 @@ final class TrackpadEdgeController {
         var moved = false
     }
 
+    private static let crossfadeSensitivity = 3.0
     private static var owner: TrackpadEdgeController?
     static var isActive: Bool { owner != nil }
     private(set) var active = false
     var onModeChange: ((Bool) -> Void)?
     var onError: ((String) -> Void)?
-    var onCrossfade: ((Double) -> Void)?
+    var onCrossfadeDelta: ((Double) -> Void)?
     var onScratch: ((Region, Double, Double) -> Void)?
     var onRelease: ((Region) -> Void)?
     var onCancel: (() -> Void)?
@@ -44,8 +45,7 @@ final class TrackpadEdgeController {
               let region = Self.region(at: point),
               !contacts.contains(where: { $0.region == region }) else { return }
         contacts.append(Contact(identity: identity, region: region, point: point, timestamp: timestamp))
-        if region == .crossfade { onCrossfade?(Double(point.x)) }
-        else { onStopScratch?(region) }
+        if region != .crossfade { onStopScratch?(region) }
     }
 
     func move(identity: any NSObjectProtocol, point: NSPoint, deviceHeight: Double, timestamp: Double) {
@@ -56,7 +56,7 @@ final class TrackpadEdgeController {
         contacts[index].point = point
         contacts[index].timestamp = timestamp
         if old.region == .crossfade {
-            onCrossfade?(min(1, max(0, Double(point.x))))
+            onCrossfadeDelta?(Double(point.x - old.point.x) * Self.crossfadeSensitivity)
         } else {
             let distance = Double(point.y - old.point.y) * deviceHeight
             contacts[index].moved = true

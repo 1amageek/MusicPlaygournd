@@ -13,7 +13,7 @@ extension NativeHostTests {
             var released: [TrackpadEdgeController.Region] = []
             var stopped: [TrackpadEdgeController.Region] = []
             var cancelled = 0
-            controller.onCrossfade = { fades.append($0) }
+            controller.onCrossfadeDelta = { fades.append($0) }
             controller.onScratch = { scratch.append(($0, $1)); #expect($2 > 0 && $2 <= 0.25) }
             controller.onRelease = { released.append($0) }
             controller.onStopScratch = { stopped.append($0) }
@@ -33,7 +33,7 @@ extension NativeHostTests {
             controller.move(identity: a, point: NSPoint(x: 0.95, y: 0.6), deviceHeight: 100, timestamp: 1.1)
             controller.move(identity: b, point: NSPoint(x: 0.05, y: 0.4), deviceHeight: 100, timestamp: 1.1)
             controller.move(identity: f, point: NSPoint(x: 0.8, y: 0.5), deviceHeight: 100, timestamp: 1.1)
-            #expect(fades == [0.2, 0.8])
+            #expect(fades.count == 1 && abs(fades[0] - 1.8) < 0.0001)
             #expect(scratch.count == 2)
             #expect(scratch[0].0 == .a && abs(scratch[0].1 - 10) < 0.0001)
             #expect(scratch[1].0 == .b && abs(scratch[1].1 + 10) < 0.0001)
@@ -43,7 +43,7 @@ extension NativeHostTests {
             #expect(stopped == [.a, .b, .b])
             controller.cancelContacts()
             controller.move(identity: f, point: .zero, deviceHeight: 100, timestamp: 2)
-            #expect(fades.count == 2 && cancelled == 1)
+            #expect(fades.count == 1 && cancelled == 1)
 
             controller.begin(identity: a, point: NSPoint(x: 0, y: 0.5), timestamp: 3)
             controller.begin(identity: b, point: NSPoint(x: 0, y: 0.6), timestamp: 3)
@@ -53,6 +53,26 @@ extension NativeHostTests {
             controller.end(identity: a, timestamp: 4, cancelled: false)
             #expect(released == [.a])
             #expect(stopped.last == .a)
+        }
+
+        @Test(.timeLimit(.minutes(1)))
+        func crossfadeUsesFastRelativeMotionWithoutTouchDownJumps() {
+            let controller = TrackpadEdgeController()
+            var deltas: [Double] = []
+            controller.onCrossfadeDelta = { deltas.append($0) }
+            let finger = NSNumber(value: 1)
+            controller.begin(identity: finger, point: NSPoint(x: 0.1, y: 0.05), timestamp: 1)
+            #expect(deltas.isEmpty)
+            controller.move(identity: finger, point: NSPoint(x: 0.2, y: 0.05), deviceHeight: 100, timestamp: 1.1)
+            controller.move(identity: finger, point: NSPoint(x: 0.1, y: 0.05), deviceHeight: 100, timestamp: 1.2)
+            #expect(deltas.count == 2)
+            #expect(abs(deltas[0] - 0.3) < 0.0001)
+            #expect(abs(deltas[1] + 0.3) < 0.0001)
+            controller.end(identity: finger, timestamp: 1.3, cancelled: false)
+            controller.begin(identity: finger, point: NSPoint(x: 0.8, y: 0.05), timestamp: 2)
+            #expect(deltas.count == 2)
+            controller.move(identity: finger, point: NSPoint(x: 0.7, y: 0.05), deviceHeight: 100, timestamp: 2.1)
+            #expect(abs(deltas[2] + 0.3) < 0.0001)
         }
 
         @Test(.timeLimit(.minutes(1)))

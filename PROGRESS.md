@@ -127,4 +127,4 @@
 
 - [x] SCRATCH-1 Signed PCM scratch preserves play/pause intent; native paused output, release and other-deck isolation passed `depends:none` `parallel:none`
 - [x] SCRATCH-2 Wave routes timed motion and cleanup to scratch; gesture duration, release and window deactivation tests passed `depends:SCRATCH-1` `parallel:none`
-- [ ] SCRATCH-INT Native output and 18 regression tests passed; Release integration pending `depends:SCRATCH-1,SCRATCH-2` `parallel:none`
+- [x] SCRATCH-INT Native paused scratch and 18 regression tests passed; Release built (67.26 s), TranceSet reopened paused with scratch help and zero errors; physical touch delivery not automated `depends:SCRATCH-1,SCRATCH-2` `parallel:none`

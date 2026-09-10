@@ -147,3 +147,6 @@
 - [x] CUE-1 Independent cue and main/headphone routing (145b097); native PCM, volume, live device switching and private-device filtering verified (3 tests, 1.050 s) `depends:none` `parallel:none`
 - [x] CUE-2 Rounded TAP/SYNC/CUE buttons and shared Audio settings verified in the Release app; main device switch/restore and unconfigured cue popover exercised `depends:CUE-1` `parallel:none`
 - [x] CUE-INT Release build and native UI passed; main/cue PCM separation and output switching verified; physical headphone listening unavailable because headphones are disconnected `depends:CUE-1,CUE-2` `parallel:none`
+
+- [x] HIGHLIGHT-1 Fresh language connection and bounded highlight retry; native NSTextStorage recovery and stale-document regressions passed `depends:none` `parallel:none`
+- [x] HIGHLIGHT-INT Release build passed; Trance.swift in Deck B visibly colors keywords, comments, types and strings `depends:HIGHLIGHT-1` `parallel:none`

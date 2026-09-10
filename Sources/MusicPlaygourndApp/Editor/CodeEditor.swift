@@ -629,7 +629,23 @@ struct CodeEditor: NSViewRepresentable {
             highlightTask = Task { @MainActor [weak self, weak editor] in
                 do {
                     try await Task.sleep(for: .milliseconds(180))
-                    let tokens = try await request(source)
+                    var tokens: [SwiftSemanticToken] = []
+                    for attempt in 0..<2 {
+                        do {
+                            tokens = try await request(source)
+                            break
+                        } catch let error as SwiftCompletionError {
+                            let transient: Bool
+                            switch error {
+                            case .timedOut, .processExited, .processFailed: transient = true
+                            default: transient = false
+                            }
+                            guard attempt == 0, transient else { throw error }
+                            try Task.checkCancellation()
+                            self?.parent.onHighlightStatus("Reconnecting syntax highlighting…")
+                            try await Task.sleep(for: .milliseconds(500))
+                        }
+                    }
                     try Task.checkCancellation()
                     guard let self, let editor, generation == self.highlightGeneration,
                           self.documentID == identity, self.parent.syntaxContext == context,

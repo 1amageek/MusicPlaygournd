@@ -325,3 +325,5 @@ DeckWorkspace owns UI cue selection and accepted mix/level/device state, calling
 The app Settings scene receives the existing DeckWorkspace. Its Audio tab exposes main output selection and reuses CueSettingsView for headphone routing/mix/level. It does not create another graph or store independent audio settings.
 
 Transport TAP/SYNC/headphone actions use the approved dark rounded button surfaces with 10-point semibold labels and a 13-point headphone icon. Their 25-point controls remain inside the existing 32-point row; selected cue uses the deck tint. Verify legibility and fit at the standard window size without increasing header height.
+
+Semantic coloring retries one transient SourceKit-LSP timeout/process failure after a 500 ms delay, displaying recovery status. A second failure remains a diagnostic; cancellation, document identity, source and syntax-context guards still reject stale results. Verify actual NSTextStorage colors after first-request failure and document changes during recovery.

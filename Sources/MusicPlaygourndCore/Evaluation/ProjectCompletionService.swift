@@ -4,7 +4,8 @@ import Foundation
 public actor ProjectCompletionService {
     private let root: URL
     private let hostModuleDirectory: URL?
-    private let connection: SwiftCompletionConnection
+    private var connection: SwiftCompletionConnection
+    private let executable: String
     private var started = false
     private var busy = false
     private var closed = false
@@ -12,6 +13,7 @@ public actor ProjectCompletionService {
     private var opened: Set<URL> = []
 
     init(root: URL, executable: String, hostModuleDirectory: URL? = nil) {
+        self.executable = executable
         self.hostModuleDirectory = hostModuleDirectory
         self.root = root
         connection = SwiftCompletionConnection(executable: executable, workspace: root)
@@ -77,7 +79,9 @@ public actor ProjectCompletionService {
                 try await connection.configureSemanticTokens(initialization)
                 started = true
             } catch {
-                try await connection.shutdown()
+                let failed = connection
+                connection = SwiftCompletionConnection(executable: executable, workspace: root)
+                try await failed.shutdown()
                 throw error
             }
         }

@@ -146,3 +146,5 @@ Project evaluation accepts an explicit source entry within the selected target a
 
 ### Music entry discovery
 SourceEvaluator discovers concrete top-level Music conformances in the selected source using the typechecked Swift AST and the same compiler/SDK as playback. Project siblings and unsaved buffers are included; host and cached dependency module search paths are reused. Discovery uses a separate temporary workspace, a 20-second compiler timeout and explicit failures. It does not replace a retained worker or publish audio. The editor rejects results if the selected source changed while discovery ran. Compiler conformance evidence, rather than source spelling or type-name guesses, owns the entry list.
+
+ProjectCompletionService replaces a failed initialization connection with a fresh owner after shutdown. Old process/reader callbacks cannot affect the replacement. Initialization failure remains visible to the caller, which may retry; source, file and buffer validation are unchanged.

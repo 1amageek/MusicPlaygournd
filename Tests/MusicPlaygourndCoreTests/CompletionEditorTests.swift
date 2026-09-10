@@ -384,6 +384,34 @@ extension NativeHostTests {
         }
 
         @Test(.timeLimit(.minutes(1)))
+        func highlightingRecoversFromTransientStartupFailure() async throws {
+            let source = "struct Trance {}"
+            let editor = CompletionTextView(frame: NSRect(x: 0, y: 0, width: 500, height: 200))
+            editor.string = source
+            var attempts = 0
+            var recovered = false
+            let view = CodeEditor(text: .constant(source), inlineLoop: nil, inlineEnabled: false,
+                resultLines: [:], beatPosition: 0, isPlaying: false, selectionLine: nil, selectionToken: 0,
+                rhythmLines: [], rowLines: [:], patternTexts: [:], activeTokens: [:], scrollDelta: 0,
+                onLayout: { _ in }, beforeEdit: { _, _ in }, onEdit: {}, completions: { _, _ in [] },
+                onCompletionStatus: { _ in }, semanticTokens: { _ in
+                    attempts += 1
+                    if attempts == 1 { throw SwiftCompletionError.timedOut("initialize") }
+                    return [SwiftSemanticToken(range: NSRange(location: 0, length: 6), kind: "keyword")]
+                }, onHighlightStatus: { recovered = $0.isEmpty })
+            let coordinator = view.makeCoordinator()
+            coordinator.installDocument(UUID(), editor: editor, state: EditorDocumentState())
+            coordinator.highlight(editor)
+            let deadline = ContinuousClock.now + .seconds(3)
+            while !recovered, ContinuousClock.now < deadline { try await Task.sleep(for: .milliseconds(10)) }
+            #expect(attempts == 2 && recovered)
+            let theme = EditorTheme(rawValue: UserDefaults.standard.string(forKey: "editor.theme") ?? "") ?? .midnight
+            #expect(editor.textStorage?.attribute(.foregroundColor, at: 0, effectiveRange: nil) as? NSColor == theme.palette.keyword)
+            #expect(editor.string == source)
+            coordinator.cancelHighlight()
+        }
+
+        @Test(.timeLimit(.minutes(1)))
         func semanticColorsPreserveEditingAndRejectStaleDocuments() async throws {
             var source = "struct Old {}"
             let editor = CompletionTextView(frame: NSRect(x: 0, y: 0, width: 500, height: 300))

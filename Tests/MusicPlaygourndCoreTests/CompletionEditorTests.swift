@@ -7,6 +7,24 @@ import Testing
 extension NativeHostTests {
     @MainActor
     struct CompletionEditorTests {
+        @Test
+        func vectorscopeTrailFadesByAudioAge() throws {
+            #expect(VectorscopeView.trailOpacity(framesAgo: 0, sampleRate: 44_100) == 1)
+            #expect(abs(VectorscopeView.trailOpacity(framesAgo: 3_087, sampleRate: 44_100) - 0.25) < 0.00001)
+            #expect(abs(VectorscopeView.trailOpacity(framesAgo: 3_360, sampleRate: 48_000) - 0.25) < 0.00001)
+            #expect(VectorscopeView.trailOpacity(framesAgo: 8_192, sampleRate: 44_100) < 0.03)
+            #expect(VectorscopeView.trailOpacity(framesAgo: 1, sampleRate: 0) == 0)
+            let size = CGSize(width: 400, height: 300)
+            let near = try #require(VectorscopeView.project(CGPoint(x: 0.1, y: -0.3), age: 0, size: size))
+            let far = try #require(VectorscopeView.project(CGPoint(x: 0.1, y: -0.3), age: 0.15, size: size))
+            #expect(far.depth < near.depth)
+            #expect(far.point != near.point)
+            let nearOrigin = try #require(VectorscopeView.project(.zero, age: 0, size: size))
+            let farOrigin = try #require(VectorscopeView.project(.zero, age: 0.15, size: size))
+            #expect(abs(far.point.x - farOrigin.point.x) < abs(near.point.x - nearOrigin.point.x))
+            #expect(VectorscopeView.project(.zero, age: .nan, size: size) == nil)
+        }
+
         @Test(.timeLimit(.minutes(1)))
         func scratchGestureReportsTimingAndEndsOnLifecycleChanges() {
             let gesture = MultiFingerGestureRecognizer()

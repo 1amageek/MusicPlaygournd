@@ -1,12 +1,15 @@
 import SwiftUI
 
-/// A stereo balance and reverb surface over the unmodified Mid/Side trace.
+/// A stereo balance and reverb surface over stereo signal traces.
 struct VectorscopeControlView: View {
   let samples: [Float]
   let balance: Float
   let space: Double
   let onBalanceChange: (Float) -> Void
   let onSpaceChange: (Double) -> Void
+  var samplesB: [Float]?
+  var colorA: Color = .mint
+  var colorB: Color = .purple
 
   var body: some View {
     VStack(spacing: 0) {
@@ -14,7 +17,13 @@ struct VectorscopeControlView: View {
         let width = max(1, geometry.size.width - 32)
         let height = max(1, geometry.size.height - 32)
         ZStack {
-          VectorscopeView(samples: samples).allowsHitTesting(false)
+          Group {
+            if let samplesB {
+              DeckVectorscopeView(samplesA: samples, samplesB: samplesB, colorA: colorA, colorB: colorB)
+            } else {
+              VectorscopeView(samples: samples)
+            }
+          }.allowsHitTesting(false)
           Circle().fill(.cyan.opacity(0.3)).frame(width: 24, height: 24).blur(radius: 5)
             .position(x: 16 + Double(balance + 1) / 2 * width, y: 16 + (1 - space) * height)
             .allowsHitTesting(false)

@@ -4,6 +4,27 @@ import Testing
 
 extension NativeHostTests {
 struct SwiftCompletionConnectionTests {
+    @Test(.timeLimit(.minutes(1)))
+    func testIdleDeckDoesNotBlockOtherDeckInitialization() async throws {
+        let executable = try #require(try Self.resolveSourceKitLSP())
+        let a = SwiftCompletionConnection(executable: executable)
+        let b = SwiftCompletionConnection(executable: executable)
+        var failure: Error?
+        do {
+            let parameters = Data("{\"processId\":null,\"rootUri\":null,\"capabilities\":{}}".utf8)
+            try await a.start()
+            _ = try await a.request(method: "initialize", parameters: parameters, timeout: .seconds(5))
+            try await a.notify(method: "initialized", parameters: Data("{}".utf8))
+            try await Task.sleep(for: .milliseconds(100))
+            try await b.start()
+            let response = try await b.request(method: "initialize", parameters: parameters, timeout: .seconds(5))
+            #expect(!response.isEmpty)
+        } catch { failure = error }
+        try await a.shutdown()
+        try await b.shutdown()
+        if let failure { throw failure }
+    }
+
     @Test(.timeLimit(.minutes(3)))
     func testFrameParserHandlesSplitHeaderAndBody() throws {
         let body = Data(#"{"jsonrpc":"2.0","id":1,"result":[]}"#.utf8)

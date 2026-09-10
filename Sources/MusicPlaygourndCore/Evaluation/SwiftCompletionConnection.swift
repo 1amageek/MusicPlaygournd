@@ -49,9 +49,7 @@ actor SwiftCompletionConnection {
         process.standardInput = inputPair.child
         process.standardOutput = outputPipe
         process.standardError = FileHandle(forWritingAtPath: "/dev/null")
-        process.terminationHandler = { [weak self] process in
-            Task { await self?.processTerminated(status: process.terminationStatus) }
-        }
+        // Stdout EOF owns completion: process exit may precede reading its final response.
 
         do {
             try process.run()
@@ -67,16 +65,39 @@ actor SwiftCompletionConnection {
         shutdownRequested = false
 
         let output = outputPipe.fileHandleForReading
+        let descriptor = output.fileDescriptor
+        let flags = fcntl(descriptor, F_GETFL, 0)
+        guard flags >= 0, fcntl(descriptor, F_SETFL, flags | O_NONBLOCK) == 0 else {
+            throw SwiftCompletionError.processFailed("Could not configure nonblocking LSP stdout.")
+        }
         readerTask = Task { [weak self] in
             do {
                 var parser = SwiftCompletionFrameParser()
-                for try await byte in output.bytes {
-                    let frames = try parser.append(byte)
-                    for frame in frames {
-                        await self?.deliver(frame)
+                // This task owns the buffer; read borrows initialized storage only for
+                // the syscall. The handle remains owned by the connection until shutdown.
+                var buffer = [UInt8](repeating: 0, count: 64 * 1024)
+                while !Task.isCancelled {
+                    let count = buffer.withUnsafeMutableBytes { bytes in
+                        Darwin.read(descriptor, bytes.baseAddress!, bytes.count)
+                    }
+                    if count < 0 {
+                        if errno == EINTR { continue }
+                        if errno == EAGAIN || errno == EWOULDBLOCK {
+                            try await Task.sleep(for: .milliseconds(10))
+                            continue
+                        }
+                        throw SwiftCompletionError.processFailed("LSP stdout read failed: \(errno)")
+                    }
+                    if count == 0 { break }
+                    for byte in buffer.prefix(count) {
+                        for frame in try parser.append(byte) {
+                            await self?.deliver(frame)
+                        }
                     }
                 }
-                await self?.processTerminated(status: -1)
+                if !Task.isCancelled { await self?.processTerminated(status: -1) }
+            } catch is CancellationError {
+                // Shutdown owns pending request completion and descriptor closure.
             } catch {
                 await self?.fail(error)
             }
@@ -315,7 +336,6 @@ actor SwiftCompletionConnection {
     private func processTerminated(status: Int32) {
         guard !isClosed || !pending.isEmpty else { return }
         isClosed = true
-        process = nil
         let continuations = Array(pending.values)
         pending.removeAll(keepingCapacity: false)
         let error: Error = shutdownRequested

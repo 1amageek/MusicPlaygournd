@@ -158,3 +158,6 @@
 
 - [x] PALETTE-1 Restore 12-swatch deck palette and compressor tint; native Cyan selection and Magenta restoration verified `depends:none` `parallel:none`
 - [x] PALETTE-INT Release build and native palette/settings verification passed; paused compressor tint verified; live waveform check interrupted by app closure `depends:PALETTE-1` `parallel:none`
+
+- [x] DECK-COLOR-1 Independent nonblocking readers; two real language processes, bounded shutdown, cancellation, final response and native editor regressions passed (10 tests, 2.35 s) `depends:none` `parallel:none`
+- [x] DECK-COLOR-INT Release build passed (63.78 s); native TranceSet A/B/A switching retained keyword, comment, type and string colors with zero errors `depends:DECK-COLOR-1` `parallel:none`

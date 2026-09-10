@@ -36,6 +36,7 @@ struct MusicHeaderView: View {
                         .textFieldStyle(.plain).frame(width: 60)
                         .accessibilityLabel("Tempo in BPM").accessibilityIdentifier("tempo-field")
                 }
+                .background(TempoGestureView(onChange: { model.adjustTempo(by: $0) }))
                 VStack(alignment: .leading, spacing: 5) {
                     Text("TIME").fixedSize().font(.system(size: 8, weight: .medium, design: .monospaced)).tracking(1)
                         .foregroundStyle(.secondary)

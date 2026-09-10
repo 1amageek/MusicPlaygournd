@@ -91,3 +91,6 @@
 - [x] COLOR-1 Replace fixed-name coloring with SourceKit semantic tokens for project and standalone documents; preserve exact source/UTF-16 mapping, document isolation, completion serialization, cancellation and bounded lifecycle `depends:none` `parallel:none`
 - [x] COLOR-2 Apply token categories through all five themes without modifying characters, selection, undo or marked text; verify actual SourceKit output and native editor behavior `depends:COLOR-1` `parallel:none`
 - [x] COLOR-INT Release app and starter/Settings visually verified; real SourceKit, UTF-16, native editing and stale-response checks passed `depends:COLOR-1,COLOR-2` `parallel:none`
+
+- [x] TEMPO-1 Move gesture ownership to the BPM view; accept three-finger horizontal motion only inside its visible bounds, preserve native editing/scrolling and existing tempo deltas `depends:none` `parallel:none`
+- [x] TEMPO-INT Native region/lifecycle check passed; Release app built and FirstLight reopened; physical three-finger input requires manual confirmation `depends:TEMPO-1` `parallel:none`

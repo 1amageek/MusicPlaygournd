@@ -44,7 +44,6 @@ struct CodeEditor: NSViewRepresentable {
     var onSliderChange: (String, Double) -> Void = { _, _ in }
     var mutedTracks: [Int: Bool] = [:]
     var onToggleTrackMute: (Int) -> Void = { _ in }
-    var onTempoSwipe: (Double) -> Void = { _ in }
     var onFormat: (@MainActor (String) async throws -> String)? = nil
     var onFormatFailure: @MainActor (String) -> Void = { _ in }
     var selectionRange: NSRange? = nil
@@ -78,7 +77,6 @@ struct CodeEditor: NSViewRepresentable {
         editor.isAutomaticSpellingCorrectionEnabled = false
         editor.isContinuousSpellCheckingEnabled = false
         editor.isGrammarCheckingEnabled = false
-        editor.allowedTouchTypes = .indirect
         editor.isVerticallyResizable = false
         editor.isHorizontallyResizable = false
         editor.autoresizingMask = []
@@ -119,16 +117,12 @@ struct CodeEditor: NSViewRepresentable {
             guard let editor else { return }
             coordinator?.requestFormat(editor)
         }
-        editor.onTempoSwipe = { [weak coordinator = context.coordinator] delta in
-            coordinator?.parent.onTempoSwipe(delta)
-        }
         context.coordinator.highlight(editor)
         context.coordinator.publishLayout()
         return scroll
     }
 
     static func dismantleNSView(_ scroll: NSScrollView, coordinator: Coordinator) {
-        (scroll.documentView as? CompletionTextView)?.resetTempoSwipe()
         coordinator.cancelCompletion()
         coordinator.cancelFormat()
         coordinator.cancelHighlight()

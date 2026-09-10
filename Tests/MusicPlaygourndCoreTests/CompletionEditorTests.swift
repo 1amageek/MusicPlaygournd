@@ -8,6 +8,33 @@ extension NativeHostTests {
     @MainActor
     struct CompletionEditorTests {
         @Test(.timeLimit(.minutes(1)))
+        func tempoGestureIsLimitedToItsVisibleRegion() throws {
+            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 600, height: 400),
+                styleMask: [.titled], backing: .buffered, defer: false)
+            window.isReleasedWhenClosed = false
+            let content = try #require(window.contentView)
+            let originalTypes = content.allowedTouchTypes
+            let originalResting = content.wantsRestingTouches
+            let region = TempoGestureView.RegionView(frame: NSRect(x: 120, y: 320, width: 60, height: 40))
+            content.addSubview(region)
+            #expect(region.gesture.contains(NSPoint(x: 150, y: 340), in: window))
+            #expect(!region.gesture.contains(NSPoint(x: 119, y: 340), in: window))
+            #expect(!region.gesture.contains(NSPoint(x: 181, y: 340), in: window))
+            #expect(!region.gesture.contains(NSPoint(x: 150, y: 319), in: window))
+            #expect(!region.gesture.contains(NSPoint(x: 150, y: 361), in: window))
+            #expect(!region.gesture.contains(NSPoint(x: 150, y: 340), in: nil))
+            #expect(region.hitTest(NSPoint(x: 150, y: 340)) == nil)
+            region.isHidden = true
+            #expect(!region.gesture.contains(NSPoint(x: 150, y: 340), in: window))
+            region.isHidden = false
+            region.removeFromSuperview()
+            #expect(!region.gesture.contains(NSPoint(x: 150, y: 340), in: window))
+            #expect(content.allowedTouchTypes == originalTypes)
+            #expect(content.wantsRestingTouches == originalResting)
+            window.close()
+        }
+
+        @Test(.timeLimit(.minutes(1)))
         func commentShortcutPreservesLinesAndSupportsUndo() throws {
             let editor = CompletionTextView(frame: NSRect(x: 0, y: 0, width: 500, height: 300))
             editor.isRichText = false

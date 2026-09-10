@@ -131,7 +131,6 @@ struct ContentView: View {
                 activeSwitchRanges: model.activeSwitchRanges,
                 sliders: model.inlineSliders, sliderValues: model.inlineSliderValues, onSliderChange: model.setInlineSlider,
                 mutedTracks: model.rowMuteStates, onToggleTrackMute: model.toggleTrackMute,
-                onTempoSwipe: { model.adjustTempo(by: $0) },
                 onFormat: { try await model.formatSource($0) },
                 onFormatFailure: { model.hostDiagnostic = $0 }, selectionRange: model.selectionRange, visualization: model.editorLoop == nil ? nil : model.controlVisualization,
                 documentID: model.activeDocumentID, editorState: model.activeDocument.editorState, openDocumentIDs: Set(model.documents.map(\.id)),

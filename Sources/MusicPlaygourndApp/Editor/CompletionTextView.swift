@@ -7,21 +7,12 @@ final class CompletionTextView: NSTextView, NSTableViewDataSource, NSTableViewDe
     var onLayout: (() -> Void)?
     var onCompletionRequest: (() -> Void)?
     var onFormatRequest: (() -> Void)?
-    var onTempoSwipe: ((Double) -> Void)?
     private var documentUndoManager = UndoManager()
     private var candidates: [SwiftCompletion] = []
     private var candidateSource = ""
     private var candidateSelection = NSRange(location: 0, length: 0)
     private let completionPopover = NSPopover()
     private let completionTable = NSTableView()
-    private let tempoGesture = TempoGestureRecognizer()
-
-    override func viewDidMoveToWindow() {
-        super.viewDidMoveToWindow()
-        tempoGesture.onChange = { [weak self] delta in self?.onTempoSwipe?(delta) }
-        tempoGesture.attach(to: window)
-    }
-
     override var undoManager: UndoManager? { documentUndoManager }
 
     @objc func undo(_ sender: Any?) {
@@ -44,17 +35,12 @@ final class CompletionTextView: NSTextView, NSTableViewDataSource, NSTableViewDe
     }
 
     func useUndoManager(_ manager: UndoManager) {
-        resetTempoSwipe()
         documentUndoManager = manager
     }
 
     override func layout() {
         super.layout()
         onLayout?()
-    }
-
-    func resetTempoSwipe() {
-        tempoGesture.reset()
     }
 
     override func insertNewline(_ sender: Any?) {

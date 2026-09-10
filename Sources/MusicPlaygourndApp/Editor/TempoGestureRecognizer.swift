@@ -3,6 +3,7 @@ import AppKit
 /// Observes three-finger trackpad motion without consuming mouse or scroll events.
 @MainActor
 final class TempoGestureRecognizer {
+    private weak var region: NSView?
     private var monitor: Any?
     private weak var touchView: NSView?
     private var previousTouchTypes: NSTouch.TouchTypeMask = []
@@ -12,7 +13,7 @@ final class TempoGestureRecognizer {
     private var accumulated = NSPoint.zero
     private var horizontal = false
 
-    func attach(to window: NSWindow?) {
+    func attach(to view: NSView?) {
         if let monitor { NSEvent.removeMonitor(monitor) }
         monitor = nil
         if let touchView {
@@ -21,7 +22,8 @@ final class TempoGestureRecognizer {
         }
         touchView = nil
         reset()
-        guard let window else { return }
+        region = view
+        guard let window = view?.window else { return }
         if let content = window.contentView {
             touchView = content
             previousTouchTypes = content.allowedTouchTypes
@@ -31,10 +33,22 @@ final class TempoGestureRecognizer {
         }
         monitor = NSEvent.addLocalMonitorForEvents(matching: .gesture) { [weak self, weak window] event in
             MainActor.assumeIsolated {
-                if let window, event.window === window { self?.update(event) }
+                guard let self else { return }
+                guard let window, self.contains(window.mouseLocationOutsideOfEventStream, in: event.window) else {
+                    self.reset()
+                    return
+                }
+                self.update(event)
             }
             return event
         }
+    }
+
+    func contains(_ location: NSPoint, in window: NSWindow?) -> Bool {
+        guard let region, let window, region.window === window,
+              !region.isHiddenOrHasHiddenAncestor else { return false }
+        let point = region.convert(location, from: nil)
+        return region.bounds.contains(point) && region.visibleRect.contains(point)
     }
 
     func reset() {

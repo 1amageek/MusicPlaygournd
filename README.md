@@ -8,12 +8,12 @@ MusicPlayground is a native macOS live music editor powered by [SwiftMusic](http
 
 ## Get started
 
-Current source preview: **0.4.0**, powered by **SwiftMusic 0.5.1**.
+Current source preview: **0.5.0**, powered by **SwiftMusic 0.5.1**.
 
 Requires **Swift 6.4**, **macOS 15 or later**, and Xcode command-line tools. Swift 6.4 operation was verified on September 10, 2026.
 
 ```sh
-git clone --branch 0.4.0 https://github.com/1amageek/MusicPlaygournd.git
+git clone --branch 0.5.0 https://github.com/1amageek/MusicPlaygournd.git
 cd MusicPlaygournd
 ./Scripts/build-app.sh
 open .build/MusicPlaygournd.app
@@ -27,7 +27,7 @@ Sessions run local Swift with your account's permissions. Open code you trust.
 
 ## Two decks
 
-Version 0.4.0 includes independent A/B decks.
+Version 0.5.0 includes independent A/B decks.
 
 - New projects include **Session.swift** for A and **Trance.swift** for B. Trance adapts the lead, bass and ducking arrangement from [Switch Angel’s performance](https://www.youtube.com/watch?v=iu5rnQkfO6M) into editable synthesized music, with acid/level sliders and stereo panning. It does not include the original recording or voiceover.
 - Left and right tab groups share file contents and undo, but select independently. Selecting a tab changes the wide editor, not the playing music.

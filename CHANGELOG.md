@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.5.0 — Preview — 2026-09-12
+
+- Choose when source edits become audible and apply replacements with seamless crossfades.
+- Cache SwiftPM binary-directory discovery between source edits to avoid repeated process startup.
+- Track cumulative scratch position and use band-limited variable-speed playback in both directions, including while paused. Scratch bypasses pitch preservation; normal tempo changes retain it.
+- Preserve recent hand velocity through finger release and smoothly launch inertia. Fast finite gestures retain their displacement while audible read speed stays bounded.
+- Keep scratch gestures active when contact count changes between two and three fingers, rebasing the touch centroid to avoid jumps.
+
+Validation: 56 Release integration tests passed across native audio, gesture transitions, inertia, source replacement and deck isolation. Earlier scratch checks verified pitch following speed, exact position return, bounded resampling and PCM lifetime. Physical finger feel is not automated. SwiftMusic remains pinned to public 0.5.1. This remains a source preview requiring Swift 6.4 and Xcode command-line tools; no notarized binary is provided. Previously documented editor and hardware-verification limitations remain outside this release's scope.
+
 ## 0.4.0 — Preview — 2026-09-11
 
 - Update the host, evaluator, completion service and new-project templates to SwiftMusic 0.5.1 Preview.

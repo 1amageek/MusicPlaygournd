@@ -274,6 +274,8 @@ public final class AudioLoopEngine: AudioUnitHosting, MasterRecording {
         deckMeterStore.activate()
         do { try output.start(deckIndex) }
         catch {
+            // A failed native start has no callback to finish a cancellation fade.
+            transport.endScratch(immediate: true)
             endScratch()
             throw PlaybackError.audioStartFailed(String(describing: error))
         }
@@ -282,8 +284,9 @@ public final class AudioLoopEngine: AudioUnitHosting, MasterRecording {
     public func releaseScratch() { transport.releaseScratch() }
 
     public func endScratch() {
+        transport.endScratch(immediate: !output.audioEngine.isRunning)
+        guard !transport.isScratching else { return }
         scratchOutputActive = false
-        transport.endScratch()
         if !transport.snapshot().isPlaying {
             deckMeterStore.clear()
             output.stop(deckIndex)
@@ -721,10 +724,16 @@ final class AudioTransport: Sendable {
 
     private struct Scratch: Sendable {
         var step: Double
-        var remaining: Int
-        var released = false
-        var targetStep = 0.0
-        var decay = 1.0
+        var targetStep: Double
+        var holdFrames: Int
+        var remaining: Int?
+        var decay: Double
+        var gain: Float
+        var entryFrame: Int?
+        var entryElapsed = 0
+        var hasRendered = false
+        let transitionFrames: Int
+        let gainDecay: Float
     }
 
     private struct State: Sendable {
@@ -760,6 +769,7 @@ final class AudioTransport: Sendable {
     }
 
     private let state = Mutex(State())
+    private let scratchResampler = ScratchResampler()
 
     /// Called only off callback. The engine keeps every returned immutable buffer alive.
     func drainRetiredAndRetainedIdentities() -> [Identity] {
@@ -1020,10 +1030,27 @@ final class AudioTransport: Sendable {
             guard let current = state.current else { throw PlaybackError.noCurrentLoop }
             guard state.reservation == nil, state.replacement == nil, state.fade == nil,
                   state.pending == nil else { throw PlaybackError.replacementInProgress }
-            let distance = seconds * (current.bpm / 60)
-            guard distance.isFinite else { throw PlaybackError.invalidScratchMotion }
-            let frames = max(1, Int(duration * current.sampleRate * state.clockRate))
-            state.scratch = Scratch(step: distance / Double(frames), remaining: frames)
+            let sourceRate = current.sampleRate * state.clockRate
+            let step = seconds / duration / state.clockRate * (current.bpm / 60 / current.sampleRate)
+            let readSpeed = step * Double(current.pcm.count / 2) / current.beatCount
+            guard readSpeed.isFinite, abs(readSpeed) <= ScratchResampler.maximumSpeed else {
+                throw PlaybackError.invalidScratchMotion
+            }
+            let transitionFrames = max(2, Int(0.005 * sourceRate))
+            let holdFrames = max(1, Int(min(0.12, max(0.02, 2 * duration)) * sourceRate))
+            let decay = exp(-1 / (0.005 * sourceRate))
+            if var scratch = state.scratch {
+                scratch.targetStep = step
+                scratch.holdFrames = holdFrames
+                scratch.remaining = nil
+                scratch.decay = decay
+                state.scratch = scratch
+            } else {
+                state.scratch = Scratch(step: state.isPlaying ? deltaBeatFor(current) : 0,
+                    targetStep: step, holdFrames: holdFrames, decay: decay,
+                    gain: state.isPlaying ? 1 : 0, entryFrame: state.isPlaying ? state.framePosition : nil,
+                    transitionFrames: transitionFrames, gainDecay: Float(1 - decay))
+            }
             state.synchronization = nil
             state.clockSample = nil
             state.lastHostTime = nil
@@ -1034,17 +1061,30 @@ final class AudioTransport: Sendable {
     func releaseScratch() {
         state.withLock { state in
             guard var scratch = state.scratch, let current = state.current else { return }
-            scratch.released = true
-            scratch.remaining = max(1, Int(1.2 * current.sampleRate * state.clockRate))
-            scratch.targetStep = state.isPlaying ? current.bpm / 60 / current.sampleRate : 0
-            scratch.decay = exp(log(0.001) / Double(scratch.remaining))
+            // A complete touch can arrive before the first source callback.
+            if !scratch.hasRendered { scratch.step = scratch.targetStep }
+            let remaining = max(1, Int(1.2 * current.sampleRate * state.clockRate))
+            scratch.remaining = remaining
+            scratch.targetStep = state.isPlaying ? deltaBeatFor(current) : 0
+            scratch.decay = exp(log(0.001) / Double(remaining))
             state.scratch = scratch
         }
     }
 
-    func endScratch() {
+    func endScratch(immediate: Bool = false) {
         state.withLock { state in
-            state.scratch = nil
+            if immediate {
+                state.scratch = nil
+                state.clockSample = nil
+                state.lastHostTime = nil
+                return
+            }
+            guard var scratch = state.scratch, let current = state.current else { return }
+            if scratch.remaining.map({ $0 > scratch.transitionFrames }) ?? true {
+                scratch.remaining = scratch.transitionFrames
+                scratch.targetStep = state.isPlaying ? deltaBeatFor(current) : 0
+                state.scratch = scratch
+            }
             state.clockSample = nil
             state.lastHostTime = nil
         }
@@ -1213,22 +1253,59 @@ final class AudioTransport: Sendable {
             }
 
             if var scratch = state.scratch, let current = state.current {
-                for offset in 0..<frameCount {
-                    if scratch.released && scratch.remaining == 0 { scratch.step = scratch.targetStep }
-                    if (scratch.remaining > 0 || (scratch.released && state.isPlaying)) && scratch.step != 0 {
-                        let value = sample(at: state.beatPosition, in: current)
-                        let gain = scratch.released ? Float(min(1, abs(scratch.step) / (current.bpm / 60 / current.sampleRate))) : 1
-                        write(buffers: buffers, frame: offset, left: value.0 * gain, right: value.1 * gain)
+                let frames = current.pcm.count / 2
+                let baseStep = deltaBeatFor(current)
+                current.pcm.withLittleEndianBytes { pcm in
+                    for offset in 0..<frameCount {
+                        // A completed gesture joins normal playback inside the same callback.
+                        if scratch.remaining == 0 {
+                            let value = state.isPlaying ? ScratchResampler.frame(pcm: pcm, index: state.framePosition) : (0, 0)
+                            write(buffers: buffers, frame: offset, left: value.0, right: value.1)
+                            if state.isPlaying {
+                                state.beatPosition += baseStep
+                                state.framePosition = (state.framePosition + 1) % frames
+                            }
+                            continue
+                        }
+                        if scratch.remaining == nil {
+                            if scratch.holdFrames > 0 { scratch.holdFrames -= 1 }
+                            else { scratch.targetStep = 0 }
+                        }
+                        if let remaining = scratch.remaining, remaining <= scratch.transitionFrames {
+                            scratch.step += (scratch.targetStep - scratch.step) / Double(remaining)
+                        } else {
+                            scratch.step = scratch.targetStep + (scratch.step - scratch.targetStep) * scratch.decay
+                        }
+                        let desiredGain = Float(min(1, abs(scratch.step / baseStep)))
+                        scratch.gain += (desiredGain - scratch.gain) * scratch.gainDecay
+                        let position = state.beatPosition.truncatingRemainder(dividingBy: current.beatCount) / current.beatCount * Double(frames)
+                        let speed = scratch.step / current.beatCount * Double(frames)
+                        var value: (Float, Float) = (0, 0)
+                        if scratch.gain > 0.000001 {
+                            let filtered = scratchResampler.sample(pcm: pcm, position: position, speed: speed)
+                            value = (filtered.0 * scratch.gain, filtered.1 * scratch.gain)
+                        }
+                        if let entryFrame = scratch.entryFrame {
+                            let old = ScratchResampler.frame(pcm: pcm, index: entryFrame)
+                            let mix = Float(scratch.entryElapsed) / Float(scratch.transitionFrames - 1)
+                            value = (old.0 * (1 - mix) + value.0 * mix, old.1 * (1 - mix) + value.1 * mix)
+                            scratch.entryElapsed += 1
+                            scratch.entryFrame = scratch.entryElapsed == scratch.transitionFrames ? nil : (entryFrame + 1) % frames
+                        }
+                        if let remaining = scratch.remaining, remaining <= scratch.transitionFrames {
+                            let mix = Float(scratch.transitionFrames - remaining) / Float(scratch.transitionFrames - 1)
+                            let target = state.isPlaying ? ScratchResampler.frame(pcm: pcm, index: state.framePosition) : (0, 0)
+                            value = (value.0 * (1 - mix) + target.0 * mix, value.1 * (1 - mix) + target.1 * mix)
+                        }
+                        write(buffers: buffers, frame: offset, left: value.0, right: value.1)
                         let beat = (state.beatPosition + scratch.step).truncatingRemainder(dividingBy: current.beatCount)
                         state.beatPosition = beat < 0 ? beat + current.beatCount : beat
                         state.framePosition = frame(for: state.beatPosition, in: current)
-                    } else {
-                        write(buffers: buffers, frame: offset, left: 0, right: 0)
+                        if let remaining = scratch.remaining { scratch.remaining = remaining - 1 }
                     }
-                    if scratch.remaining > 0 { scratch.remaining -= 1 }
-                    if scratch.released { scratch.step = scratch.targetStep + (scratch.step - scratch.targetStep) * scratch.decay }
                 }
-                state.scratch = scratch.released && scratch.remaining == 0 ? nil : scratch
+                scratch.hasRendered = true
+                state.scratch = scratch.remaining == 0 ? nil : scratch
                 return noErr
             }
 

@@ -92,6 +92,9 @@ extension NativeHostTests {
             try transport.startPlayback()
             try transport.scratch(bySeconds: -0.1, over: 0.1)
             transport.releaseScratch()
+            let playingReleaseStart = transport.snapshot().beatPosition
+            _ = try render(transport, frames: 1000)
+            #expect(transport.snapshot().beatPosition < playingReleaseStart)
             _ = try render(transport, frames: 55_000)
             #expect(!transport.isScratching && transport.snapshot().isPlaying)
             let before = transport.snapshot().beatPosition
@@ -102,8 +105,11 @@ extension NativeHostTests {
             try transport.scratch(bySeconds: 0.1, over: 0.1)
             let grabbed = transport.snapshot().beatPosition
             _ = try render(transport, frames: 100)
+            #expect(transport.snapshot().beatPosition < grabbed)
+            _ = try render(transport, frames: 1000)
             #expect(transport.snapshot().beatPosition > grabbed)
             transport.endScratch()
+            _ = try render(transport, frames: 256)
             #expect(!transport.isScratching)
         }
 
@@ -121,6 +127,22 @@ extension NativeHostTests {
             for _ in 0..<18 { _ = try engine.renderOfflineForTests(frameCount: 4096) }
             #expect(!engine.snapshot().isPlaying)
             #expect(!engine.output.audioEngine.isRunning)
+        }
+
+        @Test(.timeLimit(.minutes(1)))
+        func cancellationClearsMotionWhenNativeOutputHasStopped() throws {
+            let engine = try AudioLoopEngine()
+            defer { engine.stop() }
+            engine.beginUpdate(revision: 1)
+            try engine.submit(loop: loop(), revision: 1)
+            try engine.prepareOfflineRenderingForTests()
+            try engine.scratch(bySeconds: 0.1, over: 0.1)
+            _ = try engine.renderOfflineForTests(frameCount: 1024)
+            engine.output.audioEngine.stop()
+            engine.endScratch()
+            // Seek rejects active scratch; a stopped graph cannot finish an audio fade.
+            try engine.seek(bySeconds: 0.1)
+            #expect(!engine.snapshot().isPlaying && !engine.output.audioEngine.isRunning)
         }
 
         @Test(.timeLimit(.minutes(1)))

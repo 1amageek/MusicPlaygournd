@@ -25,10 +25,13 @@ extension NativeHostTests {
                     beatsPerBar: 4, beatCount: 4, samples: pcm, events: []), revision: 1)
             }
             try a.scratch(bySeconds: -0.2, over: 0.25)
+            a.releaseScratch()
             try await Task.sleep(for: .milliseconds(350))
             #expect(!a.snapshot().isPlaying)
             #expect(a.deckMeter().interleavedSamples.contains { abs($0) > 0.01 })
             a.endScratch()
+            try await Task.sleep(for: .milliseconds(50))
+            _ = a.snapshot()
             #expect(!output.audioEngine.isRunning)
             try a.prepareOfflineRenderingForTests()
             try output.setCrossfade(0.5)
@@ -52,6 +55,8 @@ extension NativeHostTests {
             pcm = try a.renderOfflineForTests(frameCount: 4_096)
             #expect(pcm.contains { abs($0) > 0.01 })
             a.endScratch()
+            _ = try a.renderOfflineForTests(frameCount: 1024)
+            _ = a.snapshot()
             #expect(!output.audioEngine.isRunning)
             #expect(!a.snapshot().isPlaying && !b.snapshot().isPlaying)
         }

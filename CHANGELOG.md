@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.5.1 — Preview — 2026-09-12
+
+- Show compiler issues directly in the editor with red gutter markers, underlines, subtle row backgrounds and trailing inline messages.
+- Click an inline message or issue-list entry to open the source file and select the compiler-reported location. Errors precede warnings, and full build output starts collapsed.
+- Map UTF-8 compiler columns to Unicode editor positions and retain exact source snapshots; changed text, unknown files and ambiguous locations never receive stale or guessed navigation.
+- Include ordinary Swift syntax/type failures and package-manifest reload diagnostics while preserving the previous valid music after failed edits.
+
+Validation: four focused tests passed, covering real compiler errors, cross-file navigation, Unicode/EOF and ambiguous locations, native annotation lifecycle, and retained audio after typed and ordinary compiler failures. The packaged app was visually verified with a real line-7/column-19 error; clicking its inline message selected the failing character and opened details. SwiftMusic remains pinned to public 0.5.1. This is a source preview requiring Swift 6.4 and Xcode command-line tools; no notarized binary is provided. Earlier documented limitations outside editor diagnostics remain unchanged.
+
 ## 0.5.0 — Preview — 2026-09-12
 
 - Choose when source edits become audible and apply replacements with seamless crossfades.

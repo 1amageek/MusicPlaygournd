@@ -8,7 +8,7 @@ import Testing
 extension NativeHostTests {
     @MainActor
     struct EditorSemanticWorkflowTests {
-        @Test(.timeLimit(.minutes(6)))
+        @Test(.timeLimit(.minutes(2)))
         func adoptedBankCompletionAndTypedDiagnosticPreserveAudio() async throws {
             let package = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
                 .deletingLastPathComponent().deletingLastPathComponent()
@@ -23,7 +23,9 @@ extension NativeHostTests {
             let file = try AVAudioFile(forWriting: sample, settings: format.settings)
             try file.write(from: buffer)
             file.close()
-            let evaluator = SourceEvaluator(packageURL: package, workspace: directory.appending(path: "Evaluation"), swiftExecutable: "/usr/bin/swift")
+            let sdk = package.appending(path: ".build/MusicPlaygournd.app/Contents/Resources/RuntimeSDK")
+            try #require(FileManager.default.fileExists(atPath: sdk.appending(path: "environment.json").path))
+            let evaluator = SourceEvaluator(packageURL: package, workspace: directory.appending(path: "Evaluation"), swiftExecutable: "/usr/bin/swift", runtimeSDK: sdk)
             let completion = SwiftCompletionService(packageURL: package, workspace: directory.appending(path: "Completion"), sourceKitLSPExecutable: "/usr/bin/sourcekit-lsp")
             let engine = try AudioLoopEngine()
             let model = SessionModel(evaluator: evaluator, completionService: completion, engine: engine,
@@ -40,6 +42,7 @@ extension NativeHostTests {
                     var body: some Sound { Sample(bank: bank).sampleSelection("kick") }
                 }
                 """
+                model.fileURL = directory.appending(path: "Session.swift")
                 model.source = original
                 model.scheduleEvaluation(immediate: true)
                 try await wait("bank adoption") {
@@ -78,7 +81,8 @@ extension NativeHostTests {
                 model.source = "struct Session: Music {"
                 model.scheduleEvaluation(immediate: true)
                 try await wait("raw Swift diagnostic") { !model.isPreparing && !model.diagnostic.isEmpty }
-                #expect(model.diagnosticRange == nil)
+                #expect(!model.compilerIssues.isEmpty)
+                #expect(model.compilerIssues.contains { $0.range != nil })
                 #expect(model.loop == loop && model.currentRevision == 1)
                 try await model.shutdown()
                 try FileManager.default.removeItem(at: directory)
@@ -90,7 +94,7 @@ extension NativeHostTests {
         }
 
         private func wait(_ description: String, _ predicate: () throws -> Bool) async throws {
-            let deadline = ContinuousClock.now.advanced(by: .seconds(260))
+            let deadline = ContinuousClock.now.advanced(by: .seconds(60))
             while try !predicate(), ContinuousClock.now < deadline { try await Task.sleep(for: .milliseconds(50)) }
             guard try predicate() else { throw EvaluationError.timedOut(description) }
         }

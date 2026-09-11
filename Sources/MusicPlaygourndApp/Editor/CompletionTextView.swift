@@ -4,6 +4,7 @@ import MusicPlaygourndCore
 /// Keeps keyboard focus in the editor while presenting semantic candidates.
 @MainActor
 final class CompletionTextView: NSTextView, NSTableViewDataSource, NSTableViewDelegate, NSPopoverDelegate {
+    var diagnosticLines: [(NSRange, NSColor)] = []
     var onLayout: (() -> Void)?
     var onCompletionRequest: (() -> Void)?
     var onFormatRequest: (() -> Void)?
@@ -13,6 +14,21 @@ final class CompletionTextView: NSTextView, NSTableViewDataSource, NSTableViewDe
     private var candidateSelection = NSRange(location: 0, length: 0)
     private let completionPopover = NSPopover()
     private let completionTable = NSTableView()
+    override func drawBackground(in rect: NSRect) {
+        super.drawBackground(in: rect)
+        guard let manager = layoutManager else { return }
+        for (range, color) in diagnosticLines where range.location <= string.utf16.count {
+            let line: NSRect
+            if range.location < string.utf16.count {
+                line = manager.lineFragmentRect(forGlyphAt: manager.glyphIndexForCharacter(at: range.location), effectiveRange: nil)
+            } else { line = manager.extraLineFragmentRect }
+            let highlight = NSRect(x: visibleRect.minX, y: line.minY + textContainerOrigin.y,
+                width: visibleRect.width, height: manager.defaultLineHeight(for: font ?? .systemFont(ofSize: 12)))
+            color.withAlphaComponent(0.08).setFill()
+            if highlight.intersects(rect) { highlight.intersection(rect).fill() }
+        }
+    }
+
     override var undoManager: UndoManager? { documentUndoManager }
 
     @objc func undo(_ sender: Any?) {

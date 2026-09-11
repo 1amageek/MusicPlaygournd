@@ -169,7 +169,11 @@ final class SessionModel {
     var outputSamples = [Float]()
     var deckSamples = [Float]()
     var beatsPerBar = 4
-    var diagnostic = "" { didSet { diagnosticRange = nil } }
+    var diagnostic = "" { didSet { diagnosticRange = nil; compilerIssues = [] } }
+    private(set) var compilerIssues: [EditorDiagnostic] = []
+    var visibleCompilerIssues: [EditorDiagnostic] {
+        compilerIssues.filter { $0.matches(documentID: activeDocumentID, url: fileURL, text: source) }
+    }
     var status = "No project open"
     var preparationProgress = ""
     var isOpeningPackage = false
@@ -580,6 +584,17 @@ final class SessionModel {
                 projectRequest = nil
             }
         } catch { diagnostic = error.localizedDescription; isPreparing = false; if loop == nil { wantsPlayback = false }; return }
+        let issueSources: [EditorDiagnostic.Source]
+        let evaluationRequest: ProjectEvaluationRequest?
+        do {
+            issueSources = try diagnosticSources(entryText: text, entryID: revisionDocuments[requested], request: projectRequest)
+            if let projectRequest {
+                var buffers = projectRequest.buffers
+                for input in issueSources { if let url = input.url { buffers[url] = input.text } }
+                evaluationRequest = try ProjectEvaluationRequest(project: projectRequest.project,
+                    target: projectRequest.target, buffers: buffers)
+            } else { evaluationRequest = nil }
+        } catch { diagnostic = error.localizedDescription; isPreparing = false; if loop == nil { wantsPlayback = false }; return }
         let tempo = 120.0
         let entryType = loadedType
         let meter = beatsPerBar
@@ -592,7 +607,7 @@ final class SessionModel {
             do {
                 if !immediate { try await Task.sleep(for: .milliseconds(150)) }
                 await self?.adoptionTask?.value
-                let evaluation = try await evaluator.evaluateRetained(source: text, bpm: tempo, beatsPerBar: meter, revision: requested, project: projectRequest, entryType: entryType, progress: { [weak self] message in
+                let evaluation = try await evaluator.evaluateRetained(source: text, bpm: tempo, beatsPerBar: meter, revision: requested, project: evaluationRequest, entryType: entryType, progress: { [weak self] message in
                     await MainActor.run {
                         guard let self, self.revision == requested, !self.isOpeningPackage else { return }
                         self.preparationProgress = message
@@ -628,10 +643,7 @@ final class SessionModel {
                 guard let self, requested == self.revision else { return }
                 self.isPreparing = false
                 if self.loop == nil { self.wantsPlayback = false }
-                self.diagnostic = error.localizedDescription
-                if case EvaluationError.compilerDiagnostic(_, let range) = error, self.source == text {
-                    self.diagnosticRange = range?.utf16Range
-                }
+                self.recordCompilerFailure(error, sources: issueSources)
                 self.status = self.loop == nil ? "Fix the error to start" : "Edit failed · previous loop continues"
             }
         }
@@ -1331,7 +1343,66 @@ final class SessionModel {
         }
     }
 
+    private func diagnosticSources(entryText: String, entryID: UUID?, request: ProjectEvaluationRequest?) throws -> [EditorDiagnostic.Source] {
+        guard let request else {
+            let document = documents.first { $0.id == entryID }
+            return [.init(documentID: entryID, url: document?.fileURL,
+                path: document?.fileURL?.lastPathComponent ?? "Session.swift", text: entryText, isEntry: true)]
+        }
+        let entry = request.project.entryURL(for: request.target)
+        var result: [EditorDiagnostic.Source] = []
+        for target in request.project.targets {
+            for file in target.sources {
+                let path = target.path + "/" + file
+                let url = request.project.root.appending(path: path).standardizedFileURL.resolvingSymlinksInPath()
+                let text = url == entry ? entryText : try request.buffers[url] ?? String(contentsOf: url, encoding: .utf8)
+                guard text.utf8.count <= 65_536 else { throw EvaluationError.invalidSource("Source exceeds 64 KiB: " + path) }
+                result.append(.init(documentID: documents.first { $0.fileURL == url }?.id,
+                    url: url, path: path, text: text, isEntry: url == entry))
+            }
+        }
+        return result
+    }
+
+    func recordCompilerFailure(_ error: Error, sources: [EditorDiagnostic.Source]) {
+        diagnostic = error.localizedDescription
+        compilerIssues = EditorDiagnostic.parse(diagnostic, sources: sources)
+        if case EvaluationError.compilerDiagnostic(let message, let range) = error,
+           let range, let entry = sources.first(where: \.isEntry) {
+            compilerIssues = [.init(file: range.fileID, line: range.line, column: range.column,
+                severity: "error", message: message, source: entry, range: range.utf16Range)]
+        }
+        diagnosticRange = visibleCompilerIssues.first?.range
+    }
+
+    func revealDiagnostic(_ issue: EditorDiagnostic) {
+        guard let input = issue.source, let range = issue.range else { return }
+        do {
+            if let url = input.url {
+                let current = try documents.first { $0.fileURL == url }?.source
+                    ?? documentStore?.buffers[url] ?? String(contentsOf: url, encoding: .utf8)
+                guard current.utf8.elementsEqual(input.text.utf8) else { return }
+                let retained = compilerIssues
+                try openDocument(at: url)
+                compilerIssues = retained
+            } else if let id = input.documentID {
+                guard let document = documents.first(where: { $0.id == id }),
+                      document.source.utf8.elementsEqual(input.text.utf8) else { return }
+                let retained = compilerIssues
+                selectDocument(id)
+                compilerIssues = retained
+            }
+            guard issue.matches(documentID: activeDocumentID, url: fileURL, text: source) else { return }
+            selectionRange = range
+            selectionToken += 1
+        } catch { hostDiagnostic = error.localizedDescription }
+    }
+
     func revealDiagnostic() {
+        if let issue = visibleCompilerIssues.first ?? compilerIssues.first(where: { $0.range != nil }) {
+            revealDiagnostic(issue)
+            return
+        }
         guard let diagnosticRange else { return }
         selectionRange = diagnosticRange
         selectionToken += 1
@@ -1365,8 +1436,11 @@ final class SessionModel {
         status = "Opening package…"
         projectTask = Task {
             defer { if projectRequestID == request { isOpeningPackage = false } }
+            var manifestInput: EditorDiagnostic.Source?
             do {
                 let manifest = try String(contentsOf: root.appending(path: "Package.swift"), encoding: .utf8)
+                manifestInput = .init(documentID: nil, url: root.appending(path: "Package.swift"),
+                    path: "Package.swift", text: manifest, isEntry: false)
                 let loaded = try await evaluator.openProject(at: root, resolveDependencies: resolveDependencies, progress: { [weak self] message in
                     await MainActor.run {
                         guard let self, self.projectRequestID == request else { return }
@@ -1428,7 +1502,11 @@ final class SessionModel {
                 if let selected { selectDocument(selected.id) }
                 scheduleEvaluation(immediate: true)
             } catch is CancellationError { }
-            catch { fileBrowser.errorMessage = error.localizedDescription; diagnostic = error.localizedDescription }
+            catch {
+                guard projectRequestID == request else { return }
+                fileBrowser.errorMessage = error.localizedDescription
+                recordCompilerFailure(error, sources: manifestInput.map { [$0] } ?? [])
+            }
         }
     }
 

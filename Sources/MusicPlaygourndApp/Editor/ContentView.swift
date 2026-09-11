@@ -158,7 +158,9 @@ struct ContentView: View {
                 sliders: model.inlineSliders, sliderValues: model.inlineSliderValues, onSliderChange: model.setInlineSlider,
                 mutedTracks: model.rowMuteStates, onToggleTrackMute: model.toggleTrackMute,
                 onFormat: { try await model.formatSource($0) },
-                onFormatFailure: { model.hostDiagnostic = $0 }, selectionRange: model.selectionRange, visualization: model.editorLoop == nil ? nil : model.controlVisualization,
+                onFormatFailure: { model.hostDiagnostic = $0 },
+                diagnostics: model.visibleCompilerIssues,
+                onRevealDiagnostic: { model.revealDiagnostic($0); logsExpanded = true }, selectionRange: model.selectionRange, visualization: model.editorLoop == nil ? nil : model.controlVisualization,
                 documentID: model.activeDocumentID, editorState: model.activeDocument.editorState, openDocumentIDs: Set((deckWorkspace.map { $0.a.documents + $0.b.documents } ?? model.documents).map(\.id)),
                 onEditorStateChange: { id, state in model.documents.first { $0.id == id }?.editorState = state })
         }.frame(minWidth: 350, minHeight: 220)
@@ -168,8 +170,25 @@ struct ContentView: View {
     @ViewBuilder
     private var logs: some View {
         DisclosureGroup(isExpanded: $logsExpanded) {
+            ScrollView {
             VStack(alignment: .leading, spacing: 8) {
                 if !model.diagnostic.isEmpty {
+                    ForEach(model.compilerIssues.sorted { ($0.severity == "error" ? 0 : 1) < ($1.severity == "error" ? 0 : 1) }) { issue in
+                        Button { model.revealDiagnostic(issue) } label: {
+                            HStack(alignment: .top, spacing: 6) {
+                                Image(systemName: issue.severity == "error" ? "xmark.octagon.fill" : "exclamationmark.triangle.fill")
+                                    .foregroundStyle(issue.severity == "error" ? Color.red : Color.orange)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(issue.location).font(.system(size: 11, weight: .semibold, design: .monospaced))
+                                    Text(issue.message).font(.system(size: 12)).multilineTextAlignment(.leading)
+                                }
+                            }.frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(issue.range == nil)
+                        .accessibilityLabel(issue.location + ": " + issue.message)
+                    }
+                    if model.compilerIssues.isEmpty {
                     Button { model.revealDiagnostic() } label: {
                         Label("Edit needs attention", systemImage: "exclamationmark.circle.fill")
                             .font(.system(size: 12, weight: .semibold))
@@ -177,6 +196,8 @@ struct ContentView: View {
                     }
                     .buttonStyle(.plain)
                     .disabled(model.diagnosticRange == nil)
+                    }
+                    DisclosureGroup("Build output") {
                     ScrollView {
                         Text(model.diagnostic)
                             .font(.system(size: 11, design: .monospaced))
@@ -184,6 +205,7 @@ struct ContentView: View {
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     .frame(maxHeight: 130)
+                    }
                 }
                 if !model.hostDiagnostic.isEmpty {
                     Text(model.hostDiagnostic).font(.system(size: 11, design: .monospaced))
@@ -211,6 +233,7 @@ struct ContentView: View {
                 }
             }
             .padding(.top, 8)
+            }.frame(maxHeight: 220)
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: diagnosticCount == 0 ? "doc.text" : "exclamationmark.circle.fill")
@@ -243,7 +266,11 @@ struct ContentView: View {
         .background(diagnosticCount == 0 ? Color.white.opacity(0.025) : Color.orange.opacity(0.07))
     }
 
-    private var diagnosticCount: Int { (model.diagnostic.isEmpty ? 0 : 1) + (model.hostDiagnostic.isEmpty ? 0 : 1) }
+    private var diagnosticCount: Int {
+        (model.compilerIssues.isEmpty ? (model.diagnostic.isEmpty ? 0 : 1)
+            : model.compilerIssues.filter { $0.severity == "error" }.count)
+            + (model.hostDiagnostic.isEmpty ? 0 : 1)
+    }
 
     private var diagnosticCountLabel: String {
         let count = diagnosticCount

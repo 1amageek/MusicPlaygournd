@@ -3,6 +3,9 @@ import AppKit
 /// Draws source line numbers from the editor's native text layout.
 @MainActor
 final class LineNumberRulerView: NSRulerView {
+    var diagnostics: [EditorDiagnostic] = []
+    var onRevealDiagnostic: (EditorDiagnostic) -> Void = { _ in }
+    private var issueRects: [(NSRect, EditorDiagnostic)] = []
     var labelColor = NSColor.secondaryLabelColor
     private let labelFont = NSFont.monospacedSystemFont(ofSize: 10, weight: .regular)
     var backgroundColor = NSColor(calibratedRed: 0.045, green: 0.055, blue: 0.065, alpha: 1)
@@ -29,6 +32,7 @@ final class LineNumberRulerView: NSRulerView {
         guard !clippedRect.isNull, !clippedRect.isEmpty else { return }
         backgroundColor.setFill()
         clippedRect.fill()
+        issueRects = []
         drawLineNumbers(in: clippedRect)
         separatorColor.setFill()
         NSRect(x: bounds.maxX - 1, y: clippedRect.minY, width: 1, height: clippedRect.height).intersection(bounds).fill()
@@ -61,7 +65,22 @@ final class LineNumberRulerView: NSRulerView {
             )
             guard drawRect.intersects(dirtyRect) else { continue }
             (label as NSString).draw(in: drawRect, withAttributes: attributes)
+            if let issue = diagnostics.first(where: { $0.line == index + 1 }) {
+                let marker = NSRect(x: 3, y: point.y - 6, width: 12, height: 12)
+                (issue.severity == "error" ? NSColor.systemRed : NSColor.systemOrange).setFill()
+                NSBezierPath(ovalIn: marker).fill()
+                ("!" as NSString).draw(in: marker.offsetBy(dx: 4, dy: -1), withAttributes: [
+                    .font: NSFont.systemFont(ofSize: 10, weight: .bold), .foregroundColor: NSColor.white])
+                issueRects.append((NSRect(x: 0, y: point.y - 9, width: bounds.width, height: 18), issue))
+            }
         }
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        let point = convert(event.locationInWindow, from: nil)
+        if let issue = issueRects.first(where: { $0.0.contains(point) })?.1 {
+            onRevealDiagnostic(issue)
+        } else { super.mouseDown(with: event) }
     }
 
     private func lineStarts(in source: NSString) -> [Int] {

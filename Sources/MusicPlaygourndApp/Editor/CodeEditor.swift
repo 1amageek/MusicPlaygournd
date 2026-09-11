@@ -46,6 +46,8 @@ struct CodeEditor: NSViewRepresentable {
     var onToggleTrackMute: (Int) -> Void = { _ in }
     var onFormat: (@MainActor (String) async throws -> String)? = nil
     var onFormatFailure: @MainActor (String) -> Void = { _ in }
+    var diagnostics: [EditorDiagnostic] = []
+    var onRevealDiagnostic: (EditorDiagnostic) -> Void = { _ in }
     var selectionRange: NSRange? = nil
     var visualization: PreparedControlVisualization? = nil
     var documentID: UUID? = nil
@@ -120,6 +122,7 @@ struct CodeEditor: NSViewRepresentable {
             coordinator?.requestFormat(editor)
         }
         context.coordinator.highlight(editor)
+        context.coordinator.updateDiagnostics(editor)
         context.coordinator.publishLayout()
         return scroll
     }
@@ -164,6 +167,7 @@ struct CodeEditor: NSViewRepresentable {
             onSelectSwitch: onSelectSwitch)
         context.coordinator.publishLayout()
         context.coordinator.highlightPlayback(editor)
+        context.coordinator.updateDiagnostics(editor)
         if context.coordinator.lastSelection != selectionToken, let range = selectionRange {
             context.coordinator.lastSelection = selectionToken
             let count = (editor.string as NSString).length
@@ -211,6 +215,82 @@ struct CodeEditor: NSViewRepresentable {
         private(set) var documentID: UUID?
         private var undoManagers: [UUID: UndoManager] = [:]
         private let untitledUndoManager = UndoManager()
+
+        private var displayedDiagnostics: [EditorDiagnostic] = []
+        private var diagnosticSource = ""
+        private var diagnosticButtons: [UUID: NSButton] = [:]
+
+        func updateDiagnostics(_ editor: NSTextView) {
+            guard let layout = editor.layoutManager else { return }
+            let issues = parent.diagnostics.filter { issue in
+                issue.source?.text.utf8.elementsEqual(editor.string.utf8) == true
+            }
+            guard issues != displayedDiagnostics || diagnosticSource != editor.string else { return }
+            displayedDiagnostics = issues
+            diagnosticSource = editor.string
+            for button in diagnosticButtons.values { button.removeFromSuperview() }
+            diagnosticButtons = [:]
+            var markedLines = Set<Int>()
+            for issue in issues.sorted(by: { ($0.severity == "error" ? 0 : 1) < ($1.severity == "error" ? 0 : 1) }) {
+                guard markedLines.insert(issue.line).inserted else { continue }
+                let button = NSButton(title: issue.message, target: self, action: #selector(revealInlineDiagnostic(_:)))
+                button.identifier = NSUserInterfaceItemIdentifier(issue.id.uuidString)
+                button.isBordered = false
+                button.font = .systemFont(ofSize: 11)
+                button.lineBreakMode = .byTruncatingTail
+                button.image = NSImage(systemSymbolName: "exclamationmark.circle.fill", accessibilityDescription: issue.severity)
+                button.imagePosition = .imageLeading
+                button.contentTintColor = issue.severity == "error" ? .systemRed : .systemOrange
+                button.wantsLayer = true
+                button.layer?.cornerRadius = 3
+                button.layer?.backgroundColor = button.contentTintColor?.withAlphaComponent(0.13).cgColor
+                button.toolTip = issue.message
+                button.setAccessibilityLabel(issue.location + ": " + issue.message)
+                diagnosticButtons[issue.id] = button
+                editor.addSubview(button)
+            }
+            (editor as? CompletionTextView)?.diagnosticLines = issues.compactMap { issue in
+                issue.range.map { ($0, issue.severity == "error" ? NSColor.systemRed : NSColor.systemOrange) }
+            }
+            editor.needsDisplay = true
+            let entire = NSRange(location: 0, length: editor.string.utf16.count)
+            layout.removeTemporaryAttribute(.underlineStyle, forCharacterRange: entire)
+            layout.removeTemporaryAttribute(.underlineColor, forCharacterRange: entire)
+            layout.removeTemporaryAttribute(.toolTip, forCharacterRange: entire)
+            for issue in issues {
+                guard let range = issue.range, range.location <= entire.length,
+                      range.length <= entire.length - range.location else { continue }
+                let color = issue.severity == "error" ? NSColor.systemRed : NSColor.systemOrange
+                layout.addTemporaryAttributes([.underlineStyle: NSUnderlineStyle.single.rawValue,
+                    .underlineColor: color, .toolTip: issue.message], forCharacterRange: range)
+            }
+            lineNumberRuler?.diagnostics = issues
+            lineNumberRuler?.onRevealDiagnostic = parent.onRevealDiagnostic
+            lineNumberRuler?.needsDisplay = true
+            layoutDiagnostics(editor)
+        }
+
+        @objc private func revealInlineDiagnostic(_ sender: NSButton) {
+            guard let issue = displayedDiagnostics.first(where: { $0.id.uuidString == sender.identifier?.rawValue }) else { return }
+            parent.onRevealDiagnostic(issue)
+        }
+
+        private func layoutDiagnostics(_ editor: NSTextView) {
+            guard let layout = editor.layoutManager else { return }
+            let viewport = editor.visibleRect
+            for issue in displayedDiagnostics {
+                guard let button = diagnosticButtons[issue.id], let range = issue.range else { continue }
+                let line = range.location < editor.string.utf16.count
+                    ? layout.lineFragmentUsedRect(forGlyphAt: layout.glyphIndexForCharacter(at: range.location), effectiveRange: nil)
+                    : layout.extraLineFragmentUsedRect
+                let desired = min(viewport.width * 0.55, button.intrinsicContentSize.width + 12)
+                let x = max(line.maxX + editor.textContainerOrigin.x + 12, viewport.maxX - desired - 8)
+                let width = min(desired, viewport.maxX - x - 8)
+                button.isHidden = width < 28
+                button.frame = NSRect(x: x, y: line.minY + editor.textContainerOrigin.y,
+                    width: max(0, width), height: layout.defaultLineHeight(for: editor.font ?? .systemFont(ofSize: 12)))
+            }
+        }
 
         func highlightPlayback(_ editor: NSTextView) {
             guard let layout = editor.layoutManager else { return }
@@ -397,6 +477,7 @@ struct CodeEditor: NSViewRepresentable {
             layout.ensureLayout(for: container)
             lineNumberRuler?.needsDisplay = true
             layoutSliders(editor)
+            layoutDiagnostics(editor)
             let text = editor.string as NSString
             let requested = Set(parent.rhythmLines)
             var rectangles: [Int: CGRect] = [:]
@@ -432,6 +513,7 @@ struct CodeEditor: NSViewRepresentable {
         }
         init(_ parent: CodeEditor) { self.parent = parent }
         func textDidChange(_ notification: Notification) {
+            if let editor = notification.object as? NSTextView { updateDiagnostics(editor) }
             guard let editor = notification.object as? NSTextView, !editor.hasMarkedText(), parent.text != editor.string else { return }
             cancelFormat()
             parent.text = editor.string

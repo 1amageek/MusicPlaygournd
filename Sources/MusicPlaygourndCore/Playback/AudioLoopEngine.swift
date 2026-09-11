@@ -156,13 +156,13 @@ public final class AudioLoopEngine: AudioUnitHosting, MasterRecording {
         pruneRetainedLoops()
     }
 
-    public func submit(loop: PreparedLoop, revision: UInt64) throws {
+    public func submit(loop: PreparedLoop, revision: UInt64, timing: SourceUpdateTiming = .nextBar) throws {
         do {
             try loop.validate()
         } catch let error as PreparedLoopValidationError {
             throw PlaybackError.invalidLoop(error)
         }
-        try transport.submit(loop: loop, revision: revision)
+        try transport.submit(loop: loop, revision: revision, timing: timing)
         retainedLoops[.init(revision: revision, generation: 0)] = loop
         pruneRetainedLoops()
     }
@@ -710,6 +710,8 @@ final class AudioTransport: Sendable {
     private struct Fade: Sendable {
         let old: Candidate
         var elapsed = 0
+        // Source fades retain an independent old clock, including across tempo/length edits.
+        var oldBeatPosition: Double?
     }
 
     private struct ClockSample: Sendable {
@@ -747,6 +749,7 @@ final class AudioTransport: Sendable {
         var beatPosition = 0.0
         var framePosition = 0
         var pendingBoundary: Double?
+        var pendingTiming: SourceUpdateTiming = .nextBar
         var scratch: Scratch?
         var isPlaying = false
         var clockSample: ClockSample?
@@ -943,7 +946,7 @@ final class AudioTransport: Sendable {
         }
     }
 
-    func submit(loop: PreparedLoop, revision: UInt64) throws {
+    func submit(loop: PreparedLoop, revision: UInt64, timing: SourceUpdateTiming = .nextBar) throws {
         try state.withLock { state in
             guard state.latestRevision == revision else {
                 throw state.latestRevision.map { _ in PlaybackError.staleRevision(revision) }
@@ -966,9 +969,9 @@ final class AudioTransport: Sendable {
                 state.framePosition = 0
             } else {
                 state.pending = candidate
+                state.pendingTiming = timing
                 if state.isPlaying, let current = state.current {
-                    let meter = Double(current.beatsPerBar)
-                    state.pendingBoundary = (floor(state.beatPosition / meter) + 1) * meter
+                    state.pendingBoundary = timing.boundary(after: state.beatPosition, beatsPerBar: current.beatsPerBar)
                 }
             }
         }
@@ -1001,7 +1004,7 @@ final class AudioTransport: Sendable {
             state.clockSample = nil
             state.lastHostTime = nil
             state.clockDiscontinuous = false
-            state.pendingBoundary = state.pending == nil ? nil : Double(current.beatsPerBar)
+            state.pendingBoundary = state.pending == nil ? nil : state.pendingTiming.boundary(after: 0, beatsPerBar: current.beatsPerBar)
             state.scratch = nil
             state.isPlaying = true
         }
@@ -1064,8 +1067,7 @@ final class AudioTransport: Sendable {
             state.clockSample = nil
             state.lastHostTime = nil
             state.clockDiscontinuous = false
-            let meter = Double(current.beatsPerBar)
-            state.pendingBoundary = state.pending == nil ? nil : (floor(state.beatPosition / meter) + 1) * meter
+            state.pendingBoundary = state.pending == nil ? nil : state.pendingTiming.boundary(after: state.beatPosition, beatsPerBar: current.beatsPerBar)
         }
     }
 
@@ -1097,11 +1099,14 @@ final class AudioTransport: Sendable {
 
     func positionSnapshot() -> PositionSnapshot {
         state.withLock { state in
+            let sourceFade = state.fade.flatMap { $0.oldBeatPosition == nil ? nil : $0 }
             let switching = state.currentSwitchIndex != state.publishedSwitchIndex
-            let visibleLoop = state.currentPerformanceGeneration != state.publishedPerformanceGeneration || switching
+            let visibleLoop = sourceFade != nil || state.currentPerformanceGeneration != state.publishedPerformanceGeneration || switching
                 ? state.fade?.old.loop : state.current
             let beatPosition: Double
-            if state.currentPerformanceGeneration != state.publishedPerformanceGeneration || switching, let visibleLoop {
+            if let sourceFade, let oldBeat = sourceFade.oldBeatPosition {
+                beatPosition = oldBeat.truncatingRemainder(dividingBy: sourceFade.old.loop.beatCount)
+            } else if state.currentPerformanceGeneration != state.publishedPerformanceGeneration || switching, let visibleLoop {
                 beatPosition = state.beatPosition.truncatingRemainder(dividingBy: visibleLoop.beatCount)
             } else if let current = state.current {
                 let frames = max(1, current.pcm.count / 2)
@@ -1112,14 +1117,14 @@ final class AudioTransport: Sendable {
             return PositionSnapshot(
                 playback: PlaybackSnapshot(
                     loop: visibleLoop,
-                    revision: state.currentRevision,
+                    revision: sourceFade?.old.revision ?? state.currentRevision,
                     beatPosition: beatPosition,
                     isPlaying: state.isPlaying,
-                    overrideGeneration: switching ? (state.fade?.old.generation ?? state.currentGeneration) : state.currentGeneration,
-                    performanceGeneration: state.publishedPerformanceGeneration,
-                    switchVariantIndex: state.publishedSwitchIndex
+                    overrideGeneration: sourceFade?.old.generation ?? (switching ? (state.fade?.old.generation ?? state.currentGeneration) : state.currentGeneration),
+                    performanceGeneration: sourceFade?.old.performanceGeneration ?? state.publishedPerformanceGeneration,
+                    switchVariantIndex: sourceFade == nil ? state.publishedSwitchIndex : sourceFade?.old.switchIndex
                 ),
-                accumulatedBeatPosition: state.beatPosition
+                accumulatedBeatPosition: sourceFade?.oldBeatPosition ?? state.beatPosition
             )
         }
     }
@@ -1166,7 +1171,7 @@ final class AudioTransport: Sendable {
 
     func clockAnchor(presentationLatency: Double, now: UInt64 = mach_absolute_time()) throws -> PlaybackClockAnchor {
         let values = try state.withLock { state in
-            guard state.scratch == nil else { throw PlaybackClockError.unavailable }
+            guard state.scratch == nil, state.fade?.oldBeatPosition == nil else { throw PlaybackClockError.unavailable }
             return (state.current?.bpm, state.current?.beatCount, state.currentRevision,
              state.currentGeneration, state.isPlaying, state.beatPosition, state.clockRate,
              state.clockSample, state.clockDiscontinuous)
@@ -1253,9 +1258,15 @@ final class AudioTransport: Sendable {
             for offset in 0..<frameCount {
                 if let pending = state.pending,
                    let boundary = state.pendingBoundary,
-                   state.beatPosition >= boundary, state.reservation == nil,
+                   state.beatPosition >= boundary, state.reservation == nil, state.fade == nil, state.retired == nil,
                    state.currentPerformanceGeneration == state.publishedPerformanceGeneration {
+                    let old: Candidate?
+                    if let loop = state.current, let revision = state.currentRevision {
+                        old = Candidate(loop: loop, revision: revision, generation: state.currentGeneration,
+                            performanceGeneration: state.currentPerformanceGeneration, switchIndex: state.currentSwitchIndex)
+                    } else { old = nil }
                     adopt(pending, into: &state)
+                    if let old { state.fade = Fade(old: old, oldBeatPosition: state.beatPosition) }
                 }
 
                 if state.fade == nil, state.retired == nil, let replacement = state.replacement {
@@ -1275,9 +1286,15 @@ final class AudioTransport: Sendable {
                 var right = phase.1
                 if let fade = state.fade {
                     let mix = Float(fade.elapsed) / Float(Self.crossfadeFrames - 1)
-                    let old = performanceFade || state.currentPerformanceGeneration > 0 || state.currentSwitchIndex != nil || fade.old.switchIndex != nil
-                        ? sample(at: state.beatPosition, in: fade.old.loop)
-                        : (fade.old.loop.pcm[frame * 2], fade.old.loop.pcm[frame * 2 + 1])
+                    let old: (Float, Float)
+                    if let oldBeat = fade.oldBeatPosition {
+                        old = sample(at: oldBeat, in: fade.old.loop)
+                        state.fade?.oldBeatPosition = oldBeat + deltaBeatFor(fade.old.loop)
+                    } else {
+                        old = performanceFade || state.currentPerformanceGeneration > 0 || state.currentSwitchIndex != nil || fade.old.switchIndex != nil
+                            ? sample(at: state.beatPosition, in: fade.old.loop)
+                            : (fade.old.loop.pcm[frame * 2], fade.old.loop.pcm[frame * 2 + 1])
+                    }
                     left = old.0 * (1 - mix) + left * mix
                     right = old.1 * (1 - mix) + right * mix
                     if fade.elapsed + 1 == Self.crossfadeFrames {

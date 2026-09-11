@@ -27,10 +27,10 @@ struct PlaybackTests {
         #expect(throws: (any Error).self) { try transport.submit(loop: next, revision: 3) }
         _ = try advance(transport, frames: 88_200 - 1_024)
         #expect(transport.snapshot().revision == 1)
-        _ = try advance(transport, frames: 2)
+        _ = try advance(transport, frames: AudioTransport.crossfadeFrames + 2)
         #expect(transport.snapshot().revision == 3)
         #expect(transport.snapshot().loop?.bpm == 60)
-        #expect(transport.snapshot().beatPosition < 0.001)
+        #expect(transport.snapshot().beatPosition < 0.031)
         transport.stopPlayback()
         let paused = transport.snapshot().beatPosition
         #expect(try advance(transport, frames: 512) == 0)

@@ -55,7 +55,11 @@ struct LiveReplacementPlaybackTests {
         #expect(transport.snapshot() == before)
         transport.beginUpdate(revision: 5)
         try transport.submit(loop: loop(scale: 0.3), revision: 5)
-        _ = try render(transport, frames: 12)
+        _ = try render(transport, frames: AudioTransport.crossfadeFrames)
+        #expect(transport.snapshot().revision == 4)
+        // The host drains retired PCM off callback before a source fade can begin.
+        _ = transport.drainRetiredAndRetainedIdentities()
+        _ = try render(transport, frames: AudioTransport.crossfadeFrames)
         #expect(transport.snapshot().revision == 5)
         #expect(transport.snapshot().overrideGeneration == 0)
         #expect(throws: PlaybackError.staleRevision(4)) {

@@ -364,3 +364,5 @@ PlayModeKeys owns standalone modifier-tap recognition using native left/right mo
 ## Shared master monitoring
 
 DeckWorkspace owns the single master capture read per display tick and supplies it to both SessionModels. The models independently read deck captures and update spectrum only for a new audio sequence or playback transition. Playback owns capture storage and chronology; Editor never borrows mutable callback storage. See [Playback monitor contract](../../MusicPlaygourndCore/Playback/DESIGN.md#monitor-ring-and-immutable-snapshots).
+
+Audio settings persist `playback.sourceUpdateTiming` with Immediate as the app default and Next Beat / Next Bar alternatives. SessionModel reads the preference at source submission and describes that pending timing in its status. Transport publication follows the Playback contract, so existing worker/control adoption observes only a completed crossfade. The 150ms typing debounce remains unchanged.

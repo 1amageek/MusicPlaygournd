@@ -90,7 +90,7 @@ struct PlaybackClockAnchorTests {
         #expect(transport.snapshot().revision == 1)
         #expect(transport.snapshot().beatPosition == 0)
         #expect(transport.positionSnapshot().accumulatedBeatPosition == 0)
-        try advance(transport, frames: 88_202, hostTime: 101)
+        try advance(transport, frames: 88_202 + AudioTransport.crossfadeFrames, hostTime: 101)
         #expect(transport.snapshot().revision == 2)
     }
 

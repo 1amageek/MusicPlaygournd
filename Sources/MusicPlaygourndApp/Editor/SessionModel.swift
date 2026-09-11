@@ -616,10 +616,11 @@ final class SessionModel {
                     self.candidatePerformanceTransferIssues = [:]
                 }
                 self.candidateSourceDigests = [requested: DocumentHostStateStore.sourceDigest(text)]
-                try engine.submit(loop: candidate, revision: requested)
+                let timing = SourceUpdateTiming(rawValue: UserDefaults.standard.string(forKey: "playback.sourceUpdateTiming") ?? "") ?? .immediate
+                try engine.submit(loop: candidate, revision: requested, timing: timing)
                 if self.wantsPlayback { try engine.play() }
                 self.isPreparing = false
-                self.status = "Ready · waiting for the next bar"
+                self.status = "Ready · \(timing.title)"
                 self.refresh()
             } catch is CancellationError {
                 // A newer revision owns the UI and pending state.

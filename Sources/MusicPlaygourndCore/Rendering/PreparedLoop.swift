@@ -12,7 +12,8 @@ public struct PreparedLoop: Codable, Sendable, Equatable {
     public let bpm: Double
     public let beatsPerBar: Int
     public let beatCount: Double
-    public let samples: [Float]
+    public let pcm: PCMBuffer
+    public var samples: [Float] { pcm.array }
     public let events: [LoopEvent]
     public let meters: [PreparedMeterEnvelope]?
     public let rows: [LoopRow]
@@ -27,18 +28,24 @@ public struct PreparedLoop: Codable, Sendable, Equatable {
         rows: [LoopRow] = [],
         meters: [PreparedMeterEnvelope]? = nil
     ) {
+        self.init(sampleRate: sampleRate, bpm: bpm, beatsPerBar: beatsPerBar, beatCount: beatCount,
+                  pcm: PCMBuffer(samples), events: events, rows: rows, meters: meters)
+    }
+
+    internal init(sampleRate: Double, bpm: Double, beatsPerBar: Int, beatCount: Double,
+                  pcm: PCMBuffer, events: [LoopEvent], rows: [LoopRow] = [], meters: [PreparedMeterEnvelope]? = nil) {
         self.sampleRate = sampleRate
         self.bpm = bpm
         self.beatsPerBar = beatsPerBar
         self.beatCount = beatCount
-        self.samples = samples
+        self.pcm = pcm
         self.events = events
         self.rows = rows
         self.meters = meters
     }
 
     private enum CodingKeys: String, CodingKey {
-        case sampleRate, bpm, beatsPerBar, beatCount, samples, pcmFloat32LE, events, meters, rows
+        case sampleRate, bpm, beatsPerBar, beatCount, samples, pcmFloat32LE, pcmRange, events, meters, rows
     }
 
     public init(from decoder: any Decoder) throws {
@@ -50,21 +57,21 @@ public struct PreparedLoop: Codable, Sendable, Equatable {
         events = try values.decode([LoopEvent].self, forKey: .events)
         rows = try values.decode([LoopRow].self, forKey: .rows)
         meters = try values.decodeIfPresent([PreparedMeterEnvelope].self, forKey: .meters)
-        if values.contains(.pcmFloat32LE) {
-            let data = try values.decode(Data.self, forKey: .pcmFloat32LE)
-            let maximumBytes = Int(Self.requiredSampleRate * Self.maximumDurationSeconds) * 2 * 4
-            guard data.count.isMultiple(of: 4), data.count <= maximumBytes else {
+        if values.contains(.pcmRange) {
+            guard let context = decoder.userInfo[PCMFileTransport.codingKey] as? PCMFileTransport.Context else {
+                throw DecodingError.dataCorruptedError(forKey: .pcmRange, in: values,
+                    debugDescription: "PCM file requires a transport context.")
+            }
+            pcm = try context.read(values.decode([Int].self, forKey: .pcmRange))
+        } else if values.contains(.pcmFloat32LE) {
+            let bytes = try values.decode(Data.self, forKey: .pcmFloat32LE)
+            guard bytes.count <= PCMBuffer.maximumBytes, bytes.count.isMultiple(of: 4) else {
                 throw DecodingError.dataCorruptedError(forKey: .pcmFloat32LE, in: values,
                     debugDescription: "PCM must contain bounded, complete Float32 samples.")
             }
-            // The Data owns this scoped borrow; each unaligned read is within its checked byte count.
-            samples = data.withUnsafeBytes { bytes in
-                (0..<(bytes.count / 4)).map { index in
-                    Float(bitPattern: UInt32(littleEndian: bytes.loadUnaligned(fromByteOffset: index * 4, as: UInt32.self)))
-                }
-            }
+            pcm = try PCMBuffer(bytes: bytes)
         } else {
-            samples = try values.decode([Float].self, forKey: .samples)
+            pcm = PCMBuffer(try values.decode([Float].self, forKey: .samples))
         }
     }
 
@@ -77,13 +84,12 @@ public struct PreparedLoop: Codable, Sendable, Equatable {
         try values.encode(events, forKey: .events)
         try values.encode(rows, forKey: .rows)
         try values.encodeIfPresent(meters, forKey: .meters)
-        // Serialization needs owned bytes beyond this Array borrow; Data performs that boundary copy.
-        #if _endian(little)
-        let data = samples.withUnsafeBytes { Data($0) }
-        #else
-        let data = samples.map { $0.bitPattern.littleEndian }.withUnsafeBytes { Data($0) }
-        #endif
-        try values.encode(data, forKey: .pcmFloat32LE)
+        if let context = encoder.userInfo[PCMFileTransport.codingKey] as? PCMFileTransport.Context {
+            try values.encode(context.write(pcm), forKey: .pcmRange)
+        } else {
+            // Standalone serialization must own bytes beyond this scoped borrow.
+            try values.encode(pcm.withLittleEndianBytes { Data($0) }, forKey: .pcmFloat32LE)
+        }
     }
 
     public func validate() throws {
@@ -113,18 +119,16 @@ public struct PreparedLoop: Codable, Sendable, Equatable {
             throw PreparedLoopValidationError.invalidBeatCount(beatCount)
         }
         let expectedFrames = Int((duration * sampleRate).rounded(.up))
-        guard expectedFrames >= 1, samples.count == expectedFrames * 2 else {
-            throw PreparedLoopValidationError.invalidSampleCount(samples.count)
+        guard expectedFrames >= 1, pcm.count == expectedFrames * 2 else {
+            throw PreparedLoopValidationError.invalidSampleCount(pcm.count)
         }
 
         let maximumSamples = Int(Self.requiredSampleRate * Self.maximumDurationSeconds) * 2
-        guard samples.count <= maximumSamples else {
+        guard pcm.count <= maximumSamples else {
             throw PreparedLoopValidationError.tooManySamples(limit: maximumSamples)
         }
-        for (index, sample) in samples.enumerated() {
-            guard sample.isFinite else {
-                throw PreparedLoopValidationError.nonFiniteSample(index: index)
-            }
+        if let index = pcm.firstNonFinite {
+            throw PreparedLoopValidationError.nonFiniteSample(index: index)
         }
 
         guard rows.count <= Self.maximumRows else {

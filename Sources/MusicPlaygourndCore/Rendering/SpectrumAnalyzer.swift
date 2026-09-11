@@ -29,9 +29,9 @@ public final class SpectrumAnalyzer {
 
     /// Returns peak-amplitude dBFS for logarithmic bands, with silence at -90 dBFS.
     public func analyze(loop: PreparedLoop, beat: Double, isPlaying: Bool) -> [Float] {
-        let frames = loop.samples.count / 2
+        let frames = loop.pcm.count / 2
         let phase = beat.isFinite && loop.beatCount > 0 ? max(0, min(1, beat / loop.beatCount)) : 0
-        return analyze(samples: loop.samples, sampleRate: loop.sampleRate,
+        return analyze(samples: loop.pcm, sampleRate: loop.sampleRate,
             cursor: Int(phase * Double(frames)), isPlaying: isPlaying && beat.isFinite)
     }
 
@@ -41,7 +41,7 @@ public final class SpectrumAnalyzer {
             cursor: interleavedSamples.count / 2, isPlaying: isPlaying)
     }
 
-    private func analyze(samples: [Float], sampleRate: Double, cursor: Int, isPlaying: Bool) -> [Float] {
+    private func analyze<Samples: RandomAccessCollection>(samples: Samples, sampleRate: Double, cursor: Int, isPlaying: Bool) -> [Float] where Samples.Index == Int, Samples.Element == Float {
         var bands = [Float](repeating: -90, count: Self.bandCount)
         let frames = samples.count / 2
         guard isPlaying, frames > 0, samples.count.isMultiple(of: 2),

@@ -846,7 +846,7 @@ internal actor RenderWorkerConnection {
         guard let size, size.intValue <= 16 * 1024 * 1024 else {
             throw EvaluationError.invalidResult("Worker result exceeds 16 MiB.")
         }
-        let result = try PropertyListDecoder().decode(WorkerPreparedResult.self, from: Data(contentsOf: outputURL))
+        let result = try PCMFileTransport.read(WorkerPreparedResult.self, from: Data(contentsOf: outputURL, options: .alwaysMapped), at: outputURL)
         guard result.revision == revision, result.generation == generation else {
             throw EvaluationError.invalidResult("Worker result identity does not match its response.")
         }
@@ -871,7 +871,7 @@ internal actor RenderWorkerConnection {
         var variants = [SwitchVariant]()
         for index in descriptor.selections.indices {
             let file = directory.appending(path: "prepared-switch-\(index).plist")
-            let variant = try PropertyListDecoder().decode(SwitchVariant.self, from: boundedData(at: file))
+            let variant = try PCMFileTransport.read(SwitchVariant.self, from: boundedData(at: file), at: file)
             guard variant.selection == descriptor.selections[index] else {
                 throw EvaluationError.invalidResult("Worker switch variant selection does not match its descriptor.")
             }
@@ -891,7 +891,7 @@ internal actor RenderWorkerConnection {
               size.intValue <= 16 * 1024 * 1024 else {
             throw EvaluationError.invalidResult("Worker switch sidecar exceeds 16 MiB.")
         }
-        return try Data(contentsOf: url)
+        return try Data(contentsOf: url, options: .alwaysMapped)
     }
 
     private func validate(_ manifest: [StemExportManifest]) throws {

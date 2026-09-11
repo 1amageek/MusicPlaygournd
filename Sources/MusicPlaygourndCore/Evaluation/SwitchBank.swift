@@ -153,7 +153,7 @@ public struct PreparedSwitchBank: Codable, Sendable, Equatable {
             }
         }
         let totalPCMBytes = try variants.reduce(into: 0) { partial, variant in
-            let (bytes, overflow) = variant.loop.samples.count.multipliedReportingOverflow(by: MemoryLayout<Float>.stride)
+            let (bytes, overflow) = variant.loop.pcm.count.multipliedReportingOverflow(by: MemoryLayout<Float>.stride)
             guard !overflow else {
                 throw EvaluationError.invalidResult("Prepared Swift switch PCM size overflowed.")
             }

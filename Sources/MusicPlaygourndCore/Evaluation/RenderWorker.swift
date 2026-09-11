@@ -192,15 +192,7 @@ public enum RenderWorker {
         try loop.validate()
         let result = WorkerPreparedResult(revision: revision, generation: generation,
                                           loop: loop, metadata: metadata)
-        let encoder = PropertyListEncoder()
-        encoder.outputFormat = .binary
-        let data = try encoder.encode(result)
-        guard data.count <= maximumResultBytes else {
-            throw EvaluationError.invalidResult("Worker PCM result exceeds 16 MiB.")
-        }
-        let directory = outputURL.deletingLastPathComponent()
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        try data.write(to: outputURL, options: .atomic)
+        try PCMFileTransport.write(result, to: outputURL, maximumBytes: maximumResultBytes)
     }
 
     private static func publishSwitchBank(_ bank: PreparedSwitchBank, outputURL: URL) throws {
@@ -223,17 +215,11 @@ public enum RenderWorker {
         guard index >= 0 else {
             throw EvaluationError.invalidResult("Worker switch variant index is invalid.")
         }
-        let encoder = PropertyListEncoder()
-        encoder.outputFormat = .binary
-        let data = try encoder.encode(variant)
-        guard data.count <= maximumResultBytes else {
-            throw EvaluationError.invalidResult("Worker switch variant exceeds 16 MiB.")
-        }
-        let file = outputURL.deletingLastPathComponent().appending(path: "prepared-switch-\(index).plist")
-        try data.write(to: file, options: .atomic)
         guard variant.metadata.revision == revision else {
             throw EvaluationError.invalidResult("Worker switch variant revision is invalid.")
         }
+        let file = outputURL.deletingLastPathComponent().appending(path: "prepared-switch-\(index).plist")
+        try PCMFileTransport.write(variant, to: file, maximumBytes: maximumResultBytes)
     }
 }
 

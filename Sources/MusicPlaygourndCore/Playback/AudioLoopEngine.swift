@@ -191,7 +191,7 @@ public final class AudioLoopEngine: AudioUnitHosting, MasterRecording {
         for loop in loops {
             do { try loop.validate() }
             catch let error as PreparedLoopValidationError { throw PlaybackError.invalidLoop(error) }
-            bytes += loop.samples.count * MemoryLayout<Float>.stride
+            bytes += loop.pcm.count * MemoryLayout<Float>.stride
             guard bytes <= 128 * 1024 * 1024, loop.bpm == loops[0].bpm,
                   loop.beatsPerBar == loops[0].beatsPerBar else { throw PlaybackError.incompatibleReplacement }
         }
@@ -907,7 +907,7 @@ final class AudioTransport: Sendable {
     private static func sameShape(_ lhs: PreparedLoop, _ rhs: PreparedLoop) -> Bool {
         guard lhs.sampleRate == rhs.sampleRate, lhs.bpm == rhs.bpm,
               lhs.beatsPerBar == rhs.beatsPerBar, lhs.beatCount == rhs.beatCount,
-              lhs.samples.count == rhs.samples.count,
+              lhs.pcm.count == rhs.pcm.count,
               lhs.events.count == rhs.events.count, lhs.rows.count == rhs.rows.count else { return false }
         for (a, b) in zip(lhs.events, rhs.events) {
             guard a.sourceID == b.sourceID, a.label == b.label, a.startBeat == b.startBeat,
@@ -1104,7 +1104,7 @@ final class AudioTransport: Sendable {
             if state.currentPerformanceGeneration != state.publishedPerformanceGeneration || switching, let visibleLoop {
                 beatPosition = state.beatPosition.truncatingRemainder(dividingBy: visibleLoop.beatCount)
             } else if let current = state.current {
-                let frames = max(1, current.samples.count / 2)
+                let frames = max(1, current.pcm.count / 2)
                 beatPosition = Double(state.framePosition) / Double(frames) * current.beatCount
             } else {
                 beatPosition = 0
@@ -1266,18 +1266,18 @@ final class AudioTransport: Sendable {
                     write(buffers: buffers, frame: offset, left: 0, right: 0)
                     continue
                 }
-                let frame = state.framePosition % max(1, active.samples.count / 2)
+                let frame = state.framePosition % max(1, active.pcm.count / 2)
                 let performanceFade = state.currentPerformanceGeneration != state.publishedPerformanceGeneration
                 let phase = state.currentPerformanceGeneration > 0 || state.currentSwitchIndex != nil
                     ? sample(at: state.beatPosition, in: active)
-                    : (active.samples[frame * 2], active.samples[frame * 2 + 1])
+                    : (active.pcm[frame * 2], active.pcm[frame * 2 + 1])
                 var left = phase.0
                 var right = phase.1
                 if let fade = state.fade {
                     let mix = Float(fade.elapsed) / Float(Self.crossfadeFrames - 1)
                     let old = performanceFade || state.currentPerformanceGeneration > 0 || state.currentSwitchIndex != nil || fade.old.switchIndex != nil
                         ? sample(at: state.beatPosition, in: fade.old.loop)
-                        : (fade.old.loop.samples[frame * 2], fade.old.loop.samples[frame * 2 + 1])
+                        : (fade.old.loop.pcm[frame * 2], fade.old.loop.pcm[frame * 2 + 1])
                     left = old.0 * (1 - mix) + left * mix
                     right = old.1 * (1 - mix) + right * mix
                     if fade.elapsed + 1 == Self.crossfadeFrames {
@@ -1320,24 +1320,24 @@ final class AudioTransport: Sendable {
     }
 
     private func sample(at beat: Double, in loop: PreparedLoop) -> (Float, Float) {
-        let count = loop.samples.count / 2
+        let count = loop.pcm.count / 2
         let localBeat = beat.truncatingRemainder(dividingBy: loop.beatCount)
         let position = max(0, localBeat / loop.beatCount * Double(count))
         let first = Int(position) % count
         let second = (first + 1) % count
         let fraction = Float(position - floor(position))
-        return (loop.samples[first * 2] * (1 - fraction) + loop.samples[second * 2] * fraction,
-                loop.samples[first * 2 + 1] * (1 - fraction) + loop.samples[second * 2 + 1] * fraction)
+        return (loop.pcm[first * 2] * (1 - fraction) + loop.pcm[second * 2] * fraction,
+                loop.pcm[first * 2 + 1] * (1 - fraction) + loop.pcm[second * 2 + 1] * fraction)
     }
 
     private func frame(for beat: Double, in loop: PreparedLoop) -> Int {
         let localBeat = beat.truncatingRemainder(dividingBy: loop.beatCount)
         let ratio = max(0, min(1, localBeat / loop.beatCount))
-        return Int((ratio * Double(loop.samples.count / 2)).rounded(.down)) % max(1, loop.samples.count / 2)
+        return Int((ratio * Double(loop.pcm.count / 2)).rounded(.down)) % max(1, loop.pcm.count / 2)
     }
 
     private func loopFrameCountFor(_ loop: PreparedLoop) -> Int {
-        max(1, loop.samples.count / 2)
+        max(1, loop.pcm.count / 2)
     }
 
     private func deltaBeatFor(_ loop: PreparedLoop) -> Double {

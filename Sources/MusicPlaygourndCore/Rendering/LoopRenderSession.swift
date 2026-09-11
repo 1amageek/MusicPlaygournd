@@ -190,7 +190,7 @@ public struct LoopRenderSession: Sendable {
               rendered.bpm == baseline.bpm,
               rendered.beatsPerBar == baseline.beatsPerBar,
               rendered.beatCount == baseline.beatCount,
-              rendered.samples.count == baseline.samples.count,
+              rendered.pcm.count == baseline.pcm.count,
               rendered.events.count == baseline.events.count,
               rendered.rows.count == baseline.rows.count else {
             throw LoopRenderingError.invalidSound("live override changed the prepared loop shape")

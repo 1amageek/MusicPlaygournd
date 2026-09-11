@@ -499,7 +499,7 @@ public actor SourceEvaluator {
         let loop = initial.loop
         let resultLines = try ExpressionResultLocations.lines(ast: ast, source: source, prefixBytes: prefix.utf8.count, rows: loop.rows)
         let located = PreparedLoop(sampleRate: loop.sampleRate, bpm: loop.bpm, beatsPerBar: loop.beatsPerBar,
-            beatCount: loop.beatCount, samples: loop.samples, events: loop.events,
+            beatCount: loop.beatCount, pcm: loop.pcm, events: loop.events,
             rows: loop.rows.map { row in
                 LoopRow(sourceID: row.sourceID, label: row.label, anchor: row.anchor, peaks: row.peaks,
                     patternText: row.patternText, resultLine: resultLines[row.sourceID], trackID: row.trackID)
@@ -626,7 +626,7 @@ public actor SourceEvaluator {
         let loop = try await worker.connection.render(overrides: overrides, generation: generation)
         guard adopted?.revision == revision else { throw CancellationError() }
         let located = PreparedLoop(sampleRate: loop.sampleRate, bpm: loop.bpm,
-            beatsPerBar: loop.beatsPerBar, beatCount: loop.beatCount, samples: loop.samples,
+            beatsPerBar: loop.beatsPerBar, beatCount: loop.beatCount, pcm: loop.pcm,
             events: loop.events, rows: loop.rows.map {
                 LoopRow(sourceID: $0.sourceID, label: $0.label, anchor: $0.anchor, peaks: $0.peaks,
                         patternText: $0.patternText, resultLine: worker.resultLines[$0.sourceID], trackID: $0.trackID)
@@ -773,7 +773,7 @@ public actor SourceEvaluator {
             rows: loop.rows
         )
         let result = PreparedLoop(sampleRate: loop.sampleRate, bpm: loop.bpm,
-            beatsPerBar: loop.beatsPerBar, beatCount: loop.beatCount, samples: loop.samples,
+            beatsPerBar: loop.beatsPerBar, beatCount: loop.beatCount, pcm: loop.pcm,
             events: loop.events, rows: loop.rows.map { row in
                 LoopRow(sourceID: row.sourceID, label: row.label, anchor: row.anchor, peaks: row.peaks,
                     patternText: row.patternText, resultLine: lines[row.sourceID], trackID: row.trackID)

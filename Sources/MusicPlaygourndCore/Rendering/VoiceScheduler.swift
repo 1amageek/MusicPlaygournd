@@ -15,6 +15,22 @@ internal enum VoiceScheduler {
             } == true
         }
         mutating func terminate() { terminationOffset = voice.state.offset }
+        // Borrow the array element once: reading nested state through repeated array
+        // subscripts otherwise copies the large voice and retains its descriptors.
+        mutating func render(frame: Int, into output: inout [StereoBuffer]) throws {
+            let offset = voice.state.offset
+            var value = try voice.next()
+            if let start = terminationOffset {
+                let length = terminationFrames
+                let gain = length <= 1 ? 0 : Float(length - 1 - (offset - start)) / Float(length - 1)
+                value.left *= gain; value.right *= gain
+            }
+            if frame >= 0 {
+                let source = voice.source.id
+                output[source].left[frame] += value.left
+                output[source].right[frame] += value.right
+            }
+        }
         func magnitude() throws -> Float {
             let magnitude: Float
             if voice.state.offset == 0 {
@@ -106,18 +122,7 @@ internal enum VoiceScheduler {
                 cursor += 1
             }
             for index in active.indices {
-                let offset = active[index].voice.state.offset
-                var value = try active[index].voice.next()
-                if let start = active[index].terminationOffset {
-                    let length = active[index].terminationFrames
-                    let gain = length <= 1 ? 0 : Float(length - 1 - (offset - start)) / Float(length - 1)
-                    value.left *= gain; value.right *= gain
-                }
-                if frame >= 0 {
-                    let source = active[index].voice.source.id
-                    output[source].left[frame] += value.left
-                    output[source].right[frame] += value.right
-                }
+                try active[index].render(frame: frame, into: &output)
             }
         }
         return output

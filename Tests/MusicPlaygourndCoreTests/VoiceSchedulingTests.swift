@@ -4,6 +4,35 @@ import Testing
 @testable import MusicPlaygourndCore
 
 struct VoiceSchedulingTests {
+    private struct UnisonMix: Sound {
+        let tracks: Int
+        var body: some Sound {
+            for index in 0..<tracks {
+                Track("Voice \(index)") {
+                    Synthesizer(.bandLimitedSaw).notes("C3 E3 G3 C4").slow(4)
+                        .unison(voices: 5, detuneCents: 20).gain(0.01)
+                        .pan(index % 2 == 0 ? -0.6 : 0.6)
+                }
+            }
+        }
+    }
+
+    @Test(.timeLimit(.minutes(3)))
+    func scheduledUnisonPreservesEveryPCMSample() throws {
+        // Captured from the original scheduler before borrowing frame advancement.
+        for (tracks, expected) in [(1, UInt64(3503274188154613577)),
+                                   (8, UInt64(10066868256302327499)),
+                                   (16, UInt64(6415127351070170227))] {
+            let sound = try SoundCompiler().compile(UnisonMix(tracks: tracks))
+            let loop = try LoopRenderSession(sound: sound, bpm: 240, beatsPerBar: 4).baseline
+            let hash = loop.pcm.reduce(UInt64(14695981039346656037)) {
+                ($0 ^ UInt64($1.bitPattern)) &* 1099511628211
+            }
+            #expect(loop.pcm.count == 44100 * 4 * 2)
+            #expect(hash == expected)
+        }
+    }
+
     private struct Loader: SampleLoading {
         func load(_ request: SampleLoadRequest) throws -> LoadedSample {
             let level: Float = request.fileURL.lastPathComponent == "a" ? 1

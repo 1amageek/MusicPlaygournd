@@ -21,7 +21,7 @@ extension NativeHostTests {
             #expect(rendered.map { abs($0) }.max() ?? 0 > 0.01)
 
             let meter = engine.outputMeter()
-            #expect(meter.interleavedSamples.count == 4_096)
+            #expect(meter.interleavedSamples.count == OutputMeterStore.sampleCapacity)
             #expect(meter.sampleRate == PreparedLoop.requiredSampleRate)
             #expect(meter.interleavedSamples.allSatisfy { $0.isFinite })
             #expect(meter.interleavedSamples.map { abs($0) }.max() ?? 0 > 0.01)

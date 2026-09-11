@@ -1,9 +1,14 @@
 # Changelog
 
-## Unreleased
+## 0.4.0 — Preview — 2026-09-11
 
 - Update the host, evaluator, completion service and new-project templates to SwiftMusic 0.5.1 Preview.
-- Reduce synthesis scheduling overhead while preserving exact PCM output.
+- Reduce synthesis scheduling overhead while preserving exact PCM output. On the measured M4 Max fixture, four-second synthesis dropped from 248 to 70 ms for eight tracks and 490 to 137 ms for sixteen tracks (seven-run Release medians).
+- Reuse stable evaluation binaries and compiler discovery, and preserve exact UTF-8 bytes when checking unchanged source files.
+- Retain immutable mapped PCM across worker transport and playback, and reuse meter snapshots with bounded ring capture.
+- Improve obsolete-render cancellation and reuse oscillator/FFT preparation.
+
+Validation: SwiftMusic 0.5.1 passed 208 Release tests. The host passed 24 synthesis-focused and eight live/native integration tests, followed by 12 dependency/template/completion checks and two packaged-runtime checks. Generated-template native PCM, both Slider paths and actual hardware playback were verified; mapped PCM also passed five prior Address Sanitizer checks. Release packaging and signature are verified locally. This remains a source preview; no notarized binary is provided. The known limitations recorded under 0.3.0 remain outside this performance-focused release.
 
 ## 0.3.0 — Preview — 2026-09-11
 

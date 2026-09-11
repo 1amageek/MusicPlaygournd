@@ -100,6 +100,19 @@ extension NativeHostTests {
                     overrides: [mute], revision: revision, generation: 17
                 )
                 #expect(selectedAgain == muted)
+                let builds = await evaluator.executableBuildInvocations
+                let asts = await evaluator.astInvocations
+                let binary = workspace.appending(path: "EvaluationBinary")
+                let timestamp = try binary.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate
+                let warmStart = ContinuousClock.now
+                let fresh = try await evaluator.evaluateRetained(source: source, bpm: 120,
+                    beatsPerBar: 4, revision: revision + 1)
+                print("UNCHANGED SWITCH REUSE", warmStart.duration(to: .now))
+                #expect(fresh.loop == retained.loop)
+                #expect(fresh.catalog.descriptors.allSatisfy { $0.address.revision == revision + 1 })
+                #expect(await evaluator.executableBuildInvocations == builds)
+                #expect(await evaluator.astInvocations == asts)
+                #expect(try binary.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate == timestamp)
                 try await evaluator.shutdown()
             } catch {
                 do { try await evaluator.shutdown() }

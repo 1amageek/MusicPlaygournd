@@ -10,7 +10,7 @@ public actor SourceEvaluator {
     private let swiftExecutable: String
     private let runtimeSDK: URL?
     private let projectBuildCache: URL?
-    private struct CompilerEnvironment: Decodable {
+    private struct CompilerEnvironment: Codable {
         let artifactDigests: [String: String]
         let compilerVersion: String
         let sdkPath: String
@@ -19,6 +19,11 @@ public actor SourceEvaluator {
     }
     private var compilerEnvironment: CompilerEnvironment?
     private var binaryDirectory: String?
+    private var cachedDiscovery: (key: String, value: SwitchBankDiscovery.Result)?
+    private var cachedAST: (key: String, value: Data)?
+    private var directBuildKey: String?
+    private(set) var astInvocations = 0
+    private(set) var executableBuildInvocations = 0
     private var busy = false
     private struct Worker {
         let revision: UInt64
@@ -353,16 +358,16 @@ public actor SourceEvaluator {
             PreparedLoop.maximumBeatCount,
             (PreparedLoop.maximumDurationSeconds * bpm / 60).rounded(.down)
         ))
+        let discoveryKey = Self.buildDigest(Data("\(source)\n\(entryType)\n\(bpm)\n\(beatsPerBar)\n\(project?.project.root.path ?? "")".utf8))
+        let priorDiscovery = cachedDiscovery?.key == discoveryKey ? cachedDiscovery?.value : nil
         let wrapper = Self.makeWrapper(
             source: source,
-            revision: revision,
             bpm: bpm,
             beatsPerBar: beatsPerBar,
             maximumLiveBeats: maximumLiveBeats,
-            output: output,
-            discovery: nil, entryType: entryType
+            discovery: priorDiscovery, entryType: entryType
         )
-        try wrapper.write(to: entryFile, atomically: true, encoding: .utf8)
+        try ProjectWorkspace.writeIfChanged(wrapper, to: entryFile)
         let environment = try await resolveCompilerEnvironment()
         let binaryPath: String
         let executable: URL
@@ -370,8 +375,11 @@ public actor SourceEvaluator {
         do {
         if let runtimeSDK, projectWorkspace == nil {
             binaryPath = runtimeSDK.path
-            executable = workerDirectory.appending(path: "Evaluation")
+            executable = workspace.appending(path: "EvaluationBinary")
             let compiler = URL(fileURLWithPath: swiftExecutable).deletingLastPathComponent().appending(path: "swiftc")
+            let key = Self.buildDigest(Data(wrapper.utf8) + (try Self.environmentBytes(environment)))
+            if directBuildKey != key || !manager.fileExists(atPath: executable.path) {
+                executableBuildInvocations += 1
             _ = try await run(compiler.path, ["-parse-as-library", "-O", "-target", environment.target,
                 "-sdk", environment.sdkPath, "-I", runtimeSDK.path,
                 entryFile.path,
@@ -379,7 +387,10 @@ public actor SourceEvaluator {
                 runtimeSDK.appending(path: "MusicPlayground.o").path,
                 runtimeSDK.appending(path: "MusicPlaygourndCore.o").path,
                 "-o", executable.path], timeout: 60, progress: progress)
+                directBuildKey = key
+            }
         } else {
+            executableBuildInvocations += 1
             _ = try await run(swiftExecutable, ["build", "--configuration", "release", "--build-system", "native", "-Xswiftc", "-Xfrontend", "-Xswiftc", "-disable-round-trip-debug-types", "--package-path", buildRoot.path, "--product", product], timeout: 240, progress: progress)
             if let binaryDirectory, projectWorkspace == nil { binaryPath = binaryDirectory }
             else {
@@ -401,7 +412,7 @@ public actor SourceEvaluator {
         }
         let prefix = "import Foundation\nimport SwiftMusic\nimport MusicPlaygourndCore\n"
         let displaySource = workspace.appending(path: "ResultLocations.swift")
-        try (prefix + source).write(to: displaySource, atomically: true, encoding: .utf8)
+        try ProjectWorkspace.writeIfChanged(prefix + source, to: displaySource)
         var astArguments = ["-frontend", "-dump-ast", "-dump-ast-format", "json", "-suppress-warnings",
             "-plugin-path", environment.pluginPath, "-sdk", environment.sdkPath,
             "-I", binaryPath, "-I", URL(fileURLWithPath: binaryPath).appending(path: "Modules").path]
@@ -411,25 +422,33 @@ public actor SourceEvaluator {
         } else {
             astArguments.append(displaySource.path)
         }
-        let astOutput = try await run(swiftExecutable, astArguments, timeout: 20)
-        let ast = Data(astOutput.utf8)
+        let executableDigest = Self.buildDigest(try Data(contentsOf: executable, options: .mappedIfSafe))
+        let astKey = Self.buildDigest(Data((executableDigest + source + astArguments.joined(separator: "\0")).utf8))
+        let ast: Data
+        if let cachedAST, cachedAST.key == astKey {
+            ast = cachedAST.value
+        } else {
+            astInvocations += 1
+            let astOutput = try await run(swiftExecutable, astArguments, timeout: 20)
+            ast = Data(astOutput.utf8)
+        }
         let discovery = try SwitchBankDiscovery.discover(
             ast: ast,
             source: source,
             prefixBytes: prefix.utf8.count, entryType: entryType
         )
-        if discovery.isSupported {
-            let switchedWrapper = Self.makeWrapper(
+        cachedDiscovery = (discoveryKey, discovery)
+        let switchedWrapper = Self.makeWrapper(
                 source: source,
-                revision: revision,
                 bpm: bpm,
                 beatsPerBar: beatsPerBar,
                 maximumLiveBeats: maximumLiveBeats,
-                output: output,
                 discovery: discovery, entryType: entryType
             )
-            try switchedWrapper.write(to: entryFile, atomically: true, encoding: .utf8)
+        if switchedWrapper != wrapper {
+            try ProjectWorkspace.writeIfChanged(switchedWrapper, to: entryFile)
             do {
+                executableBuildInvocations += 1
                 if let runtimeSDK, projectWorkspace == nil {
                     let compiler = URL(fileURLWithPath: swiftExecutable).deletingLastPathComponent().appending(path: "swiftc")
                     _ = try await run(compiler.path, ["-parse-as-library", "-O", "-target", environment.target,
@@ -448,9 +467,16 @@ public actor SourceEvaluator {
                 throw EvaluationError.processFailed("Switch variant preparation failed: \(error.localizedDescription)")
             }
         }
+        let finalDigest = Self.buildDigest(try Data(contentsOf: executable, options: .mappedIfSafe))
+        cachedAST = (Self.buildDigest(Data((finalDigest + source + astArguments.joined(separator: "\0")).utf8)), ast)
+        if runtimeSDK != nil, projectWorkspace == nil {
+            directBuildKey = Self.buildDigest(Data(switchedWrapper.utf8) + (try Self.environmentBytes(environment)))
+        }
         await progress?("Preparing audio…")
+        let workerExecutable = workerDirectory.appending(path: "Evaluation")
+        try manager.copyItem(at: executable, to: workerExecutable)
         let connection = try RenderWorkerConnection(
-            executable: executable,
+            executable: workerExecutable,
             outputURL: output, revision: revision, workingDirectory: project?.project.root)
         do {
         var initial = try await connection.ready()
@@ -1010,13 +1036,21 @@ public actor SourceEvaluator {
     sys.exit(status if status >= 0 else 128 - status)
     """
 
+    private static func environmentBytes(_ value: CompilerEnvironment) throws -> Data {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .sortedKeys
+        return try encoder.encode(value)
+    }
+
+    private static func buildDigest(_ data: Data) -> String {
+        SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+    }
+
     private static func makeWrapper(
         source: String,
-        revision: UInt64,
         bpm: Double,
         beatsPerBar: Int,
         maximumLiveBeats: Int,
-        output: URL,
         discovery: SwitchBankDiscovery.Result?, entryType: String
     ) -> String {
         let supportedDiscovery = discovery.flatMap { $0.isSupported ? $0 : nil }
@@ -1047,7 +1081,7 @@ public actor SourceEvaluator {
                                     beatsPerBar: \(beatsPerBar),
                                     maximumLiveBeats: \(maximumLiveBeats),
                                     source: \(swiftLiteral(source)),
-                                    revision: \(revision)
+                                    revision: revision
                                 ))
                             }
                             session.__swiftMusicSwitchApply(initialSelection)
@@ -1104,7 +1138,7 @@ public actor SourceEvaluator {
                             beatsPerBar: \(beatsPerBar),
                             maximumLiveBeats: \(maximumLiveBeats),
                             source: \(swiftLiteral(source)),
-                            revision: \(revision)
+                            revision: revision
                         )
             """
         }
@@ -1160,15 +1194,20 @@ public actor SourceEvaluator {
             }
 
             static func main() async {
+              let revision = CommandLine.arguments.dropFirst().first.flatMap(UInt64.init)
               do {
+                guard CommandLine.arguments.count == 3, let revision,
+                      CommandLine.arguments[2].hasPrefix("/") else {
+                    throw EvaluationError.invalidResult("Worker requires a revision and absolute output path.")
+                }
                 let bounds = try SoundCompiler.Limits(maximumEvents: 1024, maximumSources: 32, maximumRenderNodes: 256, maximumBuses: 32)
-                try await RenderWorker.runPrepared(revision: \(revision), outputURL: URL(fileURLWithPath: \(swiftLiteral(output.path)))) {
+                try await RenderWorker.runPrepared(revision: revision, outputURL: URL(fileURLWithPath: CommandLine.arguments[2])) {
             \(preparation)
                 }
               } catch {
-                if let located = error as? LocatedSoundCompilationError {
+                if let revision, let located = error as? LocatedSoundCompilationError {
                   do {
-                    let diagnostic = try WorkerCompilerDiagnostic(revision: \(revision), error: located)
+                    let diagnostic = try WorkerCompilerDiagnostic(revision: revision, error: located)
                     FileHandle.standardError.write(try diagnostic.encodedStderrLine())
                   } catch {
                 FileHandle.standardError.write(Data("Compiler diagnostic serialization failed: \\(error)\\n".utf8))

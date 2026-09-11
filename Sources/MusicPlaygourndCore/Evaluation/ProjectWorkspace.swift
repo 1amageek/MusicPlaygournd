@@ -35,7 +35,7 @@ struct ProjectWorkspace {
             paths.insert(relative)
             if values.isDirectory == true {
                 try manager.createDirectory(at: copy, withIntermediateDirectories: true)
-            } else if relative == "Package.swift" {
+            } else if relative == "Package.swift" || copy.standardizedFileURL == destination.appending(path: request.target.path).appending(path: request.target.entry).standardizedFileURL {
                 // The manifest is augmented below; preserve its timestamp until the final text changes.
                 continue
             } else if url.pathExtension == "swift" || url.lastPathComponent == "Package.resolved" {

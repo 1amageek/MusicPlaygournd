@@ -95,7 +95,7 @@ internal actor RenderWorkerConnection {
         let stdin = Pipe(), stdout = Pipe(), stderr = Pipe()
         process.currentDirectoryURL = workingDirectory
         process.executableURL = URL(fileURLWithPath: "/usr/bin/python3")
-        process.arguments = ["-c", "import os,sys; os.setpgid(0,0); os.execv(sys.argv[1], [sys.argv[1]])", executable.path]
+        process.arguments = ["-c", "import os,sys; os.setpgid(0,0); os.execv(sys.argv[1], sys.argv[1:])", executable.path, String(revision), outputURL.path]
         process.standardInput = stdin
         process.standardOutput = stdout
         process.standardError = stderr

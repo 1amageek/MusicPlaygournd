@@ -30,6 +30,27 @@ extension NativeHostTests {
         }
 
         @Test(.timeLimit(.minutes(1)))
+        func staggeredTwoAndThreeFingerLiftPreservesExactlyOneRelease() {
+            for (first, second) in [(3, 2), (2, 3)] {
+                let gesture = MultiFingerGestureRecognizer()
+                var released = 0, cancelled = 0
+                var motion: [Double] = []
+                gesture.onRelease = { released += 1 }
+                gesture.onEnd = { cancelled += 1 }
+                gesture.onMotion = { distance, _ in motion.append(distance) }
+                gesture.update(point: .zero, touchCount: first, timestamp: 1)
+                gesture.update(point: NSPoint(x: 10, y: 0), touchCount: first, timestamp: 1.02)
+                gesture.update(point: NSPoint(x: 100, y: 100), touchCount: second, timestamp: 1.04)
+                #expect(motion == [10] && cancelled == 0)
+                gesture.release(timestamp: 1.05)
+                gesture.release(timestamp: 1.06)
+                #expect(released == 1 && cancelled == 0)
+                gesture.attach(to: nil)
+                #expect(cancelled == 1)
+            }
+        }
+
+        @Test(.timeLimit(.minutes(1)))
         func recentHandVelocitySurvivesServoSettlementButExpiresAfterHolding() throws {
             for direction in [-1.0, 1.0] {
                 let transport = AudioTransport()

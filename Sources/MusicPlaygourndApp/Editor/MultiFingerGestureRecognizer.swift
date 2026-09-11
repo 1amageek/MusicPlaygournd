@@ -84,11 +84,15 @@ final class MultiFingerGestureRecognizer {
     }
 
     private func update(_ event: NSEvent) {
+        if event.phase == .cancelled || !event.touches(matching: .cancelled, in: nil).isEmpty {
+            reset()
+            return
+        }
         let touches = event.touches(matching: .touching, in: nil)
         guard touches.count == 2 || touches.count == 3 else {
             if touches.count < 2 && (!event.touches(matching: .ended, in: nil).isEmpty || event.phase == .ended) {
                 release(timestamp: event.timestamp)
-            } else if !coasting || !event.touches(matching: .cancelled, in: nil).isEmpty || touches.count > 3 {
+            } else if !coasting || touches.count > 3 {
                 reset()
             }
             return
@@ -104,7 +108,17 @@ final class MultiFingerGestureRecognizer {
     func update(point: NSPoint, touchCount: Int, timestamp: Double = ProcessInfo.processInfo.systemUptime) {
         guard touchCount == 2 || touchCount == 3 else { reset(); return }
         if coasting { reset() }
-        if lastTouchCount != touchCount { reset() }
+        if lastTouchCount != touchCount {
+            if tracking, onRelease != nil {
+                // Lifting one of three fingers is still a valid scratch. Rebase without
+                // interpreting the changed centroid as motion or discarding release inertia.
+                lastTouchCount = touchCount
+                lastPoint = point
+                lastTimestamp = timestamp
+                return
+            }
+            reset()
+        }
         lastTouchCount = touchCount
         if firstTimestamp == nil { firstTimestamp = timestamp }
         defer { lastPoint = point; lastTimestamp = timestamp }

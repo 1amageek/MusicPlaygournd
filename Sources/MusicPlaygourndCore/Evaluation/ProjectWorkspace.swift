@@ -133,7 +133,7 @@ struct ProjectWorkspace {
     }
 
     static func writeIfChanged(_ text: String, to url: URL) throws {
-        if FileManager.default.fileExists(atPath: url.path), try String(contentsOf: url, encoding: .utf8) == text { return }
+        if FileManager.default.fileExists(atPath: url.path), try String(contentsOf: url, encoding: .utf8).utf8.elementsEqual(text.utf8) { return }
         try text.write(to: url, atomically: true, encoding: .utf8)
     }
 

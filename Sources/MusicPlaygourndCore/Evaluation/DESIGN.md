@@ -158,3 +158,5 @@ Worker revision and output path are runtime arguments, not generated-source lite
 ### Mapped PCM publication
 
 Worker results and switch variants use the [Rendering PCM transport contract](../Rendering/DESIGN.md#pcm-transport). One atomic result file contains separate metadata and raw PCM sections. Revision, generation, semantic metadata and bank selection are checked before adoption exactly as for legacy packed payloads. Worker cleanup removes files; adopted PCM retains its own immutable mapping independently of file replacement and worker lifetime.
+
+Source write avoidance compares exact UTF-8 bytes, not Swift String canonical equivalence. Composed and decomposed Unicode must update the physical source so AST and diagnostic offsets match the editor buffer; byte-identical writes preserve the file timestamp.

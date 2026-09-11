@@ -13,6 +13,27 @@ struct ScratchBandlimitedTests {
         return pcm
     }
 
+    @Test(.timeLimit(.minutes(1)))
+    func heldPositionReturnsExactlyAcrossRatesAndCallbackPartitions() throws {
+        let loop = PreparedLoop(sampleRate: 44_100, bpm: 120, beatsPerBar: 4, beatCount: 2, samples: tone(440), events: [])
+        for rate in [0.5, 1, 2] {
+            for chunk in [127, 512] {
+                let transport = AudioTransport()
+                transport.beginUpdate(revision: 1)
+                try transport.submit(loop: loop, revision: 1)
+                try transport.seek(bySeconds: 0.3)
+                transport.setClockRate(rate)
+                try transport.scratch(bySeconds: 0.1, over: 0.1)
+                for _ in 0..<100 { _ = try render(transport, frames: chunk) }
+                #expect(abs(transport.snapshot().beatPosition - 0.8) < 1e-8)
+                try transport.scratch(bySeconds: -0.1, over: 0.03)
+                for _ in 0..<100 { _ = try render(transport, frames: chunk) }
+                #expect(abs(transport.snapshot().beatPosition - 0.6) < 1e-8)
+                #expect(try render(transport, frames: 512).allSatisfy { $0 == 0 })
+            }
+        }
+    }
+
     @Test(.timeLimit(.minutes(2)))
     func speedDependentFilteringRejectsAliasedTonesAndPreservesStereo() {
         let resampler = ScratchResampler()

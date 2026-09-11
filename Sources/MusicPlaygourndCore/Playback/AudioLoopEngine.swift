@@ -12,6 +12,7 @@ public final class AudioLoopEngine: AudioUnitHosting, MasterRecording {
     public let output: AudioOutput
     private let deckIndex: Int
     private var scratchOutputActive = false
+    private var scratchLifecycleTask: Task<Void, Never>?
     private let deckGain = AVAudioMixerNode()
     private let deckMeterStore = OutputMeterStore()
     public var compressorSettings: MasterCompressorSettings { output.compressorSettings }
@@ -234,6 +235,7 @@ public final class AudioLoopEngine: AudioUnitHosting, MasterRecording {
 
     public func play() throws {
         try transport.startPlayback()
+        restoreScratchRouting()
         deckMeterStore.activate()
         do {
             try output.start(deckIndex)
@@ -261,7 +263,7 @@ public final class AudioLoopEngine: AudioUnitHosting, MasterRecording {
         let transport = transport
         parameterSmoother.set(.rate, from: unit.rate, to: rate, immediate: true) { value, _ in
             unit.rate = value
-            transport.setClockRate(Double(value))
+            transport.setClockRate(unit.bypass ? 1 : Double(value))
         }
     }
 
@@ -270,7 +272,21 @@ public final class AudioLoopEngine: AudioUnitHosting, MasterRecording {
         let starting = !transport.isScratching
         try transport.scratch(bySeconds: seconds, over: duration)
         guard starting else { return }
+        timePitch.bypass = true
+        transport.setClockRate(1)
         scratchOutputActive = true
+        scratchLifecycleTask?.cancel()
+        scratchLifecycleTask = Task { @MainActor [weak self] in
+            while !Task.isCancelled {
+                do { try await Task.sleep(for: .milliseconds(5)) }
+                catch { return }
+                guard let self else { return }
+                if !self.transport.isScratching {
+                    self.endScratch()
+                    return
+                }
+            }
+        }
         deckMeterStore.activate()
         do { try output.start(deckIndex) }
         catch {
@@ -286,11 +302,19 @@ public final class AudioLoopEngine: AudioUnitHosting, MasterRecording {
     public func endScratch() {
         transport.endScratch(immediate: !output.audioEngine.isRunning)
         guard !transport.isScratching else { return }
-        scratchOutputActive = false
+        restoreScratchRouting()
         if !transport.snapshot().isPlaying {
             deckMeterStore.clear()
             output.stop(deckIndex)
         }
+    }
+
+    private func restoreScratchRouting() {
+        scratchLifecycleTask?.cancel()
+        scratchLifecycleTask = nil
+        scratchOutputActive = false
+        timePitch.bypass = false
+        transport.setClockRate(Double(timePitch.rate))
     }
 
     public func seek(bySeconds seconds: Double) throws {
@@ -299,6 +323,7 @@ public final class AudioLoopEngine: AudioUnitHosting, MasterRecording {
 
     public func stop() {
         transport.stopPlayback()
+        restoreScratchRouting()
         deckMeterStore.clear()
         output.stop(deckIndex)
         parameterSmoother.finishAll()
@@ -363,7 +388,7 @@ public final class AudioLoopEngine: AudioUnitHosting, MasterRecording {
         parameterSmoother.set(.rate, from: unit.rate, to: rate,
                               immediate: !transport.snapshot().isPlaying) { value, _ in
             unit.rate = value
-            transport.setClockRate(Double(value))
+            transport.setClockRate(unit.bypass ? 1 : Double(value))
         }
     }
 
@@ -678,6 +703,7 @@ public final class AudioLoopEngine: AudioUnitHosting, MasterRecording {
     }
 
     isolated deinit {
+        scratchLifecycleTask?.cancel()
         audioUnitRequest?.cancel()
         parameterSmoother.cancelAll()
         transport.stopPlayback()
@@ -725,7 +751,8 @@ final class AudioTransport: Sendable {
     private struct Scratch: Sendable {
         var step: Double
         var targetStep: Double
-        var holdFrames: Int
+        var position: Double
+        var targetPosition: Double
         var remaining: Int?
         var decay: Double
         var gain: Float
@@ -1030,24 +1057,26 @@ final class AudioTransport: Sendable {
             guard let current = state.current else { throw PlaybackError.noCurrentLoop }
             guard state.reservation == nil, state.replacement == nil, state.fade == nil,
                   state.pending == nil else { throw PlaybackError.replacementInProgress }
-            let sourceRate = current.sampleRate * state.clockRate
-            let step = seconds / duration / state.clockRate * (current.bpm / 60 / current.sampleRate)
+            let sourceRate = current.sampleRate
+            let baseStep = deltaBeatFor(current)
+            let step = seconds / duration * baseStep
             let readSpeed = step * Double(current.pcm.count / 2) / current.beatCount
-            guard readSpeed.isFinite, abs(readSpeed) <= ScratchResampler.maximumSpeed else {
-                throw PlaybackError.invalidScratchMotion
-            }
+            let previous = state.scratch
+            let anchor = previous.map { $0.remaining == nil ? $0.targetPosition : $0.position } ?? state.beatPosition
+            let target = anchor + seconds * current.bpm / 60
+            guard readSpeed.isFinite, abs(readSpeed) <= ScratchResampler.maximumSpeed,
+                  target.isFinite else { throw PlaybackError.invalidScratchMotion }
             let transitionFrames = max(2, Int(0.005 * sourceRate))
-            let holdFrames = max(1, Int(min(0.12, max(0.02, 2 * duration)) * sourceRate))
             let decay = exp(-1 / (0.005 * sourceRate))
-            if var scratch = state.scratch {
+            if var scratch = previous {
                 scratch.targetStep = step
-                scratch.holdFrames = holdFrames
+                scratch.targetPosition = target
                 scratch.remaining = nil
                 scratch.decay = decay
                 state.scratch = scratch
             } else {
-                state.scratch = Scratch(step: state.isPlaying ? deltaBeatFor(current) : 0,
-                    targetStep: step, holdFrames: holdFrames, decay: decay,
+                state.scratch = Scratch(step: state.isPlaying ? baseStep : 0,
+                    targetStep: step, position: state.beatPosition, targetPosition: target, decay: decay,
                     gain: state.isPlaying ? 1 : 0, entryFrame: state.isPlaying ? state.framePosition : nil,
                     transitionFrames: transitionFrames, gainDecay: Float(1 - decay))
             }
@@ -1063,7 +1092,7 @@ final class AudioTransport: Sendable {
             guard var scratch = state.scratch, let current = state.current else { return }
             // A complete touch can arrive before the first source callback.
             if !scratch.hasRendered { scratch.step = scratch.targetStep }
-            let remaining = max(1, Int(1.2 * current.sampleRate * state.clockRate))
+            let remaining = max(1, Int(1.2 * current.sampleRate))
             scratch.remaining = remaining
             scratch.targetStep = state.isPlaying ? deltaBeatFor(current) : 0
             scratch.decay = exp(log(0.001) / Double(remaining))
@@ -1268,10 +1297,17 @@ final class AudioTransport: Sendable {
                             continue
                         }
                         if scratch.remaining == nil {
-                            if scratch.holdFrames > 0 { scratch.holdFrames -= 1 }
-                            else { scratch.targetStep = 0 }
-                        }
-                        if let remaining = scratch.remaining, remaining <= scratch.transitionFrames {
+                            // A critically damped position servo follows hand displacement, not
+                            // an indefinitely held velocity. Its output is continuous at reversals.
+                            let error = scratch.targetPosition - scratch.position
+                            let omega = 1 / (0.005 * current.sampleRate)
+                            scratch.step += omega * omega * error - 2 * omega * scratch.step
+                            let limit = ScratchResampler.maximumSpeed * current.beatCount / Double(frames)
+                            scratch.step = min(limit, max(-limit, scratch.step))
+                            if abs(error) < baseStep * 0.000001 && abs(scratch.step) < baseStep * 0.000001 {
+                                scratch.step = error
+                            }
+                        } else if let remaining = scratch.remaining, remaining <= scratch.transitionFrames {
                             scratch.step += (scratch.targetStep - scratch.step) / Double(remaining)
                         } else {
                             scratch.step = scratch.targetStep + (scratch.step - scratch.targetStep) * scratch.decay
@@ -1298,7 +1334,8 @@ final class AudioTransport: Sendable {
                             value = (value.0 * (1 - mix) + target.0 * mix, value.1 * (1 - mix) + target.1 * mix)
                         }
                         write(buffers: buffers, frame: offset, left: value.0, right: value.1)
-                        let beat = (state.beatPosition + scratch.step).truncatingRemainder(dividingBy: current.beatCount)
+                        scratch.position += scratch.step
+                        let beat = scratch.position.truncatingRemainder(dividingBy: current.beatCount)
                         state.beatPosition = beat < 0 ? beat + current.beatCount : beat
                         state.framePosition = frame(for: state.beatPosition, in: current)
                         if let remaining = scratch.remaining { scratch.remaining = remaining - 1 }

@@ -27,6 +27,15 @@ extension NativeHostTests {
             #expect(abs((medianSpacing(fastOnsets)) - (0.25)) <= 0.035)
             let pitch = measuredPitch(fast)
             #expect(abs((pitch) - (440)) <= 12)
+            try engine.scratch(bySeconds: -0.1, over: 0.1)
+            _ = try render(engine, seconds: 0.1)
+            engine.endScratch()
+            _ = try render(engine, seconds: 0.02)
+            try await Task.sleep(for: .milliseconds(30))
+            let restored = try render(engine, seconds: 2)
+            #expect(abs(medianSpacing(onsets(restored)) - 0.25) <= 0.035)
+            #expect(abs(measuredPitch(restored) - 440) <= 12)
+
         }
 
         @Test(.timeLimit(.minutes(3)))

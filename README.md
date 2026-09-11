@@ -8,7 +8,7 @@ MusicPlayground is a native macOS live music editor powered by [SwiftMusic](http
 
 ## Get started
 
-Current source preview: **0.3.0**, powered by **SwiftMusic 0.5.0**.
+Current source preview: **0.3.0**, powered by **SwiftMusic 0.5.1**.
 
 Requires **Swift 6.4**, **macOS 15 or later**, and Xcode command-line tools. Swift 6.4 operation was verified on September 10, 2026.
 
@@ -19,7 +19,7 @@ cd MusicPlaygournd
 open .build/MusicPlaygournd.app
 ```
 
-The build script fetches **SwiftMusic 0.5.0** and creates a locally signed app with the runtime modules needed to evaluate your music. Build on the Mac where you will use the app and keep its compiler and SDK installed. This is a source distribution; a notarized app download is not currently provided.
+The build script fetches **SwiftMusic 0.5.1** and creates a locally signed app with the runtime modules needed to evaluate your music. Build on the Mac where you will use the app and keep its compiler and SDK installed. This is a source distribution; a notarized app download is not currently provided.
 
 Choose **Create a new project**, enter its name and location, and start from the generated `Session.swift`. There is no template-selection step. Press **Play** when preparation finishes. Initial package resolution and compilation can take longer; progress and dependencies appear in the sidebar.
 
@@ -172,10 +172,10 @@ Code edits prepare replacement audio and adopt it at a musical boundary. Live ma
 
 ## Work in Swift package projects
 
-New projects pin SwiftMusic **0.5.0** in `Package.swift`:
+New projects pin SwiftMusic **0.5.1** in `Package.swift`:
 
 ```swift
-.package(url: "https://github.com/1amageek/SwiftMusic.git", exact: "0.5.0")
+.package(url: "https://github.com/1amageek/SwiftMusic.git", exact: "0.5.1")
 ```
 
 Projects use a folder-based SwiftPM structure:

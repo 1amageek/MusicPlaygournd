@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Update the host, evaluator, completion service and new-project templates to SwiftMusic 0.5.1 Preview.
+- Reduce synthesis scheduling overhead while preserving exact PCM output.
+
 ## 0.3.0 — Preview — 2026-09-11
 
 Source release using SwiftMusic 0.5.0.

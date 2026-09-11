@@ -1486,7 +1486,7 @@ final class SessionModel {
                 dependencies: [
                     .package(
                         url: "https://github.com/1amageek/SwiftMusic.git",
-                        exact: "0.5.0"
+                        exact: "0.5.1"
                     )
                 ],
                 targets: [

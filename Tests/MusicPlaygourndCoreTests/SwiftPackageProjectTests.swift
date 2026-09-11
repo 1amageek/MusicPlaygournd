@@ -24,7 +24,7 @@ extension NativeHostTests {
                 let loaded = try await evaluator.openProject(at: project)
                 #expect(loaded.name == "Evening Set")
                 let dependency = try #require(loaded.dependencies.first { $0.identity == "swiftmusic" })
-                #expect(dependency.name == "SwiftMusic" && dependency.versionDescription == "0.5.0")
+                #expect(dependency.name == "SwiftMusic" && dependency.versionDescription == "0.5.1")
                 let checkout = try #require(dependency.checkoutPath)
                 #expect(FileManager.default.fileExists(atPath: checkout + "/Package.swift"))
                 let target = try #require(loaded.targets.first)
@@ -38,6 +38,15 @@ extension NativeHostTests {
                 #expect(initial.loop.rows.count == 4)
                 #expect(initial.metadata.sliders.count == 2)
                 #expect(initial.loop.samples.contains { abs($0) > 0.001 })
+                let playback = try AudioLoopEngine()
+                defer { playback.stop() }
+                playback.beginUpdate(revision: 1)
+                try playback.submit(loop: initial.loop, revision: 1)
+                try playback.prepareOfflineRenderingForTests()
+                try playback.play()
+                let nativePCM = try playback.renderOfflineForTests(frameCount: 4096)
+                #expect(nativePCM.contains { abs($0) > 0.0001 })
+                #expect(nativePCM.allSatisfy { $0.isFinite })
                 #expect(await evaluator.adopt(revision: 1))
                 var values = Dictionary(uniqueKeysWithValues: initial.performanceControls.map { ($0.controlID, $0.value) })
                 let acid = try #require(initial.metadata.sliders.first)
@@ -78,7 +87,7 @@ extension NativeHostTests {
             // swift-tools-version: 6.4
             import PackageDescription
             let package = Package(name: "Live", platforms: [.macOS(.v15)], dependencies: [
-                .package(url: "https://github.com/1amageek/SwiftMusic.git", exact: "0.5.0"), .package(path: "../Kit")
+                .package(url: "https://github.com/1amageek/SwiftMusic.git", exact: "0.5.1"), .package(path: "../Kit")
             ], targets: [.target(name: "LiveSet", dependencies: [.product(name: "SwiftMusic", package: "SwiftMusic"), "Kit"], resources: [.copy("Resources")], swiftSettings: [.define("LIVE_PROJECT")])])
             """
             try write(manifest, project.appending(path: "Package.swift"))

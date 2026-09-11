@@ -118,7 +118,7 @@ public actor SwiftCompletionService {
             // swift-tools-version: 6.4
             import PackageDescription
             let package = Package(name: "CompletionSession", platforms: [.macOS(.v15)], dependencies: [
-                .package(url: "https://github.com/1amageek/SwiftMusic.git", exact: "0.5.0")
+                .package(url: "https://github.com/1amageek/SwiftMusic.git", exact: "0.5.1")
             ], targets: [.executableTarget(name: "CompletionSession", dependencies: [.product(name: "SwiftMusic", package: "SwiftMusic")])])
             """
             try manifest.write(to: directory.appending(path: "Package.swift"), atomically: true, encoding: .utf8)

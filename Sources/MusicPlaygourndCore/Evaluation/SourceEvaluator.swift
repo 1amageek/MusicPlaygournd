@@ -339,7 +339,7 @@ public actor SourceEvaluator {
             name: "MusicPlaygourndEvaluation",
             platforms: [.macOS(.v15)],
             dependencies: [
-                .package(url: "https://github.com/1amageek/SwiftMusic.git", exact: "0.5.0"),
+                .package(url: "https://github.com/1amageek/SwiftMusic.git", exact: "0.5.1"),
                 .package(path: \(Self.swiftLiteral(packageURL.path)))
             ],
             targets: [.executableTarget(name: "Evaluation", dependencies: [

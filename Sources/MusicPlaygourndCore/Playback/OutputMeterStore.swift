@@ -12,6 +12,10 @@ final class OutputMeterStore: Sendable {
         var samples = [Float](repeating: 0, count: OutputMeterStore.sampleCapacity)
         var sampleRate = PreparedLoop.requiredSampleRate
         var frameCount = 0
+        var writeFrame = 0
+        var sequence: UInt64 = 0
+        var snapshotCurrent = false
+        var snapshotSamples = [Float](repeating: 0, count: OutputMeterStore.sampleCapacity)
         var active = false
         var callbackLoad: Double?
         var dropoutCount: UInt64 = 0
@@ -30,6 +34,9 @@ final class OutputMeterStore: Sendable {
                 state.samples[index] = 0
             }
             state.frameCount = 0
+            state.writeFrame = 0
+            state.sequence &+= 1
+            state.snapshotCurrent = false
             state.sampleRate = PreparedLoop.requiredSampleRate
         }
     }
@@ -42,6 +49,9 @@ final class OutputMeterStore: Sendable {
                 state.samples[index] = 0
             }
             state.frameCount = 0
+            state.writeFrame = 0
+            state.sequence &+= 1
+            state.snapshotCurrent = false
             state.sampleRate = PreparedLoop.requiredSampleRate
         }
     }
@@ -111,13 +121,6 @@ final class OutputMeterStore: Sendable {
                 let (next, overflow) = sampleTime.addingReportingOverflow(AVAudioFramePosition(availableFrames))
                 state.nextSampleTime = overflow ? nil : next
             } else { state.nextSampleTime = nil }
-            let retainedFrames = min(state.frameCount, Self.frameCapacity - frameCount)
-            if retainedFrames > 0 {
-                let retainedStart = state.frameCount - retainedFrames
-                for index in 0..<(retainedFrames * 2) {
-                    state.samples[index] = state.samples[retainedStart * 2 + index]
-                }
-            }
             state.sampleRate = buffer.format.sampleRate
 
             if buffer.format.isInterleaved {
@@ -125,7 +128,7 @@ final class OutputMeterStore: Sendable {
                 let samples = data.assumingMemoryBound(to: Float.self)
                 for frame in 0..<frameCount {
                     let sourceFrame = frame + sourceOffset
-                    let destinationFrame = retainedFrames + frame
+                    let destinationFrame = (state.writeFrame + frame) % Self.frameCapacity
                     state.samples[destinationFrame * 2] = samples[sourceFrame * channels]
                     state.samples[destinationFrame * 2 + 1] = samples[sourceFrame * channels + min(1, channels - 1)]
                 }
@@ -135,24 +138,34 @@ final class OutputMeterStore: Sendable {
                 let right = channelData[min(1, channels - 1)]
                 for frame in 0..<frameCount {
                     let sourceFrame = frame + sourceOffset
-                    let destinationFrame = retainedFrames + frame
+                    let destinationFrame = (state.writeFrame + frame) % Self.frameCapacity
                     state.samples[destinationFrame * 2] = left[sourceFrame]
                     state.samples[destinationFrame * 2 + 1] = right[sourceFrame]
                 }
             }
-            state.frameCount = retainedFrames + frameCount
-            for index in (state.frameCount * 2)..<state.samples.count {
-                state.samples[index] = 0
-            }
+            state.frameCount = min(Self.frameCapacity, state.frameCount + frameCount)
+            state.writeFrame = (state.writeFrame + frameCount) % Self.frameCapacity
+            state.sequence &+= 1
+            state.snapshotCurrent = false
         }
     }
 
     func snapshot() -> OutputMeterSnapshot {
         state.withLock { state in
-            let samples = state.samples.withUnsafeBufferPointer { Array($0) }
-            return OutputMeterSnapshot(interleavedSamples: samples, sampleRate: state.sampleRate,
+            if !state.snapshotCurrent {
+                var samples = [Float](repeating: 0, count: Self.sampleCapacity)
+                let start = state.frameCount == Self.frameCapacity ? state.writeFrame : 0
+                for frame in 0..<state.frameCount {
+                    let source = (start + frame) % Self.frameCapacity
+                    samples[frame * 2] = state.samples[source * 2]
+                    samples[frame * 2 + 1] = state.samples[source * 2 + 1]
+                }
+                state.snapshotSamples = samples
+                state.snapshotCurrent = true
+            }
+            return OutputMeterSnapshot(interleavedSamples: state.snapshotSamples, sampleRate: state.sampleRate,
                 performance: PlaybackPerformanceSnapshot(callbackLoad: state.callbackLoad,
-                    dropoutCount: state.dropoutCount, peak: state.peak, clipped: state.clipped))
+                    dropoutCount: state.dropoutCount, peak: state.peak, clipped: state.clipped), sequence: state.sequence)
         }
     }
 
@@ -187,6 +200,9 @@ final class OutputMeterStore: Sendable {
                 state.samples[index] = 0
             }
             state.frameCount = 0
+            state.writeFrame = 0
+            state.sequence &+= 1
+            state.snapshotCurrent = false
             state.sampleRate = PreparedLoop.requiredSampleRate
         }
     }

@@ -204,7 +204,7 @@
 - [x] PERF-INT Ranked proposals by interaction latency, build stages, monitor copies, PCM transport and DSP reuse; measurement limits and preserved invariants stated; no source changes or publishing `depends:PERF-1,PERF-2` `parallel:none`
 
 - [x] OPT-1 Added block cancellation, immutable detune ratios and bounded FFT scratch/impulse reuse; 36 tests passed including native synthesis, concurrent rerenders and convolution reference/reuse; reviewed ownership and PCM paths `depends:none` `parallel:none`
-- [ ] OPT-2 Replace monitor history shifting with ring storage and reuse unchanged snapshots; share master capture between decks; preserve chronological samples, diagnostics and audio/UI isolation; tests and commit `depends:OPT-1` `parallel:none`
+- [x] OPT-2 Ring history, immutable snapshot reuse and shared master capture; 19 tests passed including wrap/isolation, telemetry and hardware callback; corrected stale 2048-frame test expectation to the existing 8192-frame viewport `depends:OPT-1` `parallel:none`
 - [ ] OPT-3 Separate runtime worker identity from compilation and reuse input-keyed AST/executables; preserve package/SDK invalidation, diagnostics and independent A/B state; real evaluator tests and commit `depends:OPT-2` `parallel:none`
 - [ ] OPT-4 Separate immutable PCM transport from metadata and retain validated ownership through playback; preserve public Array compatibility, format bounds, revision, lifetime and error retention; transport tests and commit `depends:OPT-3` `parallel:none`
 - [ ] OPT-5 Reuse parsed pattern work within one SwiftMusic compilation without changing modifier order or error provenance; compiler tests, dependency integration and commits `depends:OPT-4` `parallel:none`

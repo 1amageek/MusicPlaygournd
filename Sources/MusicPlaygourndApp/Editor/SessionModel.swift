@@ -221,6 +221,8 @@ final class SessionModel {
     var highlightingStatus = ""
     var rowLines: [Int: Int] = [:]
     var resultLines: [Int: Int] = [:]
+    private var spectrumSequence: UInt64?
+    private var spectrumPlaying = false
     var spectrum = [Float](repeating: -90, count: SpectrumAnalyzer.bandCount)
     private var lineMaps: [UInt64: SourceLineMap] = [:]
     private var analyzer: SpectrumAnalyzer?
@@ -671,7 +673,7 @@ final class SessionModel {
         refresh()
     }
 
-    func refresh() {
+    func refresh(masterCapture: OutputMeterSnapshot? = nil) {
         guard let snapshot = engine?.snapshot() else { return }
         isPlaying = snapshot.isPlaying
         isRecording = engine?.isRecording ?? false
@@ -812,13 +814,17 @@ final class SessionModel {
                 if responses != equalizerResponses { equalizerResponses = responses }
             } catch { hostDiagnostic = error.localizedDescription }
         }
-        if let capture = engine?.outputMeter() {
+        if let capture = masterCapture ?? engine?.outputMeter() {
             compressorMeter = engine?.compressorSnapshot() ?? .empty
             outputSamples = capture.interleavedSamples
-            deckSamples = engine?.deckMeter().interleavedSamples ?? []
+            let deckCapture = engine?.deckMeter()
+            deckSamples = deckCapture?.interleavedSamples ?? []
             performance = capture.performance
             hostedEffect = engine?.audioEffectSnapshot() ?? .none
-            if let analyzer {
+            let sequence = documentStore == nil ? capture.sequence : deckCapture?.sequence
+            if let analyzer, sequence != spectrumSequence || isPlaying != spectrumPlaying {
+                spectrumSequence = sequence
+                spectrumPlaying = isPlaying
                 spectrum = analyzer.analyze(interleavedSamples: documentStore == nil ? outputSamples : deckSamples,
                     sampleRate: capture.sampleRate, isPlaying: isPlaying)
             }

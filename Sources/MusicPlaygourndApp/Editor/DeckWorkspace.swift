@@ -140,7 +140,8 @@ final class DeckWorkspace {
         return Color(red: values[0], green: values[1], blue: values[2])
     }
     func refresh() {
-        a.refresh(); b.refresh()
+        let master = output?.outputMeter()
+        a.refresh(masterCapture: master); b.refresh(masterCapture: master)
         if cueDeviceID != nil && Date().timeIntervalSince(lastCueCheck) >= 1 {
             lastCueCheck = Date()
             refreshCueDevices()

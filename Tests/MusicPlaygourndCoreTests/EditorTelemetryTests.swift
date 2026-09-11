@@ -186,6 +186,39 @@ struct EditorTelemetryTests {
     }
 
     @Test(.timeLimit(.minutes(1)))
+    func meterRingWrapsAndReusesOnlyImmutableCurrentSnapshots() throws {
+        let store = OutputMeterStore()
+        let format = try #require(AVAudioFormat(standardFormatWithSampleRate: 44_100, channels: 2))
+        let buffer = try #require(AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 512))
+        buffer.frameLength = 512
+        store.activate()
+        let empty = store.snapshot()
+        for block in 0..<20 {
+            for frame in 0..<512 {
+                buffer.floatChannelData![0][frame] = Float(block * 512 + frame)
+                buffer.floatChannelData![1][frame] = -Float(block * 512 + frame)
+            }
+            store.capture(buffer)
+        }
+        let first = store.snapshot()
+        let repeated = store.snapshot()
+        #expect(first.sequence == repeated.sequence)
+        #expect(first.interleavedSamples.withUnsafeBufferPointer { lhs in
+            repeated.interleavedSamples.withUnsafeBufferPointer { lhs.baseAddress == $0.baseAddress }
+        })
+        #expect(first.interleavedSamples.count == 16_384)
+        #expect(first.interleavedSamples[0] == 2_048)
+        #expect(first.interleavedSamples[1] == -2_048)
+        #expect(first.interleavedSamples.last == -10_239)
+        #expect(empty.interleavedSamples.allSatisfy { $0 == 0 })
+        store.clear()
+        let cleared = store.snapshot()
+        #expect(cleared.sequence != first.sequence)
+        #expect(cleared.interleavedSamples.allSatisfy { $0 == 0 })
+        #expect(first.interleavedSamples[0] == 2_048)
+    }
+
+    @Test(.timeLimit(.minutes(1)))
     func meterTelemetryCoversFullTapAndFreezesUntilExplicitReset() throws {
         let store = OutputMeterStore()
         let format = try #require(AVAudioFormat(standardFormatWithSampleRate: 48_000, channels: 2))
@@ -202,7 +235,7 @@ struct EditorTelemetryTests {
         #expect(initial.callbackLoad == 0.1)
         #expect(initial.peak == 1.25)
         #expect(initial.clipped)
-        #expect(store.snapshot().interleavedSamples.max() == 0.1)
+        #expect(store.snapshot().interleavedSamples.max() == 1.25)
         store.recordCallback(elapsed: 0.02, duration: 0.01, failed: false)
         store.capture(buffer, at: AVAudioTime(sampleTime: 4_100, atRate: 48_000))
         let late = try #require(store.snapshot().performance)

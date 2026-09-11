@@ -43,7 +43,7 @@ internal struct PreparedOscillatorVoice: Equatable {
         try preparation.validate(frequency: frequency)
         let table = preparation.wavetable
         if let table {
-            let highest = frequency * pow(2, preparation.cents.last! / 1200)
+            let highest = frequency * preparation.frequencyRatios.last!
             let selected = table.level(frequency: highest)
             if offset == 0 {
                 tableLevel = selected
@@ -56,7 +56,7 @@ internal struct PreparedOscillatorVoice: Equatable {
         }
         var output = 0.0
         for lane in phases.indices {
-            let carrier = frequency * pow(2, preparation.cents[lane] / 1200)
+            let carrier = frequency * preparation.frequencyRatios[lane]
             let increment = carrier / PreparedLoop.requiredSampleRate
             let phase = phases[lane]
             let value: Double

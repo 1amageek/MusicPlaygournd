@@ -16,6 +16,15 @@ internal final class FFTConvolver {
 
     private let maximumLinearFrameCount: Int
     private var setups: [Int: SetupPair] = [:]
+    private var inputReal: [Float] = []
+    private var inputImaginary: [Float] = []
+    private var impulseReal: [Float] = []
+    private var impulseImaginary: [Float] = []
+    private var productReal: [Float] = []
+    private var productImaginary: [Float] = []
+    private var cachedImpulse: [Float] = []
+    private(set) var workspaceAllocations = 0
+    private(set) var impulseTransforms = 0
 
     init(maximumLinearFrameCount: Int) throws {
         guard maximumLinearFrameCount > 0,
@@ -65,47 +74,49 @@ internal final class FFTConvolver {
 
         let pair = try setup(for: transformLength)
 
-        // Six transform buffers are the complete scratch workspace: the input and
-        // impulse complex pairs, with the impulse pair reused for inverse output,
-        // plus the complex product pair.
-        var inputReal = [Float](repeating: 0, count: transformLength)
-        var inputImaginary = [Float](repeating: 0, count: transformLength)
-        var impulseReal = [Float](repeating: 0, count: transformLength)
-        var impulseImaginary = [Float](repeating: 0, count: transformLength)
-        var productReal = [Float](repeating: 0, count: transformLength)
-        var productImaginary = [Float](repeating: 0, count: transformLength)
-        inputReal.replaceSubrange(input.indices, with: input)
-        impulseReal.replaceSubrange(impulse.indices, with: impulse)
-
-        // vDSP borrows these array pointers only for each synchronous call; no
-        // pointer escapes the call and the Swift arrays remain the owners.
-        vDSP_DFT_Execute(
-            pair.forward,
-            inputReal,
-            inputImaginary,
-            &productReal,
-            &productImaginary
-        )
+        try Task.checkCancellation()
+        if inputReal.count != transformLength {
+            inputReal = [Float](repeating: 0, count: transformLength)
+            inputImaginary = [Float](repeating: 0, count: transformLength)
+            impulseReal = [Float](repeating: 0, count: transformLength)
+            impulseImaginary = [Float](repeating: 0, count: transformLength)
+            productReal = [Float](repeating: 0, count: transformLength)
+            productImaginary = [Float](repeating: 0, count: transformLength)
+            cachedImpulse = []
+            workspaceAllocations += 1
+        }
+        // This render-local owner retains six scratch arrays (48 MiB maximum) and
+        // one immutable impulse (at most 8 MiB). No buffer is shared across renders.
+        // Accelerate borrows aligned Array storage synchronously; no pointer escapes.
+        if cachedImpulse != impulse {
+            cachedImpulse = []
+            for index in 0..<transformLength {
+                inputReal[index] = index < impulse.count ? impulse[index] : 0
+                inputImaginary[index] = 0
+            }
+            vDSP_DFT_Execute(pair.forward, inputReal, inputImaginary, &impulseReal, &impulseImaginary)
+            guard impulseReal.allSatisfy(\.isFinite), impulseImaginary.allSatisfy(\.isFinite) else {
+                throw LoopRenderingError.invalidSound("FFT convolution impulse transform is non-finite")
+            }
+            cachedImpulse = impulse
+            impulseTransforms += 1
+        }
+        try Task.checkCancellation()
+        for index in 0..<transformLength {
+            inputReal[index] = index < input.count ? input[index] : 0
+            inputImaginary[index] = 0
+        }
+        vDSP_DFT_Execute(pair.forward, inputReal, inputImaginary, &productReal, &productImaginary)
         guard productReal.allSatisfy(\.isFinite), productImaginary.allSatisfy(\.isFinite) else {
             throw LoopRenderingError.invalidSound("FFT convolution input transform is non-finite")
         }
-
-        vDSP_DFT_Execute(
-            pair.forward,
-            impulseReal,
-            impulseImaginary,
-            &inputReal,
-            &inputImaginary
-        )
-        guard inputReal.allSatisfy(\.isFinite), inputImaginary.allSatisfy(\.isFinite) else {
-            throw LoopRenderingError.invalidSound("FFT convolution impulse transform is non-finite")
-        }
+        try Task.checkCancellation()
 
         for index in 0..<transformLength {
-            let real = productReal[index] * inputReal[index]
-                - productImaginary[index] * inputImaginary[index]
-            let imaginary = productReal[index] * inputImaginary[index]
-                + productImaginary[index] * inputReal[index]
+            let real = productReal[index] * impulseReal[index]
+                - productImaginary[index] * impulseImaginary[index]
+            let imaginary = productReal[index] * impulseImaginary[index]
+                + productImaginary[index] * impulseReal[index]
             guard real.isFinite, imaginary.isFinite else {
                 throw LoopRenderingError.invalidSound("FFT convolution spectrum product is non-finite")
             }
@@ -117,15 +128,16 @@ internal final class FFTConvolver {
             pair.inverse,
             productReal,
             productImaginary,
-            &impulseReal,
-            &impulseImaginary
+            &inputReal,
+            &inputImaginary
         )
 
+        try Task.checkCancellation()
         let scale = 1 / Float(transformLength)
         var output = [Float](repeating: 0, count: outputFrameCount)
         if circular {
             for index in 0..<naturalLength {
-                let value = impulseReal[index] * scale
+                let value = inputReal[index] * scale
                 guard value.isFinite else {
                     throw LoopRenderingError.invalidSound("FFT convolution output is non-finite")
                 }
@@ -138,7 +150,7 @@ internal final class FFTConvolver {
             }
         } else {
             for index in 0..<min(naturalLength, outputFrameCount) {
-                let value = impulseReal[index] * scale
+                let value = inputReal[index] * scale
                 guard value.isFinite else {
                     throw LoopRenderingError.invalidSound("FFT convolution output is non-finite")
                 }

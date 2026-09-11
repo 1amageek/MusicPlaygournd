@@ -5,6 +5,7 @@ import SwiftMusic
 internal struct OscillatorPreparation: Sendable {
     let waveform: Waveform
     let cents: [Double]
+    let frequencyRatios: [Double]
     let wavetable: WavetablePreparation?
     let pinkKernel: [Double]
 
@@ -58,6 +59,7 @@ internal struct OscillatorPreparation: Sendable {
         let count = source.unison?.voices ?? 1
         let detune = source.unison?.detuneCents ?? 0
         cents = count == 1 ? [0] : (0..<count).map { -detune + 2 * detune * Double($0) / Double(count - 1) }
+        frequencyRatios = cents.map { pow(2, $0 / 1200) }
         if case .wavetable(let table) = waveform { wavetable = try WavetablePreparation(table) }
         else { wavetable = nil }
         if case .coloredNoise(let noise) = waveform, noise.color == .pink {
@@ -71,8 +73,8 @@ internal struct OscillatorPreparation: Sendable {
     }
 
     func validate(frequency: Double) throws {
-        for cents in cents {
-            let carrier = frequency * pow(2, cents / 1200)
+        for ratio in frequencyRatios {
+            let carrier = frequency * ratio
             var maximum = carrier
             if case .frequencyModulation(let fm) = waveform {
                 maximum = max(carrier * fm.ratio, carrier * (1 + fm.ratio * fm.index))

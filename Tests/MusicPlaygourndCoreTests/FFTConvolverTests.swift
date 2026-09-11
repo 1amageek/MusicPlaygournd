@@ -73,6 +73,40 @@ struct FFTConvolverTests {
         }
     }
 
+    @Test(.timeLimit(.minutes(1)))
+    func workspaceReuseClearsPaddingAndInvalidatesChangedImpulse() throws {
+        let convolver = try FFTConvolver(maximumLinearFrameCount: 32)
+        for (input, impulse) in [([Float(1), 2, 3, 4], [Float(1), 0.5]),
+                                 ([Float(2), 0, 0, 0], [Float(1), 0.5]),
+                                 ([Float(3), 0, 0, 0], [Float(1), -0.5]),
+                                 ([Float(4), 0, 0], [Float(1), -0.5])] {
+            let expected = naiveConvolution(input, impulse)
+            let actual = try convolver.convolve(input, with: impulse, outputFrameCount: expected.count, circular: false)
+            #expect(zip(actual, expected).allSatisfy { abs($0 - $1) < 0.0001 })
+        }
+        #expect(convolver.workspaceAllocations == 2)
+        #expect(convolver.impulseTransforms == 3)
+        #expect(throws: LoopRenderingError.self) {
+            try convolver.convolve([1, 2, 3], with: [.greatestFiniteMagnitude, .greatestFiniteMagnitude], outputFrameCount: 4, circular: false)
+        }
+        let recovered = try convolver.convolve([4, 0, 0], with: [1, -0.5], outputFrameCount: 4, circular: false)
+        #expect(zip(recovered, [Float(4), -2, 0, 0]).allSatisfy { abs($0 - $1) < 0.0001 })
+    }
+
+    @Test(.timeLimit(.minutes(1)))
+    func cancelledOfflineWorkDoesNotReturnPCM() async throws {
+        let task = Task {
+            withUnsafeCurrentTask { $0?.cancel() }
+            #expect(throws: CancellationError.self) {
+                try VoiceScheduler.render(templates: [], sourceCount: 1, frameCount: 1024, seamless: false)
+            }
+            #expect(throws: CancellationError.self) {
+                try FFTConvolver(maximumLinearFrameCount: 8).convolve([1, 2], with: [1], outputFrameCount: 2, circular: false)
+            }
+        }
+        await task.value
+    }
+
     private func naiveConvolution(_ input: [Float], _ impulse: [Float]) -> [Float] {
         var result = [Float](repeating: 0, count: input.count + impulse.count - 1)
         for inputIndex in input.indices {

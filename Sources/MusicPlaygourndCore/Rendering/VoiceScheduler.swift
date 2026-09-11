@@ -59,6 +59,7 @@ internal enum VoiceScheduler {
         var cursor = 0
         var boundary: [Boundary] = []
         for frame in (seamless ? -frameCount : 0)...frameCount {
+            if frame & 255 == 0 { try Task.checkCancellation() }
             active.removeAll { $0.finished }
             if seamless, frame == 0 || frame == frameCount {
                 let snapshot = active.map { Boundary(eventIndex: $0.voice.eventIndex,

@@ -198,3 +198,14 @@
 
 - [x] RELEASE-030-1 Review and commit current production changes and 0.3.0 preview metadata; retain local trial projects outside release `depends:none` `parallel:none`
 - [x] RELEASE-030-INT 26 integration tests passed; packaged 0.3.0 built, signature verified and native version display confirmed; public SwiftMusic 0.5.0 dependency checked `depends:RELEASE-030-1` `parallel:none`
+
+- [x] PERF-1 Mapped both package structures and traced compilation, build, PCM publication, rendering, playback and display paths; reviewed copy/cache ownership and cancellation; source unchanged `depends:none` `parallel:none`
+- [x] PERF-2 Release focused checks passed 16/16; measured compile/render/PCM codec/validation/spectrum costs and 513 ms cancellation latency with temporary probes `depends:PERF-1` `parallel:none`
+- [x] PERF-INT Ranked proposals by interaction latency, build stages, monitor copies, PCM transport and DSP reuse; measurement limits and preserved invariants stated; no source changes or publishing `depends:PERF-1,PERF-2` `parallel:none`
+
+- [x] OPT-1 Added block cancellation, immutable detune ratios and bounded FFT scratch/impulse reuse; 36 tests passed including native synthesis, concurrent rerenders and convolution reference/reuse; reviewed ownership and PCM paths `depends:none` `parallel:none`
+- [ ] OPT-2 Replace monitor history shifting with ring storage and reuse unchanged snapshots; share master capture between decks; preserve chronological samples, diagnostics and audio/UI isolation; tests and commit `depends:OPT-1` `parallel:none`
+- [ ] OPT-3 Separate runtime worker identity from compilation and reuse input-keyed AST/executables; preserve package/SDK invalidation, diagnostics and independent A/B state; real evaluator tests and commit `depends:OPT-2` `parallel:none`
+- [ ] OPT-4 Separate immutable PCM transport from metadata and retain validated ownership through playback; preserve public Array compatibility, format bounds, revision, lifetime and error retention; transport tests and commit `depends:OPT-3` `parallel:none`
+- [ ] OPT-5 Reuse parsed pattern work within one SwiftMusic compilation without changing modifier order or error provenance; compiler tests, dependency integration and commits `depends:OPT-4` `parallel:none`
+- [ ] OPT-INT Verify all changes together, compare the same performance probes, build the app, run behavioral integration, commit evidence and push only task commits to configured upstreams `depends:OPT-1,OPT-2,OPT-3,OPT-4,OPT-5` `parallel:none`

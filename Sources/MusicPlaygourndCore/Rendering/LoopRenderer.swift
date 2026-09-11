@@ -857,6 +857,7 @@ private struct RenderContext {
             }
         }
         for index in sound.renderNodes.indices where neededNodes[index] {
+            try Task.checkCancellation()
             let rendered = try cache?.buffers[index] ?? renderNode(index)
             if cache == nil && boundaries.contains(index) { retainedMuteBuffers[index] = rendered }
             if let target = meterBoundaries[index] {
@@ -1086,6 +1087,7 @@ private struct RenderContext {
         for eventIndex in sound.events.indices where sound.events[eventIndex].sourceID == sourceID {
             var voice = try makeVoice(eventIndex)
             for offset in 0..<voice.eventFrames {
+                if offset & 255 == 0 { try Task.checkCancellation() }
                 let frame = sound.playbackMode == .seamlessLoop
                     ? (voice.startFrame + offset) % frameCount : voice.startFrame + offset
                 let value = try voice.next()

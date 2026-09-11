@@ -758,7 +758,9 @@ final class AudioTransport: Sendable {
         var gain: Float
         var entryFrame: Int?
         var entryElapsed = 0
-        var hasRendered = false
+        var handStep: Double
+        var motionAgeFrames = 0
+        var launchFrames = 0
         let transitionFrames: Int
         let gainDecay: Float
     }
@@ -1059,16 +1061,23 @@ final class AudioTransport: Sendable {
                   state.pending == nil else { throw PlaybackError.replacementInProgress }
             let sourceRate = current.sampleRate
             let baseStep = deltaBeatFor(current)
-            let step = seconds / duration * baseStep
-            let readSpeed = step * Double(current.pcm.count / 2) / current.beatCount
+            let requestedStep = seconds / duration * baseStep
+            let readSpeed = requestedStep * Double(current.pcm.count / 2) / current.beatCount
             let previous = state.scratch
             let anchor = previous.map { $0.remaining == nil ? $0.targetPosition : $0.position } ?? state.beatPosition
             let target = anchor + seconds * current.bpm / 60
-            guard readSpeed.isFinite, abs(readSpeed) <= ScratchResampler.maximumSpeed,
-                  target.isFinite else { throw PlaybackError.invalidScratchMotion }
+            guard readSpeed.isFinite, target.isFinite else { throw PlaybackError.invalidScratchMotion }
+            // Hand displacement is authoritative; only audible speed is bounded for DSP work.
+            let limit = ScratchResampler.maximumSpeed * current.beatCount / Double(current.pcm.count / 2)
+            let step = min(limit, max(-limit, requestedStep))
             let transitionFrames = max(2, Int(0.005 * sourceRate))
             let decay = exp(-1 / (0.005 * sourceRate))
             if var scratch = previous {
+                if step != 0 || scratch.remaining != nil {
+                    scratch.handStep = step
+                    scratch.motionAgeFrames = 0
+                }
+                scratch.launchFrames = 0
                 scratch.targetStep = step
                 scratch.targetPosition = target
                 scratch.remaining = nil
@@ -1078,7 +1087,7 @@ final class AudioTransport: Sendable {
                 state.scratch = Scratch(step: state.isPlaying ? baseStep : 0,
                     targetStep: step, position: state.beatPosition, targetPosition: target, decay: decay,
                     gain: state.isPlaying ? 1 : 0, entryFrame: state.isPlaying ? state.framePosition : nil,
-                    transitionFrames: transitionFrames, gainDecay: Float(1 - decay))
+                    handStep: step, transitionFrames: transitionFrames, gainDecay: Float(1 - decay))
             }
             state.synchronization = nil
             state.clockSample = nil
@@ -1089,9 +1098,11 @@ final class AudioTransport: Sendable {
 
     func releaseScratch() {
         state.withLock { state in
-            guard var scratch = state.scratch, let current = state.current else { return }
-            // A complete touch can arrive before the first source callback.
-            if !scratch.hasRendered { scratch.step = scratch.targetStep }
+            guard var scratch = state.scratch, scratch.remaining == nil,
+                  let current = state.current else { return }
+            // Servo settlement must not erase a recent flick, but old motion cannot restart it.
+            if scratch.motionAgeFrames >= Int(0.12 * current.sampleRate) { scratch.handStep = 0 }
+            scratch.launchFrames = scratch.transitionFrames
             let remaining = max(1, Int(1.2 * current.sampleRate))
             scratch.remaining = remaining
             scratch.targetStep = state.isPlaying ? deltaBeatFor(current) : 0
@@ -1297,6 +1308,7 @@ final class AudioTransport: Sendable {
                             continue
                         }
                         if scratch.remaining == nil {
+                            scratch.motionAgeFrames = min(Int(0.12 * current.sampleRate), scratch.motionAgeFrames + 1)
                             // A critically damped position servo follows hand displacement, not
                             // an indefinitely held velocity. Its output is continuous at reversals.
                             let error = scratch.targetPosition - scratch.position
@@ -1309,6 +1321,9 @@ final class AudioTransport: Sendable {
                             }
                         } else if let remaining = scratch.remaining, remaining <= scratch.transitionFrames {
                             scratch.step += (scratch.targetStep - scratch.step) / Double(remaining)
+                        } else if scratch.launchFrames > 0 {
+                            scratch.step += (scratch.handStep - scratch.step) / Double(scratch.launchFrames)
+                            scratch.launchFrames -= 1
                         } else {
                             scratch.step = scratch.targetStep + (scratch.step - scratch.targetStep) * scratch.decay
                         }
@@ -1341,7 +1356,6 @@ final class AudioTransport: Sendable {
                         if let remaining = scratch.remaining { scratch.remaining = remaining - 1 }
                     }
                 }
-                scratch.hasRendered = true
                 state.scratch = scratch.remaining == 0 ? nil : scratch
                 return noErr
             }

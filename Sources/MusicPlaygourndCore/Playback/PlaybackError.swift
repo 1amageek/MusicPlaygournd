@@ -32,7 +32,7 @@ public enum PlaybackError: Error, Sendable, Equatable, CustomStringConvertible, 
         switch self {
         case .audioSetupFailed(let message): "Audio setup failed: \(message)"
         case .audioStartFailed(let message): "Audio start failed: \(message)"
-        case .invalidScratchMotion: "Scratch requires a finite displacement, an interval in (0, 0.25] seconds, and a read speed within -32...32 source frames per sample"
+        case .invalidScratchMotion: "Scratch requires a finite displacement and velocity, a representable target position, and an interval in (0, 0.25] seconds"
         case .invalidSeekOffset: "Seek offset must be finite"
         case .noCurrentLoop: "No prepared loop is available"
         case .staleRevision(let revision): "Revision \(revision) is stale"

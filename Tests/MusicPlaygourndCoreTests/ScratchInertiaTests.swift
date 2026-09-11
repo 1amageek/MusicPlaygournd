@@ -29,6 +29,33 @@ extension NativeHostTests {
             return samples
         }
 
+        @Test(.timeLimit(.minutes(1)))
+        func recentHandVelocitySurvivesServoSettlementButExpiresAfterHolding() throws {
+            for direction in [-1.0, 1.0] {
+                let transport = AudioTransport()
+                transport.beginUpdate(revision: 1)
+                try transport.submit(loop: loop(), revision: 1)
+                try transport.seek(bySeconds: 1)
+                try transport.scratch(bySeconds: direction * 0.02, over: 0.02)
+                _ = try render(transport, frames: 2646)
+                // Native contacts can deliver a final stationary sample before lift.
+                try transport.scratch(bySeconds: 0, over: 0.01)
+                _ = try render(transport, frames: 441)
+                let before = transport.positionSnapshot().accumulatedBeatPosition
+                transport.releaseScratch()
+                let samples = try render(transport, frames: 4410)
+                let distance = transport.positionSnapshot().accumulatedBeatPosition - before
+                print("RELEASE AFTER SETTLEMENT", direction, distance)
+                #expect(distance * direction > 0.01)
+                #expect(samples.contains { abs($0) > 0.01 })
+                transport.endScratch(immediate: true)
+                try transport.scratch(bySeconds: direction * 0.02, over: 0.02)
+                _ = try render(transport, frames: 10_000)
+                transport.releaseScratch()
+                #expect(try render(transport, frames: 4410).allSatisfy { $0 == 0 })
+            }
+        }
+
         @Test(.timeLimit(.minutes(2)))
         func nativeScratchModeTransitionsDoNotClick() async throws {
             for rate: Float in [0.5, 2] {
@@ -166,6 +193,7 @@ extension NativeHostTests {
             #expect(abs(transport.snapshot().beatPosition - before - 200.0 / 44_100) < 0.000001)
             try transport.scratch(bySeconds: -0.1, over: 0.1)
             transport.releaseScratch()
+            _ = try render(transport, frames: 1000)
             try transport.scratch(bySeconds: 0.1, over: 0.1)
             let grabbed = transport.positionSnapshot().accumulatedBeatPosition
             _ = try render(transport, frames: 1)

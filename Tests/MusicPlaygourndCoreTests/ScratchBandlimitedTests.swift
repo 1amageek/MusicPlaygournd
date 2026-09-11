@@ -14,6 +14,29 @@ struct ScratchBandlimitedTests {
     }
 
     @Test(.timeLimit(.minutes(1)))
+    func fastHandInputPreservesDistanceWhileReadSpeedStaysBounded() throws {
+        for direction in [-1.0, 1.0] {
+            let transport = AudioTransport()
+            let loop = PreparedLoop(sampleRate: 44_100, bpm: 120, beatsPerBar: 4, beatCount: 2,
+                samples: tone(440), events: [])
+            transport.beginUpdate(revision: 1)
+            try transport.submit(loop: loop, revision: 1)
+            try transport.seek(bySeconds: 0.5)
+            // A 400x input used to throw, although the position servo can track it safely.
+            try transport.scratch(bySeconds: direction * 0.4, over: 0.001)
+            let start = transport.positionSnapshot().accumulatedBeatPosition
+            _ = try render(transport, frames: 100)
+            let moved = abs(transport.positionSnapshot().accumulatedBeatPosition - start)
+            #expect(moved <= 32 * 100 * 2 / 44_100.0 + 1e-9)
+            _ = try render(transport, frames: 8000)
+            #expect(abs(transport.positionSnapshot().accumulatedBeatPosition - (1 + direction * 0.8)) < 1e-8)
+            transport.releaseScratch()
+            let coast = try render(transport, frames: 1000)
+            #expect(coast.allSatisfy { $0.isFinite })
+        }
+    }
+
+    @Test(.timeLimit(.minutes(1)))
     func heldPositionReturnsExactlyAcrossRatesAndCallbackPartitions() throws {
         let loop = PreparedLoop(sampleRate: 44_100, bpm: 120, beatsPerBar: 4, beatCount: 2, samples: tone(440), events: [])
         for rate in [0.5, 1, 2] {
@@ -81,7 +104,7 @@ struct ScratchBandlimitedTests {
         print("SCRATCH REVERSAL maximum sample jump", jump)
         #expect(jump < 0.025)
         let beforeFailure = transport.snapshot()
-        #expect(throws: PlaybackError.invalidScratchMotion) { try transport.scratch(bySeconds: 4, over: 0.01) }
+        #expect(throws: PlaybackError.invalidScratchMotion) { try transport.scratch(bySeconds: .greatestFiniteMagnitude, over: 0.01) }
         #expect(transport.snapshot() == beforeFailure)
         transport.endScratch()
         samples = try render(transport, frames: 512)

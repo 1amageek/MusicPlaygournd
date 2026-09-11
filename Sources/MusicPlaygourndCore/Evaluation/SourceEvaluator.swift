@@ -19,6 +19,8 @@ public actor SourceEvaluator {
     }
     private var compilerEnvironment: CompilerEnvironment?
     private var binaryDirectory: String?
+    private var cachedBuildDirectory: (root: URL, path: String)?
+    private(set) var binaryDirectoryInvocations = 0
     private var cachedDiscovery: (key: String, value: SwitchBankDiscovery.Result)?
     private var cachedAST: (key: String, value: Data)?
     private var directBuildKey: String?
@@ -392,14 +394,18 @@ public actor SourceEvaluator {
         } else {
             executableBuildInvocations += 1
             _ = try await run(swiftExecutable, ["build", "--configuration", "release", "--build-system", "native", "-Xswiftc", "-Xfrontend", "-Xswiftc", "-disable-round-trip-debug-types", "--package-path", buildRoot.path, "--product", product], timeout: 240, progress: progress)
-            if let binaryDirectory, projectWorkspace == nil { binaryPath = binaryDirectory }
+            if let cachedBuildDirectory, cachedBuildDirectory.root == buildRoot {
+                binaryPath = cachedBuildDirectory.path
+            }
             else {
+                binaryDirectoryInvocations += 1
                 let output = try await run(swiftExecutable, ["build", "--configuration", "release", "--build-system", "native", "--package-path", buildRoot.path, "--show-bin-path"], timeout: 20)
                 let paths = output.split(whereSeparator: \.isNewline).filter { $0.hasPrefix("/") }
                 guard paths.count == 1, let path = paths.first else {
                     throw EvaluationError.invalidResult("SwiftPM did not report one absolute binary directory.")
                 }
                 binaryPath = String(path)
+                cachedBuildDirectory = (buildRoot, binaryPath)
                 if projectWorkspace == nil { binaryDirectory = binaryPath }
             }
             executable = URL(fileURLWithPath: binaryPath).appending(path: product)

@@ -11,7 +11,7 @@ Use the parent/child links above. Dependencies: SwiftMusic owns event semantics;
 
 ## Architecture
 ```text
-Swift source -> compiler AST + bounded evaluation -> PCM + pattern/result anchors -> bar-boundary adoption -> audio + aligned rows + analyzers
+Swift source -> compiler AST + bounded evaluation -> PCM + pattern/result anchors -> timed crossfade adoption (Playback contract) -> audio + aligned rows + analyzers
 ```
 
 ## Contracts and Invariants

@@ -116,10 +116,15 @@ extension NativeHostTests {
                     project: ProjectEvaluationRequest(project: loaded, target: target, buffers: [:]))
                 print("PROJECT COLD", coldStart.duration(to: .now))
                 #expect(!first.loop.samples.isEmpty)
+                #expect(await evaluator.binaryDirectoryInvocations == 1)
                 #expect(await evaluator.adopt(revision: 1))
                 let changed = [sources.appending(path: "Pitch.swift"): "import SwiftMusic\nfunc pitch() -> NotePattern { \"G3\" }"]
+                let editStart = ContinuousClock.now
                 let second = try await evaluator.evaluateRetained(source: source, bpm: 120, beatsPerBar: 4, revision: 2,
                     project: ProjectEvaluationRequest(project: loaded, target: target, buffers: changed))
+                print("PROJECT WARM EDIT", editStart.duration(to: .now))
+                #expect(await evaluator.binaryDirectoryInvocations == 1)
+                #expect(await evaluator.executableBuildInvocations == 2)
                 #expect(first.loop != second.loop)
                 #expect(try String(contentsOf: sources.appending(path: "Pitch.swift"), encoding: .utf8) == helper)
                 #expect(try String(contentsOf: project.appending(path: "Package.swift"), encoding: .utf8) == manifest)
@@ -129,6 +134,7 @@ extension NativeHostTests {
                     Issue.record("Invalid helper source must fail compilation.")
                 } catch is CancellationError { throw CancellationError() }
                 catch { #expect(!error.localizedDescription.isEmpty) }
+                #expect(await evaluator.binaryDirectoryInvocations == 1)
                 let retained = try await evaluator.render(overrides: [], revision: 1, generation: 1)
                 #expect(retained == first.loop)
                 let lsp = try await evaluator.run("/usr/bin/xcrun", ["--find", "sourcekit-lsp"], timeout: 10).trimmingCharacters(in: .whitespacesAndNewlines)

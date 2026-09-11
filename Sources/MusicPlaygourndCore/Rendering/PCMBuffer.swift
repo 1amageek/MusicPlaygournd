@@ -50,8 +50,13 @@ public final class PCMBuffer: RandomAccessCollection, Sendable, Equatable {
     /// The Array API materializes only when the owner contains mapped bytes.
     var array: [Float] {
         switch storage {
-        case .array(let samples): samples
-        case .bytes: Array(self)
+        case .array(let samples): return samples
+        case .bytes(let bytes, let range):
+            return bytes.withUnsafeBytes { buffer in
+                (0..<count).map { index in
+                    Float(bitPattern: UInt32(littleEndian: buffer.loadUnaligned(fromByteOffset: range.lowerBound + index * 4, as: UInt32.self)))
+                }
+            }
         }
     }
 

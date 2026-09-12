@@ -31,3 +31,5 @@ Serve this directory with any static server. GitHub Pages can use main /docs wit
 ## Asset Provenance
 - `musicplayground-symbol.png`: crop of the user-provided `exec-5b0d546d-34f9-4a4a-b9d0-4dea2bb16a5f.png`, top 65, left 535, height 575, width 675. Original retained in `../Assets/musicplayground-header.png`.
 - `musicplayground-app.png`: User-supplied screenshot `スクリーンショット 2026-09-12 11.47.44.png` of LiveSet051 running both template decks, preserved unchanged at 1353 × 985 pixels. No synthesized UI or substituted code.
+
+- `og-image.png`: unchanged copy of the approved `../Assets/musicplayground-header.png` (1774 × 887). Open Graph, canonical and X card URLs target `https://1amageek.github.io/MusicPlaygournd/`; public crawler verification requires enabling GitHub Pages.

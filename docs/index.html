@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0a1013">
+  <meta name="description" content="Write code. Make music. Play it live. MusicPlayground is a native macOS live music editor powered by SwiftMusic, with independent decks and hands-on sound controls.">
+  <meta property="og:title" content="MusicPlayground — Your code is the instrument.">
+  <meta property="og:description" content="Compose in Swift. Perform on two decks. Shape your sound while it plays.">
+  <meta property="og:type" content="website">
+  <title>MusicPlayground — Write code. Make music. Play it live.</title>
+  <link rel="icon" type="image/png" href="assets/musicplayground-symbol.png">
+  <link rel="stylesheet" href="styles.css">
+  <script src="site.js" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div class="page">
+  <header class="header">
+    <a class="brand" href="#" aria-label="MusicPlayground home"><img src="assets/musicplayground-symbol.png" width="54" height="46" alt=""><span>MusicPlayground</span></a>
+    <nav aria-label="Main navigation"><a href="#features">Features</a><a href="#get-started">Get started</a><a href="https://github.com/1amageek/MusicPlaygournd">GitHub <span aria-hidden="true">↗</span></a></nav>
+  </header>
+  <main id="main">
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <a class="eyebrow release" href="https://github.com/1amageek/MusicPlaygournd/releases/tag/0.5.1"><span class="status-dot"></span> Source preview 0.5.1 <span class="separator">/</span> macOS · Swift 6.4</a>
+        <h1 id="hero-title">Write code.<br>Make music.<br><span>Play it live.</span></h1>
+        <p class="intro">A native macOS playground<br class="desktop-break"> for live music with Swift.</p>
+        <div class="actions"><a class="button primary" href="#get-started">Get started <span aria-hidden="true">→</span></a><a class="button secondary" href="https://github.com/1amageek/MusicPlaygournd">View on GitHub <span aria-hidden="true">↗</span></a></div>
+      </div>
+      <div class="hero-art" aria-hidden="true"><img src="assets/waves.svg" width="760" height="510" alt=""><div class="art-label">Code<br>Synthesize<br>Perform<br>Explore</div><span class="art-foot">Two decks. One flow.</span></div>
+    </section>
+    <figure class="product">
+      <div class="section-label"><span>01 / The playground</span><span>Code · Perform · Explore</span></div>
+      <a class="screenshot-link" href="assets/musicplayground-app.png" aria-label="View full-size MusicPlayground screenshot"><img class="app-shot" src="assets/musicplayground-app.png" alt="MusicPlayground running Session.swift and Trance.swift on independent A/B decks, with spectrum EQ, shared vectorscope, Swift code and inline sliders." width="1092" height="768" fetchpriority="high"></a>
+      <figcaption><span>Real code. Real-time controls.</span><span>MusicPlayground on macOS <span aria-hidden="true">↗</span></span></figcaption>
+    </figure>
+    <section class="features" id="features" aria-labelledby="features-title">
+      <div class="feature-intro"><p class="eyebrow">02 / Made to be played</p><h2 id="features-title">Your code is<br>the instrument.</h2><p>Build sounds from sounds.<br>Turn patterns into rhythms.<br>Keep shaping them while they play.</p><a class="text-link" href="https://github.com/1amageek/MusicPlaygournd#two-decks">Explore the workflow <span aria-hidden="true">↗</span></a></div>
+      <div class="code-panel"><div class="panel-title"><span class="file-dot"></span> Session.swift <span class="muted">/ template excerpt</span></div><pre aria-label="Swift code from the starter template"><code><span class="comment">// Compose sounds together.</span>
+<span class="keyword">var</span> body: <span class="keyword">some</span> <span class="type">Sound</span> {
+    <span class="type">RhythmSection</span>()
+
+    <span class="comment">// Shape the filter live.</span>
+    <span class="type">SynthSection</span>(
+        acidAmount: <span class="function">slider</span>(<span class="number">0.5</span>, in: <span class="number">0...1</span>)
+    )
+
+    <span class="type">BusReturn</span>(<span class="string">"synths"</span>)
+        .gain(<span class="function">slider</span>($synthLevel, in: <span class="number">0...1</span>))
+}</code></pre><div class="code-caption"><span class="status-dot"></span> Inline controls, right beside your code.</div></div>
+      <div class="feature-list">
+        <article><span class="feature-icon" aria-hidden="true">&lt;/&gt;</span><div><h3>Compose in Swift</h3><p>Layer nested sounds, rhythms and effects with SwiftMusic’s declarative API.</p></div></article>
+        <article><span class="feature-icon loops" aria-hidden="true">∞</span><div><h3>Perform on two decks</h3><p>Mix independent sessions. Tap the tempo, sync the beat and scratch the waveform.</p></div></article>
+        <article><span class="feature-icon" aria-hidden="true">▥</span><div><h3>See every sound</h3><p>Waveforms, spectrum EQ and a shared vectorscope make the mix visible.</p></div></article>
+      </div>
+    </section>
+    <section class="start" id="get-started" aria-labelledby="start-title">
+      <div><p class="eyebrow">03 / Your first session</p><h2 id="start-title">From your first line<br>to your first beat.</h2><p>Build from source. Create a project. Press play.</p><p class="requirements">macOS 15+ · Swift 6.4<br>Xcode command-line tools</p></div>
+      <div class="installation"><div class="terminal"><div class="panel-title"><span class="traffic" aria-hidden="true"><i></i><i></i><i></i></span> Get started <button id="copy" type="button" hidden>Copy commands</button></div><pre><code id="commands">git clone --branch 0.5.1 https://github.com/1amageek/MusicPlaygournd.git
+cd MusicPlaygournd
+./Scripts/build-app.sh
+open .build/MusicPlaygournd.app</code></pre></div><p id="copy-status" role="status" aria-live="polite"></p><p class="install-note">This preview is built locally from source. Keep your Swift compiler and SDK installed. Initial package resolution and compilation can take longer; progress appears in the sidebar.</p><a class="text-link" href="https://github.com/1amageek/MusicPlaygournd#get-started">Read the installation guide <span aria-hidden="true">↗</span></a></div>
+    </section>
+  </main>
+  <footer><a class="brand" href="#"><img src="assets/musicplayground-symbol.png" width="42" height="36" alt=""><span>MusicPlayground</span></a><a href="https://github.com/1amageek/SwiftMusic">Powered by SwiftMusic <span aria-hidden="true">↗</span></a><a href="https://github.com/1amageek/MusicPlaygournd">Make music.<br>Make it your own. <span aria-hidden="true">↗</span></a></footer>
+</div>
+</body>
+</html>

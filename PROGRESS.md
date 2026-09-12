@@ -243,3 +243,6 @@
 
 - [x] RELEASE-051-1 b9efe5d: Updated patch metadata and notes to 0.5.1/build 6; release build, strict signature, bundled runtime hashes and public SwiftMusic 0.5.1 verified. No local dependency references in tracked manifests `depends:ISSUES-INT` `parallel:none`
 - [x] RELEASE-051-INT 0.5.1/build 6 candidate verified with strict signature, runtime hashes and URL-only manifests. Metadata-only release changes preserve the four passing diagnostic/workflow tests and native inline-message/navigation evidence from ISSUES-INT. Candidate ready for matching main tag and GitHub source-preview publication `depends:RELEASE-051-1` `parallel:none`
+
+- [x] WEB-1 Implemented approved static landing page with exact logo crop and real running A/B template capture. Desktop 1280px and mobile 390px inspected; no horizontal overflow, all images loaded, source-install anchor and keyboard focus verified. Runnable check passes README command parity, relative assets and clipboard success/denied/unavailable paths; app sources unchanged `depends:none` `parallel:none`
+- [ ] WEB-INT Verify the committed page under a repository subpath, document GitHub Pages setup, and push only task changes to the configured upstream `depends:WEB-1` `parallel:none`

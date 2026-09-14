@@ -22,8 +22,6 @@ struct DeckFXView: View {
             HStack {
                 Text("Deck \(name) · FX").font(.system(size: 13, weight: .semibold))
                 Spacer()
-                Toggle("Enabled", isOn: binding(\.enabled)).labelsHidden()
-                    .toggleStyle(.switch).controlSize(.mini).accessibilityLabel("Enable Deck \(name) FX")
                 Button("Reset", action: onReset).buttonStyle(.plain)
                     .accessibilityLabel("Reset Deck \(name) FX")
             }

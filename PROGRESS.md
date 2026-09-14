@@ -258,3 +258,6 @@
 
 - [x] FXY-1 9885892: Revised DJ FX with Mix/Depth pad, BPM-following 1/4..4-beat selector and collapsed free-rate/feedback controls. Three tests passed in 0.212s, covering native PCM/deck isolation, model sync/free/reset, 16Hz boundary, and the same clamped pad update method used by DragGesture. Native UI confirms selected beat, Mix 75%/Depth 25%, Details and synchronized 9.33Hz at 140 BPM/quarter beat `depends:none` `parallel:none`
 - [x] FXY-INT Final app release build and strict signature passed. Native popover values match the accepted model settings; tests cover shared gesture update path, BPM propagation and PCM. UI/device input automation was interrupted by external interaction; physical dragging is not claimed as verified. Scoped changes reviewed for normal main upstream push `depends:FXY-1` `parallel:none`
+
+- [x] FXM-1 Mix solely controls FX activation, initial/reset zero; three native PCM/model tests passed in 0.223s, including zero bypass and A/B isolation `depends:none` `parallel:none`
+- [x] FXM-INT Release preview build and strict signature passed; native panel has no enable switch, Mix 50% activates Phaser and Reset returns to zero/Off. Scoped diff reviewed for main upstream push `depends:FXM-1` `parallel:none`

@@ -60,13 +60,13 @@ final class DeckFXKernel: Sendable {
                 let smoothing = 1 - exp(-1 / (0.02 * sampleRate))
                 for i in 0..<frames {
                     let changing = s.kind != s.target.kind
-                    let targetWet = s.target.enabled && !changing ? s.target.mix : 0
+                    let targetWet = !changing ? s.target.mix : 0
                     let previousWet = s.wet
                     s.wet += min(1 / (0.01 * sampleRate), max(-1 / (0.01 * sampleRate), targetWet - s.wet))
                     if s.wet == 0 {
                         if changing || previousWet > 0 { s.clear(); s.kind = s.target.kind }
                         // Clearing on bypass prevents stale tails on the next activation.
-                        if !s.target.enabled || s.target.mix == 0 { continue }
+                        if s.target.mix == 0 { continue }
                     }
                     s.rate += (s.target.rate - s.rate) * smoothing
                     s.depth += (s.target.depth - s.depth) * smoothing

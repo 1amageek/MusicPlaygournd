@@ -232,6 +232,6 @@ See [DESIGN.md](DESIGN.md) for architecture and runtime contracts. Tests use Swi
 
 ### Deck FX (main branch)
 
-Each deck has an **FX** button opening live Phaser, Chorus and Flanger controls. Enable FX, select an effect, then drag the two-dimensional pad horizontally for dry/wet Mix and vertically for Depth. Select ¼, ½, 1, 2 or 4 beats per modulation cycle; the rate follows deck BPM. Details contains Feedback and a Sync to BPM switch for manual Hz control. Releasing the pad keeps the settings. Chorus uses independent stereo modulation and has no feedback control. Reset disables FX and restores the defaults. Deck colors identify the active panel.
+Each deck has an **FX** button opening live Phaser, Chorus and Flanger controls. Select an effect, then drag the two-dimensional pad horizontally for dry/wet Mix and vertically for Depth. Select ¼, ½, 1, 2 or 4 beats per modulation cycle; the rate follows deck BPM. Details contains Feedback and a Sync to BPM switch for manual Hz control. Releasing the pad keeps the settings. Chorus uses independent stereo modulation and has no feedback control. Mix starts at 0% (dry); moving right adds the effect. Reset returns Mix to 0% and restores the defaults. Deck colors identify the active panel.
 
 FX runs after the deck EQ and before Delay/Space, independently for A and B, without recompiling your code. Switching effects fades through dry audio. These session controls last for the deck lifetime; they are not written into Swift source. This feature is on main and is not included in the 0.5.1 release.

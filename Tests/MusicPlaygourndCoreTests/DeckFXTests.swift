@@ -30,7 +30,7 @@ extension NativeHostTests {
             }
             for kind in DeckFXSettings.Kind.allCases {
                 let whole = DeckFXKernel(), split = DeckFXKernel()
-                let settings = DeckFXSettings(enabled: true, kind: kind, rate: 16, depth: 0.8, mix: 0.7)
+                let settings = DeckFXSettings(kind: kind, rate: 16, depth: 0.8, mix: 0.7)
                 try whole.configure(settings); try split.configure(settings)
                 let a = try render(whole, count: 16384, block: 4096)
                 let b = try render(split, count: 16384, block: 127)
@@ -46,7 +46,8 @@ extension NativeHostTests {
                 let switched = try render(whole, count: 4096, block: 127)
                 #expect(switched.allSatisfy { $0.isFinite })
                 #expect(zip(switched.dropFirst(2), switched).allSatisfy { abs($0 - $1) < 0.5 })
-                try whole.configure(.defaults)
+                changed.mix = 0
+                try whole.configure(changed)
                 let dry = try render(whole, count: 4096, block: 4096)
                 #expect((1024..<4096).allSatisfy { dry[$0 * 2] == input($0) })
                 // A fully bypassed history cannot leak into reactivation.
@@ -90,11 +91,11 @@ extension NativeHostTests {
             }
             let dry = try render(.defaults)
             for kind in DeckFXSettings.Kind.allCases {
-                let wet = try render(.init(enabled: true, kind: kind, mix: 0.8))
+                let wet = try render(.init(kind: kind, mix: 0.8))
                 #expect(zip(dry, wet).reduce(0.0) { $0 + Double(abs($1.0 - $1.1)) } / Double(dry.count) > 0.01)
             }
             let bDry = try render(.defaults, muteA: true)
-            let bWithAEffect = try render(.init(enabled: true, kind: .flanger), muteA: true)
+            let bWithAEffect = try render(.init(kind: .flanger, mix: 0.8), muteA: true)
             #expect(zip(bDry, bWithAEffect).allSatisfy { abs($0 - $1) < 0.00001 })
         }
     }

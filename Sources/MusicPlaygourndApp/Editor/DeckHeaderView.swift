@@ -145,13 +145,13 @@ struct DeckHeaderView: View {
                     .help("Preview this deck in headphones before the crossfader")
                 Button { fxDeck[index] = true } label: {
                     Text("FX").font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(model.fxSettings.enabled ? color : .primary)
+                        .foregroundStyle(model.fxSettings.mix > 0 ? color : .primary)
                         .frame(width: 28, height: 25)
-                        .background(model.fxSettings.enabled ? color.opacity(0.22) : .white.opacity(0.09),
+                        .background(model.fxSettings.mix > 0 ? color.opacity(0.22) : .white.opacity(0.09),
                                     in: RoundedRectangle(cornerRadius: 4))
                         .overlay(RoundedRectangle(cornerRadius: 4).strokeBorder(.white.opacity(0.08)))
                 }.buttonStyle(.plain).accessibilityLabel("Deck \(name) FX")
-                    .accessibilityValue(model.fxSettings.enabled ? model.fxSettings.kind.rawValue : "Off")
+                    .accessibilityValue(model.fxSettings.mix > 0 ? model.fxSettings.kind.rawValue : "Off")
                     .popover(isPresented: $fxDeck[index]) {
                         DeckFXView(settings: model.fxSettings, beats: model.fxBeats, onChange: model.setFX,
                                    onBeatsChange: model.setFXBeats, onReset: model.resetFX, tint: color, name: name)

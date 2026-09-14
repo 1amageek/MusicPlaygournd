@@ -110,6 +110,8 @@ struct DeckHeaderView: View {
                         .overlay(Circle().strokeBorder(.white.opacity(0.85), lineWidth: 1.3)).contentShape(Circle())
                 }.buttonStyle(.plain).accessibilityLabel("Deck \(name) play pause")
                     .accessibilityValue(model.isPlaybackQueued ? "Preparing playback" : (model.isPlaying ? "Playing" : "Paused"))
+                TransportCueButton(cue: model.loop == nil ? nil : model.transportCue, color: color, name: name)
+                    .frame(width: 30, height: 30)
                 TextField("BPM", value: Binding(get: { model.displayedBPM }, set: { model.bpm = $0 }), format: .number.precision(.fractionLength(0)))
                     .font(.system(size: 22, weight: .medium, design: .rounded)).monospacedDigit()
                     .textFieldStyle(.plain).frame(width: 43).accessibilityLabel("Deck \(name) BPM")

@@ -11,9 +11,7 @@ extension NativeHostTests {
             let keys = PlayModeKeys()
             let cases: [(UInt16, UInt, NSEvent.ModifierFlags, PlayModeKeys.Action)] = [
                 (55, UInt(NX_DEVICELCMDKEYMASK), .command, .deck(0)),
-                (54, UInt(NX_DEVICERCMDKEYMASK), .command, .deck(1)),
-                (58, UInt(NX_DEVICELALTKEYMASK), .option, .cue(0)),
-                (61, UInt(NX_DEVICERALTKEYMASK), .option, .cue(1))]
+                (54, UInt(NX_DEVICERCMDKEYMASK), .command, .deck(1))]
             for (code, mask, flag, action) in cases {
                 let down = NSEvent.ModifierFlags(rawValue: flag.rawValue | mask)
                 #expect(keys.handle(type: .flagsChanged, keyCode: code, flags: []) == nil)
@@ -34,6 +32,23 @@ extension NativeHostTests {
             #expect(keys.handle(type: .keyDown, keyCode: 49, flags: []) == .all)
             #expect(keys.handle(type: .keyDown, keyCode: 49, flags: [], repeating: true) == nil)
             #expect(keys.handle(type: .keyDown, keyCode: 49, flags: .command) == nil)
+        }
+
+        @Test(.timeLimit(.minutes(1)))
+        func cuePressReleaseShiftAndCancellation() {
+            let keys = PlayModeKeys()
+            let left = NSEvent.ModifierFlags(rawValue: NSEvent.ModifierFlags.option.rawValue | UInt(NX_DEVICELALTKEYMASK))
+            let both = NSEvent.ModifierFlags(rawValue: left.rawValue | UInt(NX_DEVICERALTKEYMASK))
+            #expect(keys.handle(type: .flagsChanged, keyCode: 58, flags: left) == .cueDown(0, false))
+            #expect(keys.handle(type: .flagsChanged, keyCode: 61, flags: both) == .cueDown(1, false))
+            #expect(keys.handle(type: .flagsChanged, keyCode: 61, flags: left) == .cueUp(1))
+            #expect(keys.handle(type: .flagsChanged, keyCode: 58, flags: []) == .cueUp(0))
+            #expect(keys.handle(type: .flagsChanged, keyCode: 58, flags: left.union(.shift)) == .cueDown(0, true))
+            #expect(keys.handle(type: .keyDown, keyCode: 1, flags: left) == .cancelCue)
+            #expect(keys.handle(type: .flagsChanged, keyCode: 58, flags: []) == nil)
+            _ = keys.handle(type: .flagsChanged, keyCode: 58, flags: left)
+            keys.reset()
+            #expect(keys.handle(type: .flagsChanged, keyCode: 58, flags: []) == nil)
         }
 
         @Test(.timeLimit(.minutes(1)))

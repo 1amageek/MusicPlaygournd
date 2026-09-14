@@ -38,6 +38,12 @@ Version 0.5.1 includes independent A/B decks.
 
 Each deck keeps its last good audio after a failed load or edit. First preparation uses separate A/B build caches; subsequent runs reuse them.
 
+## Transport CUE (main branch)
+
+The circular **CUE** button beside each deck's play button controls a cue point, separately from headphone monitoring. While paused, press to set the current position. While playing, press to return to the saved position and pause. Hold for 180ms to preview; release to stop and return. Shift+CUE returns to the track start. A newly loaded file resets its cue to the start; source edits retain the cue within the loop.
+
+In Play Mode on the main branch, left/right Option press and release operate A/B transport CUE; Shift+Option returns the corresponding deck to the start. Headphone monitoring remains on its headphone button. These changes are not in the 0.5.1 source preview; its Option keys still toggle headphone monitoring as described below.
+
 ## Play Mode
 
 Enable **Play Mode** in the log bar to use the trackpad as independent performance regions. The left/right 18% edges scratch A/B; the bottom 20% controls the crossfader at 3x sensitivity. Bottom corners belong to the crossfader. Different edge contacts operate simultaneously; the initial region stays assigned until lift. There is no whole-pad two-finger fader gesture.

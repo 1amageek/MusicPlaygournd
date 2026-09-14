@@ -231,6 +231,7 @@ final class SessionModel {
     private var lineMaps: [UInt64: SourceLineMap] = [:]
     private var analyzer: SpectrumAnalyzer?
     private var engine: AudioLoopEngine?
+    private(set) var transportCue: TransportCue?
     private var midiService: (any MIDIServiceProtocol)?
     private(set) var midiRoute = MIDISessionRoute.disabled
     private(set) var midiSnapshot: MIDIServiceSnapshot?
@@ -422,6 +423,7 @@ final class SessionModel {
         do {
             guard audioEnabled else { throw PlaybackError.audioSetupFailed("Shared output is unavailable.") }
             engine = try output.map { try AudioLoopEngine(output: $0) } ?? AudioLoopEngine()
+            configureTransportCue()
         }
         catch { audioError = error.localizedDescription; diagnostic = audioError }
     }
@@ -432,6 +434,7 @@ final class SessionModel {
         self.evaluator = evaluator
         self.completionService = completionService
         self.engine = engine
+        configureTransportCue()
         self.midiService = midiService
         do { analyzer = try SpectrumAnalyzer() }
         catch { diagnostic = "Spectrum analyzer could not initialize: \(error)" }
@@ -502,7 +505,7 @@ final class SessionModel {
             let relative = String(url.path.dropFirst(project.root.appending(path: target.path).path.count + 1))
             projectTarget = try target.selectingEntry(relative)
         }
-        if loadedDocument !== document || loadedType != type { loadHostSettings(for: url) }
+        if loadedDocument !== document || loadedType != type { transportCue?.reset(); loadHostSettings(for: url) }
         loadedDocument = document
         loadedType = type
         documentStore?.membershipDidChange?()
@@ -654,7 +657,18 @@ final class SessionModel {
         scheduleEvaluation(immediate: true)
     }
 
+    private func configureTransportCue() {
+        guard let engine else { return }
+        transportCue = TransportCue(engine: engine)
+        transportCue?.onError = { [weak self] in self?.diagnostic = $0.localizedDescription }
+        transportCue?.onChange = { [weak self] in
+            self?.wantsPlayback = false
+            self?.refresh()
+        }
+    }
+
     func scratch(distance: Double, duration: Double) {
+        transportCue?.release()
         guard let engine, loop != nil else { return }
         do {
             try engine.scratch(bySeconds: distance * 0.05, over: duration)
@@ -669,6 +683,7 @@ final class SessionModel {
     }
 
     func togglePlayback() {
+        transportCue?.release()
         guard hasOpenDocument || loadedDocument != nil || isPlaying else { return }
         guard let engine else { diagnostic = audioError; return }
         if isPlaying || wantsPlayback {
@@ -1928,6 +1943,7 @@ final class SessionModel {
         }
         guard clock.commandGeneration > lastMIDICommandGeneration else { return }
         lastMIDICommandGeneration = clock.commandGeneration
+        transportCue?.release()
         do {
             switch clock.lastCommand {
             case .start:
@@ -2001,6 +2017,7 @@ final class SessionModel {
     }
 
     func shutdown() async throws {
+        transportCue?.release()
         isShuttingDown = true
         projectRequestID = UUID()
         projectTask?.cancel()

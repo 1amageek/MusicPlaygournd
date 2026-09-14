@@ -30,3 +30,5 @@ Core tests own PCM behavior, limits, revision handoff and cancellation. Parent i
 Semantic highlighting is owned by the existing Evaluation/Editor components alongside completion. Its source-snapshot, language-service and presentation contracts are documented in their linked designs.
 
 The live master compressor is owned by [Playback](Playback/DESIGN.md); it reuses [Rendering](Rendering/DESIGN.md)'s scalar dynamics step, exposes accepted settings and bounded aligned input/output envelopes, and runs upstream of master capture and recording.
+
+Live per-deck modulation FX settings and streaming audio are owned by [Playback](Playback/DESIGN.md), using causal steps from Rendering.

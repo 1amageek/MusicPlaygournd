@@ -229,3 +229,9 @@ See [DESIGN.md](DESIGN.md) for architecture and runtime contracts. Tests use Swi
 ## License
 
 [MIT](LICENSE) · Copyright 2026 1amageek.
+
+### Deck FX (main branch)
+
+Each deck has an **FX** button opening live Phaser, Chorus and Flanger controls. Enable FX, select an effect, then adjust Rate, Depth, Feedback and dry/wet Mix. Chorus uses independent stereo modulation and has no feedback control. Reset disables FX and restores the defaults. Deck colors identify the active panel.
+
+FX runs after the deck EQ and before Delay/Space, independently for A and B, without recompiling your code. Switching effects fades through dry audio. These session controls last for the deck lifetime; they are not written into Swift source. This feature is on main and is not included in the 0.5.1 release.

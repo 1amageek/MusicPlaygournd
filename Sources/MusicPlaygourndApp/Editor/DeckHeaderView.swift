@@ -6,6 +6,7 @@ import UniformTypeIdentifiers
 struct DeckHeaderView: View {
     @Bindable var workspace: DeckWorkspace
     @State private var colorDeck = [false, false]
+    @State private var fxDeck = [false, false]
     @State private var compressorDeck = [false, false]
     @State private var scopeVisible = false
     @State private var controlsDeck = [false, false]
@@ -84,7 +85,7 @@ struct DeckHeaderView: View {
         let duration = model.loop?.beatCount ?? 0
         let position = duration > 0 ? model.beatPosition.truncatingRemainder(dividingBy: duration) / duration : 0
         return VStack(alignment: .leading, spacing: 7) {
-            HStack(spacing: 7) {
+            HStack(spacing: 4) {
                 Button { colorDeck[index] = true } label: {
                     Text(name).font(.system(size: 12, weight: .bold)).foregroundStyle(.black)
                         .frame(width: 21, height: 24).background(color, in: RoundedRectangle(cornerRadius: 4))
@@ -103,6 +104,7 @@ struct DeckHeaderView: View {
                     Text(model.loadedDocument == nil ? "Load…" : (model.loadedType == "Session" ? (model.project?.name ?? model.loadedType) : model.loadedType))
                         .font(.system(size: 11, weight: .medium)).lineLimit(1).frame(maxWidth: .infinity, alignment: .leading)
                 }.menuStyle(.borderlessButton).menuIndicator(.hidden)
+                    .frame(minWidth: 0, maxWidth: .infinity).layoutPriority(-1)
                     .help(model.loadedDocument?.fileURL?.path ?? "Drop a Swift Music file here")
                 Button { model.togglePlayback() } label: {
                     Image(systemName: model.isPlaying || model.isPlaybackQueued ? "pause.fill" : "play.fill")
@@ -141,6 +143,18 @@ struct DeckHeaderView: View {
                 }.buttonStyle(.plain).accessibilityLabel("Deck \(name) headphone cue")
                     .accessibilityValue(workspace.cueDeviceID != nil && workspace.cueDecks.contains(index) ? "On" : "Off")
                     .help("Preview this deck in headphones before the crossfader")
+                Button { fxDeck[index] = true } label: {
+                    Text("FX").font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(model.fxSettings.enabled ? color : .primary)
+                        .frame(width: 28, height: 25)
+                        .background(model.fxSettings.enabled ? color.opacity(0.22) : .white.opacity(0.09),
+                                    in: RoundedRectangle(cornerRadius: 4))
+                        .overlay(RoundedRectangle(cornerRadius: 4).strokeBorder(.white.opacity(0.08)))
+                }.buttonStyle(.plain).accessibilityLabel("Deck \(name) FX")
+                    .accessibilityValue(model.fxSettings.enabled ? model.fxSettings.kind.rawValue : "Off")
+                    .popover(isPresented: $fxDeck[index]) {
+                        DeckFXView(settings: model.fxSettings, onChange: model.setFX, tint: color, name: name)
+                    }
                 Button { controlsDeck[index] = true } label: {
                     if model.isPreparing { ProgressView().controlSize(.mini) }
                     else { Image(systemName: "ellipsis").frame(width: 14, height: 24) }

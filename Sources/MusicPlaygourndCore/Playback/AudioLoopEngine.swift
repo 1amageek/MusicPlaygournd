@@ -19,6 +19,9 @@ public final class AudioLoopEngine: AudioUnitHosting, MasterRecording {
     private let equalizer: AVAudioUnitEQ
     public private(set) var masterBalance: Float = 0
     public private(set) var equalizerBands = MasterEqualizerBand.defaults
+    private let deckFX: AVAudioUnitEffect
+    private let deckFXKernel: DeckFXKernel
+    public private(set) var fxSettings = DeckFXSettings.defaults
     private let delay: AVAudioUnitDelay
     private let reverb: AVAudioUnitReverb
     private let transport: AudioTransport
@@ -63,6 +66,12 @@ public final class AudioLoopEngine: AudioUnitHosting, MasterRecording {
         let timePitch = AVAudioUnitTimePitch()
         let balanceMixer = AVAudioMixerNode()
         let equalizer = AVAudioUnitEQ(numberOfBands: 5)
+        let deckFX = DeckFXAudioUnit.makeNode()
+        guard let fxUnit = deckFX.auAudioUnit as? DeckFXAudioUnit else {
+            throw PlaybackError.audioSetupFailed("Cannot instantiate deck FX.")
+        }
+        self.deckFX = deckFX
+        self.deckFXKernel = fxUnit.kernel
         let delay = AVAudioUnitDelay()
         let reverb = AVAudioUnitReverb()
         let meterStore = output.meterStore
@@ -107,11 +116,13 @@ public final class AudioLoopEngine: AudioUnitHosting, MasterRecording {
         audioEngine.attach(balanceMixer)
         audioEngine.attach(deckGain)
         audioEngine.attach(equalizer)
+        audioEngine.attach(deckFX)
         audioEngine.attach(delay)
         audioEngine.attach(reverb)
         audioEngine.connect(sourceNode, to: timePitch, format: format)
         audioEngine.connect(timePitch, to: equalizer, format: format)
-        audioEngine.connect(equalizer, to: delay, format: format)
+        audioEngine.connect(equalizer, to: deckFX, format: format)
+        audioEngine.connect(deckFX, to: delay, format: format)
         audioEngine.connect(delay, to: reverb, format: format)
         audioEngine.connect(reverb, to: balanceMixer, format: format)
         audioEngine.connect(balanceMixer, to: deckGain, format: format)
@@ -130,6 +141,11 @@ public final class AudioLoopEngine: AudioUnitHosting, MasterRecording {
         self.meterStore = meterStore
         self.audioFormat = format
         self.audioEngine = audioEngine
+    }
+
+    public func setFX(_ value: DeckFXSettings) throws {
+        try deckFXKernel.configure(value)
+        fxSettings = value
     }
 
     public var isRecording: Bool { output.isRecording }

@@ -126,7 +126,7 @@ internal enum ModulationProcessor {
         }
     }
 
-    private struct DelayState {
+    struct DelayState {
         var ring: [Double]
         var write = 0
         mutating func advance(_ input: Double, delay: Double, feedback: Double) throws -> Double {
@@ -176,7 +176,7 @@ internal enum ModulationProcessor {
         }
     }
 
-    private struct PhaserState {
+    struct PhaserState {
         var inputs: [Double]
         var outputs: [Double]
         var feedbackSample = 0.0

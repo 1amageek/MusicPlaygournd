@@ -57,6 +57,16 @@ final class SessionModel {
 
     private(set) var equalizerResponses: [MasterEqualizerResponse] = []
     private(set) var equalizerBands = MasterEqualizerBand.defaults
+    private(set) var fxSettings = DeckFXSettings.defaults
+
+    func setFX(_ value: DeckFXSettings) {
+        do {
+            guard let engine else { throw PlaybackError.audioSetupFailed(audioError) }
+            try engine.setFX(value)
+            fxSettings = engine.fxSettings
+        } catch { hostDiagnostic = error.localizedDescription }
+    }
+
     private(set) var compressorSettings = MasterCompressorSettings.defaults
     private(set) var compressorMeter = MasterCompressorSnapshot.empty
 

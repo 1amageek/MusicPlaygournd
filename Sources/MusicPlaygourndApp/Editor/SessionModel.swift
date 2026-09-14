@@ -58,12 +58,23 @@ final class SessionModel {
     private(set) var equalizerResponses: [MasterEqualizerResponse] = []
     private(set) var equalizerBands = MasterEqualizerBand.defaults
     private(set) var fxSettings = DeckFXSettings.defaults
+    private(set) var fxBeats: Double? = 1
 
-    func setFX(_ value: DeckFXSettings) {
+    func setFX(_ value: DeckFXSettings) { applyFX(value, beats: fxBeats) }
+    func setFXBeats(_ beats: Double?) { applyFX(fxSettings, beats: beats) }
+    func resetFX() { applyFX(.defaults, beats: 1) }
+
+    private func applyFX(_ value: DeckFXSettings, beats: Double?) {
         do {
             guard let engine else { throw PlaybackError.audioSetupFailed(audioError) }
+            var value = value
+            if let beats {
+                guard [0.25, 0.5, 1, 2, 4].contains(beats) else { throw PlaybackError.invalidDeckFXSettings }
+                value.rate = displayedBPM / (60 * beats)
+            }
             try engine.setFX(value)
             fxSettings = engine.fxSettings
+            fxBeats = beats
         } catch { hostDiagnostic = error.localizedDescription }
     }
 
@@ -841,6 +852,9 @@ final class SessionModel {
                     self.diagnostic = "The live render worker stopped. Audio continues; evaluate a new edit to restore controls."
                 }
             }
+        }
+        if let beats = fxBeats, fxSettings.rate != displayedBPM / (60 * beats) {
+            setFX(fxSettings)
         }
         if snapshot.loop != nil, let engine {
             if djDelayBPM != displayedBPM {

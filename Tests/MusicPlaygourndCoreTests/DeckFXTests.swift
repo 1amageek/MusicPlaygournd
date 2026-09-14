@@ -30,7 +30,7 @@ extension NativeHostTests {
             }
             for kind in DeckFXSettings.Kind.allCases {
                 let whole = DeckFXKernel(), split = DeckFXKernel()
-                let settings = DeckFXSettings(enabled: true, kind: kind, rate: 2, depth: 0.8, mix: 0.7)
+                let settings = DeckFXSettings(enabled: true, kind: kind, rate: 16, depth: 0.8, mix: 0.7)
                 try whole.configure(settings); try split.configure(settings)
                 let a = try render(whole, count: 16384, block: 4096)
                 let b = try render(split, count: 16384, block: 127)

@@ -153,7 +153,8 @@ struct DeckHeaderView: View {
                 }.buttonStyle(.plain).accessibilityLabel("Deck \(name) FX")
                     .accessibilityValue(model.fxSettings.enabled ? model.fxSettings.kind.rawValue : "Off")
                     .popover(isPresented: $fxDeck[index]) {
-                        DeckFXView(settings: model.fxSettings, onChange: model.setFX, tint: color, name: name)
+                        DeckFXView(settings: model.fxSettings, beats: model.fxBeats, onChange: model.setFX,
+                                   onBeatsChange: model.setFXBeats, onReset: model.resetFX, tint: color, name: name)
                     }
                 Button { controlsDeck[index] = true } label: {
                     if model.isPreparing { ProgressView().controlSize(.mini) }

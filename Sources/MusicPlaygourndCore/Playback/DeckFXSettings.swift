@@ -19,7 +19,7 @@ public struct DeckFXSettings: Sendable, Equatable {
     public static let defaults = Self()
 
     func validate() throws {
-        guard rate.isFinite, (0.05...8).contains(rate), depth.isFinite, (0...1).contains(depth),
+        guard rate.isFinite, (0.05...16).contains(rate), depth.isFinite, (0...1).contains(depth),
               feedback.isFinite, (0...0.85).contains(feedback), mix.isFinite, (0...1).contains(mix) else {
             throw PlaybackError.invalidDeckFXSettings
         }

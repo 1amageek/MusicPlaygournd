@@ -48,7 +48,7 @@ public enum PlaybackError: Error, Sendable, Equatable, CustomStringConvertible, 
         case .invalidLowPassCutoff(let cutoff): "Low-pass cutoff \(cutoff) is outside 20...20000 Hz"
         case .invalidMasterBalance(let value): "Master balance \(value) is outside -1...1"
         case .equalizerResponseFailed(let status): "Cannot read native EQ response: \(status)"
-        case .invalidDeckFXSettings: "Deck FX requires rate 0.05...8 Hz, depth/mix 0...1 and feedback 0...0.85"
+        case .invalidDeckFXSettings: "Deck FX requires rate 0.05...16 Hz, depth/mix 0...1 and feedback 0...0.85"
         case .invalidCompressorSettings: "Compressor requires threshold -60...0 dB, ratio 1...20, attack 0.1...200 ms and release 10...2000 ms"
         case .invalidDJFilter(let value): "DJ filter \(value) is outside -1...1"
         case .invalidDelayTime(let value): "Delay time \(value) is outside 0.01...2 seconds"

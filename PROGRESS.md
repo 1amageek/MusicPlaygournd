@@ -256,5 +256,5 @@
 - [x] WSIZE-1 Editor default and welcome-to-editor entry enlarged from 1160x760 to 1280x800; compact welcome preserved. Release build and native entry path visually verified `depends:none` `parallel:none`
 - [x] WSIZE-INT Both size authorities agree; strict app signature and scoped diff verified `depends:WSIZE-1` `parallel:none`
 
-- [ ] FXY-1 Rate/Depth pad implemented with bounded atomic updates and accessible sliders; other controls retained. Release build and native visual inspection passed. Final drag/persistence verification remains pending: CUA repeatedly rejects actions because the user changed the app; user confirmation requested. No completion claim or commit until behavioral verification `depends:none` `parallel:none`
-- [ ] FXY-INT Build and inspect the app, verify signature and commit/push the scoped UI change `depends:FXY-1` `parallel:none`
+- [x] FXY-1 Revised DJ FX with Mix/Depth pad, BPM-following 1/4..4-beat selector and collapsed free-rate/feedback controls. Three tests passed in 0.212s, covering native PCM/deck isolation, model sync/free/reset, 16Hz boundary, and the same clamped pad update method used by DragGesture. Native UI confirms selected beat, Mix 75%/Depth 25%, Details and synchronized 9.33Hz at 140 BPM/quarter beat `depends:none` `parallel:none`
+- [ ] FXY-INT Build and inspect final DJ FX controls, verify signature, commit and push scoped changes `depends:FXY-1` `parallel:none`

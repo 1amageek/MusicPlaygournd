@@ -261,3 +261,6 @@
 
 - [x] FXM-1 Mix solely controls FX activation, initial/reset zero; three native PCM/model tests passed in 0.223s, including zero bypass and A/B isolation `depends:none` `parallel:none`
 - [x] FXM-INT Release preview build and strict signature passed; native panel has no enable switch, Mix 50% activates Phaser and Reset returns to zero/Off. Scoped diff reviewed for main upstream push `depends:FXM-1` `parallel:none`
+
+- [x] REL060-1 Updated 0.6.0 build 7, release notes, README and website install/shortcut guidance; preserved SwiftMusic 0.5.1. Scoped review and website checks passed `depends:none` `parallel:none`
+- [ ] REL060-INT Verify native CUE/FX/keys, package version/signature and website checks; commit, push matching tag and publish source preview `depends:REL060-1` `parallel:none`

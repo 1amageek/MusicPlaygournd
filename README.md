@@ -8,12 +8,12 @@ MusicPlayground is a native macOS live music editor powered by [SwiftMusic](http
 
 ## Get started
 
-Current source preview: **0.5.1**, powered by **SwiftMusic 0.5.1**.
+Current source preview: **0.6.0**, powered by **SwiftMusic 0.5.1**.
 
 Requires **Swift 6.4**, **macOS 15 or later**, and Xcode command-line tools. Swift 6.4 operation was verified on September 10, 2026.
 
 ```sh
-git clone --branch 0.5.1 https://github.com/1amageek/MusicPlaygournd.git
+git clone --branch 0.6.0 https://github.com/1amageek/MusicPlaygournd.git
 cd MusicPlaygournd
 ./Scripts/build-app.sh
 open .build/MusicPlaygournd.app
@@ -27,7 +27,7 @@ Sessions run local Swift with your account's permissions. Open code you trust.
 
 ## Two decks
 
-Version 0.5.1 includes independent A/B decks.
+Version 0.6.0 includes independent A/B decks.
 
 - New projects include **Session.swift** for A and **Trance.swift** for B. Trance adapts the lead, bass and ducking arrangement from [Switch Angel’s performance](https://www.youtube.com/watch?v=iu5rnQkfO6M) into editable synthesized music, with acid/level sliders and stereo panning. It does not include the original recording or voiceover.
 - Left and right tab groups share file contents and undo, but select independently. Selecting a tab changes the wide editor, not the playing music.
@@ -38,17 +38,17 @@ Version 0.5.1 includes independent A/B decks.
 
 Each deck keeps its last good audio after a failed load or edit. First preparation uses separate A/B build caches; subsequent runs reuse them.
 
-## Transport CUE (main branch)
+## Transport CUE
 
 The circular **CUE** button beside each deck's play button controls a cue point, separately from headphone monitoring. While paused, press to set the current position. While playing, press to return to the saved position and pause. Hold for 180ms to preview; release to stop and return. Shift+CUE returns to the track start. A newly loaded file resets its cue to the start; source edits retain the cue within the loop.
 
-In Play Mode on the main branch, left/right Option press and release operate A/B transport CUE; Shift+Option returns the corresponding deck to the start. Headphone monitoring remains on its headphone button. These changes are not in the 0.5.1 source preview; its Option keys still toggle headphone monitoring as described below.
+In Play Mode, left/right Option press and release operate A/B transport CUE; Shift+Option returns the corresponding deck to the start. Headphone monitoring remains on its headphone button.
 
 ## Play Mode
 
 Enable **Play Mode** in the log bar to use the trackpad as independent performance regions. The left/right 18% edges scratch A/B; the bottom 20% controls the crossfader at 3x sensitivity. Bottom corners belong to the crossfader. Different edge contacts operate simultaneously; the initial region stays assigned until lift. There is no whole-pad two-finger fader gesture.
 
-Space controls both decks. Tap left/right Command alone to control A/B transport; tap left/right Option alone for A/B headphone CUE. The cursor is hidden during Play Mode; **Escape** or leaving the application restores it. Physical touch recognition depends on the trackpad and macOS contact classification.
+Space controls both decks. Tap left/right Command alone to control A/B transport; press left/right Option for A/B transport CUE; hold to preview and release to return. Shift+Option returns that deck to the start. The cursor is hidden during Play Mode; **Escape** or leaving the application restores it. Physical touch recognition depends on the trackpad and macOS contact classification.
 
 ## Compose with reusable sounds
 
@@ -230,8 +230,8 @@ See [DESIGN.md](DESIGN.md) for architecture and runtime contracts. Tests use Swi
 
 [MIT](LICENSE) · Copyright 2026 1amageek.
 
-### Deck FX (main branch)
+### Deck FX
 
 Each deck has an **FX** button opening live Phaser, Chorus and Flanger controls. Select an effect, then drag the two-dimensional pad horizontally for dry/wet Mix and vertically for Depth. Select ¼, ½, 1, 2 or 4 beats per modulation cycle; the rate follows deck BPM. Details contains Feedback and a Sync to BPM switch for manual Hz control. Releasing the pad keeps the settings. Chorus uses independent stereo modulation and has no feedback control. Mix starts at 0% (dry); moving right adds the effect. Reset returns Mix to 0% and restores the defaults. Deck colors identify the active panel.
 
-FX runs after the deck EQ and before Delay/Space, independently for A and B, without recompiling your code. Switching effects fades through dry audio. These session controls last for the deck lifetime; they are not written into Swift source. This feature is on main and is not included in the 0.5.1 release.
+FX runs after the deck EQ and before Delay/Space, independently for A and B, without recompiling your code. Switching effects fades through dry audio. These session controls last for the deck lifetime; they are not written into Swift source. Available starting in 0.6.0.

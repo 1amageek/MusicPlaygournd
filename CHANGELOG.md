@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.6.0 — Preview — 2026-09-15
+
+- Add a circular transport CUE button beside each deck’s play button: set while paused, return and pause while playing, hold to preview, and release to return. Shift+CUE returns to the start.
+- Map Play Mode left/right Option press and release to A/B transport CUE, including Shift+Option. Headphone monitoring stays on its separate button.
+- Add independent Phaser, Chorus and Flanger FX for each deck with a Mix/Depth pad and BPM-synchronized quarter-, half-, one-, two- and four-beat modulation. Details provides free rate and feedback controls.
+- Use Mix alone to activate FX: initial/reset Mix is 0% (dry), moving right adds the effect, and the deck FX button reflects the active state. Smooth parameter changes and effect switching without recompilation.
+- Enlarge the default editor window to 1280 × 800 and make the full beat-selector button clickable.
+- Publish the product website with real screenshots, scratch and Play Mode guides, and social sharing metadata.
+
+Validation: seven native PCM, CUE, keyboard and FX tests passed in 0.865s. Release packaging, strict signature, runtime digests and website checks passed; packaged UI verification confirmed Mix activation/reset and compact controls. SwiftMusic remains pinned to 0.5.1. This is a source preview requiring Swift 6.4, macOS 15+ and Xcode command-line tools; no notarized binary is provided. Physical trackpad feel is not automated.
+
 ## 0.5.1 — Preview — 2026-09-12
 
 - Show compiler issues directly in the editor with red gutter markers, underlines, subtle row backgrounds and trailing inline messages.

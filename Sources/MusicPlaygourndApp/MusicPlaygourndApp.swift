@@ -16,7 +16,7 @@ struct MusicPlaygourndApp: App {
                     if let root, workspace.b.project == nil { workspace.b.openProject(at: root) }
                 }
         }
-        .defaultSize(width: 1160, height: 760)
+        .defaultSize(width: 1280, height: 800)
         .windowResizability(.contentSize)
         .windowStyle(.hiddenTitleBar)
         .windowToolbarStyle(.unified)

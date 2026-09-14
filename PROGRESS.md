@@ -252,3 +252,9 @@
 
 - [x] FX-1 f8fe0b5: Independent live Phaser/Chorus/Flanger, validated smoothed settings and deck-colored FX panels implemented. Five focused native tests passed in 0.835s: PCM changes, partition invariance, bypass/reset, parameter changes, invalid retention, A/B isolation and compressor/CUE regression. Native UI verifies selection, sliders, reset and both buttons fitting the 1160px window `depends:none` `parallel:none`
 - [x] FX-INT Release app built and strict signature verified. Final native UI confirms A/B FX placement, enabled effect selection, feedback changes and reset without increasing header height; five focused tests remain valid after spacing-only correction. Screenshot: /tmp/musicplayground-deck-fx.png. Ready for normal main upstream push `depends:FX-1` `parallel:none`
+
+- [x] WSIZE-1 Editor default and welcome-to-editor entry enlarged from 1160x760 to 1280x800; compact welcome preserved. Release build and native entry path visually verified `depends:none` `parallel:none`
+- [x] WSIZE-INT Both size authorities agree; strict app signature and scoped diff verified `depends:WSIZE-1` `parallel:none`
+
+- [ ] FXY-1 Rate/Depth pad implemented with bounded atomic updates and accessible sliders; other controls retained. Release build and native visual inspection passed. Final drag/persistence verification remains pending: CUA repeatedly rejects actions because the user changed the app; user confirmation requested. No completion claim or commit until behavioral verification `depends:none` `parallel:none`
+- [ ] FXY-INT Build and inspect the app, verify signature and commit/push the scoped UI change `depends:FXY-1` `parallel:none`

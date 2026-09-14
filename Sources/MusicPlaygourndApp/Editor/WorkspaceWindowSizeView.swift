@@ -13,7 +13,7 @@ struct WorkspaceWindowSizeView: NSViewRepresentable {
             // Run after SwiftUI replaces the welcome screen's fixed constraints.
             Task { @MainActor [weak self] in
                 guard let window = self?.window else { return }
-                window.setContentSize(NSSize(width: 1160, height: 760))
+                window.setContentSize(NSSize(width: 1280, height: 800))
             }
         }
 

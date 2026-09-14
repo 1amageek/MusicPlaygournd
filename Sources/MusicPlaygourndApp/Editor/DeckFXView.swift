@@ -32,9 +32,12 @@ struct DeckFXView: View {
             }.pickerStyle(.segmented).labelsHidden().accessibilityLabel("Deck \(name) effect")
             HStack(spacing: 5) {
                 ForEach([0.25, 0.5, 1, 2, 4], id: \.self) { beat in
-                    Button(beat == 0.25 ? "¼" : beat == 0.5 ? "½" : String(Int(beat))) { onBeatsChange(beat) }
-                        .buttonStyle(.plain).frame(maxWidth: .infinity).frame(height: 27)
-                        .background(beats == beat ? tint.opacity(0.3) : .white.opacity(0.08), in: RoundedRectangle(cornerRadius: 4))
+                    Button { onBeatsChange(beat) } label: {
+                        Text(beat == 0.25 ? "¼" : beat == 0.5 ? "½" : String(Int(beat)))
+                            .frame(maxWidth: .infinity).frame(height: 27)
+                            .background(beats == beat ? tint.opacity(0.3) : .white.opacity(0.08), in: RoundedRectangle(cornerRadius: 4))
+                            .contentShape(Rectangle())
+                    }.buttonStyle(.plain)
                         .accessibilityLabel("Deck \(name) FX \(beat) beats")
                         .accessibilityAddTraits(beats == beat ? .isSelected : [])
                 }

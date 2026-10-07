@@ -38,9 +38,10 @@ struct ContentView: View {
                     Divider()
                     logs
                 }
-                .ignoresSafeArea(.container, edges: deckWorkspace != nil && isFullScreen ? .top : [])
+                .ignoresSafeArea(.container, edges: deckWorkspace != nil ? .top : [])
             }
             .navigationSplitViewStyle(.balanced)
+            .toolbar(removing: deckWorkspace != nil ? .sidebarToggle : nil)
             .toolbarBackgroundVisibility(deckWorkspace == nil ? .automatic : .hidden, for: .windowToolbar)
             .toolbarVisibility(deckWorkspace != nil && isFullScreen ? .hidden : .automatic, for: .windowToolbar)
             .toolbar {
@@ -52,7 +53,7 @@ struct ContentView: View {
         .background(Color(red: 0.06, green: 0.07, blue: 0.08))
         .preferredColorScheme(.dark)
         .frame(minWidth: 850, minHeight: 540)
-        .background(WorkspaceWindowSizeView(onWindowChange: { window in
+        .background(WorkspaceWindowSizeView(removesToolbar: deckWorkspace != nil, onWindowChange: { window in
             workspaceWindowID = window.map(ObjectIdentifier.init)
             isFullScreen = window?.styleMask.contains(.fullScreen) == true
         }))
@@ -80,7 +81,7 @@ struct ContentView: View {
         VStack(spacing: 0) {
             if model.hasOpenDocument || deckWorkspace != nil {
                 HStack(spacing: 0) {
-                    if deckWorkspace != nil && isFullScreen {
+                    if deckWorkspace != nil {
                         Button {
                             columnVisibility = columnVisibility == .detailOnly ? .all : .detailOnly
                         } label: {

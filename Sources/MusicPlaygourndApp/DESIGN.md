@@ -21,7 +21,7 @@ App uses the same adopted metadata and latency-adjusted transport cursor for com
 
 ### Native workspace window
 
-The composition root retains the standard hidden-title window style and native resizing/fullscreen capabilities. It uses unifiedCompact toolbar sizing and supplies SidebarCommands alongside the system fullscreen command. [Editor](Editor/DESIGN.md) owns content bounds and state-dependent toolbar visibility. Verify that fullscreen entry, exit and sidebar commands remain available after that visibility policy changes; the normal window retains its native controls.
+The composition root retains the standard hidden-title window style and native resizing/fullscreen capabilities. It uses unifiedCompact toolbar sizing and supplies SidebarCommands alongside the system fullscreen command. [Editor](Editor/DESIGN.md) owns content bounds, removal of the unused DJ toolbar and state-dependent native chrome visibility. DJ sidebar controls live in the existing document tab row. Verify that fullscreen entry, exit and sidebar commands remain available after that visibility policy changes; the normal window retains its native controls.
 
 ### Packaged evaluation artifacts
 

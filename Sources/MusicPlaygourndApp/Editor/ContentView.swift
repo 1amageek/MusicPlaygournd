@@ -80,6 +80,19 @@ struct ContentView: View {
         VStack(spacing: 0) {
             if model.hasOpenDocument || deckWorkspace != nil {
                 HStack(spacing: 0) {
+                    if deckWorkspace != nil && isFullScreen {
+                        Button {
+                            columnVisibility = columnVisibility == .detailOnly ? .all : .detailOnly
+                        } label: {
+                            Image(systemName: "sidebar.left")
+                                .frame(width: 28, height: 28)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(columnVisibility == .detailOnly ? "Show Sidebar" : "Hide Sidebar")
+                        .help("Show or hide the file sidebar")
+                        Divider()
+                    }
                     if let deckWorkspace {
                         FileTabsView(model: deckWorkspace.a, accent: deckWorkspace.colorA,
                             deckName: "A", editing: deckWorkspace.selectedDeck == 0,

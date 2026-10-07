@@ -84,6 +84,22 @@ struct SessionFileBrowserTests {
                 guard case SessionFileBrowser.Failure.creationFailed = error else { return false }
                 return true
             }
+            try browser.create(at: root.appending(path: "Sound1.swift"), source: "keep this source")
+            try FileManager.default.createDirectory(at: root.appending(path: "Sound2.swift"), withIntermediateDirectories: false)
+            try browser.create(at: root.appending(path: "Sound4.swift"), source: "keep this too")
+            let third = try browser.createNumberedSource(in: root)
+            #expect(third.lastPathComponent == "Sound3.swift")
+            #expect(try String(contentsOf: third, encoding: .utf8) == "import SwiftMusic\n")
+            #expect(try browser.createNumberedSource(in: root).lastPathComponent == "Sound5.swift")
+            #expect(try SessionFileBrowser().createNumberedSource(in: root).lastPathComponent == "Sound6.swift")
+            #expect(try String(contentsOf: root.appending(path: "Sound1.swift"), encoding: .utf8) == "keep this source")
+            #expect(try String(contentsOf: root.appending(path: "Sound4.swift"), encoding: .utf8) == "keep this too")
+            #expect {
+                try browser.createNumberedSource(in: root.appending(path: "Missing"))
+            } throws: { error in
+                guard case SessionFileBrowser.Failure.creationFailed = error else { return false }
+                return true
+            }
         }
     }
 

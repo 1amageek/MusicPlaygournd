@@ -110,4 +110,19 @@ final class SessionFileBrowser {
         catch let error as CocoaError where error.code == .fileWriteFileExists { throw .fileExists }
         catch { throw .creationFailed(error.localizedDescription) }
     }
+
+    func createNumberedSource(in directory: URL) throws(Failure) -> URL {
+        for number in 1...Self.maximumEntries {
+            let destination = directory.appending(path: "Sound\(number).swift")
+            do {
+                try create(at: destination, source: "import SwiftMusic\n")
+                return destination
+            } catch .fileExists {
+                continue
+            } catch {
+                throw error
+            }
+        }
+        throw .tooManyEntries
+    }
 }

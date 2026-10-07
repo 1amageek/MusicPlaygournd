@@ -76,7 +76,7 @@ struct FileSidebarView: View {
                         }
                     }
                     Divider()
-                    Button("New Swift File…", action: model.newProjectFile).disabled(browser.directory == nil)
+                    Button("New Swift File", action: model.newProjectFile).disabled(!model.canCreateProjectFile)
                     Button("Refresh") { perform { try browser.refresh() } }.disabled(browser.directory == nil)
                 } label: {
                     Image(systemName: "plus").frame(width: 24, height: 24)

@@ -34,6 +34,39 @@ extension NativeHostTests {
                 model.openProject(at: root)
                 try await waitForPackage()
                 try #require(model.project?.name == "Before")
+                let performer = model.loadedDocument
+                let entryTarget = model.projectTarget
+                let creationRevision = model.revision
+                #expect(model.canCreateProjectFile)
+                model.newProjectFile()
+                #expect(model.fileURL == sources.appending(path: "Sound1.swift"))
+                #expect(model.source == "import SwiftMusic\n" && !model.activeDocument.isDirty)
+                model.newProjectFile()
+                #expect(model.fileURL == sources.appending(path: "Sound2.swift"))
+                #expect(model.fileBrowser.entries.contains { $0.url == model.fileURL })
+                #expect(model.loadedDocument === performer && model.projectTarget == entryTarget)
+                #expect(model.revision == creationRevision)
+                let selectedAfterCreation = model.activeDocumentID
+                let displaced = root.appending(path: "DisplacedSources")
+                try FileManager.default.moveItem(at: sources, to: displaced)
+                model.newProjectFile()
+                #expect(model.activeDocumentID == selectedAfterCreation)
+                #expect(model.fileBrowser.errorMessage != nil)
+                try FileManager.default.moveItem(at: displaced, to: sources)
+                while model.documents.count < SessionModel.maximumOpenDocuments {
+                    let url = sources.appending(path: "Tab\(model.documents.count).swift")
+                    try "// Capacity check".write(to: url, atomically: true, encoding: .utf8)
+                    try model.openDocument(at: url)
+                }
+                let atCapacity = model.activeDocumentID
+                #expect(!model.canCreateProjectFile)
+                model.newProjectFile()
+                #expect(model.activeDocumentID == atCapacity)
+                #expect(!FileManager.default.fileExists(atPath: sources.appending(path: "Sound3.swift").path))
+                #expect(model.fileBrowser.errorMessage == SessionModel.DocumentFailure.tabLimit.localizedDescription)
+                for document in model.documents where document.name.hasPrefix("Tab") {
+                    #expect(model.closeDocument(document.id, decision: .discard))
+                }
                 try model.openDocument(at: outside)
                 try await Task.sleep(for: .milliseconds(100))
                 let revision = model.revision

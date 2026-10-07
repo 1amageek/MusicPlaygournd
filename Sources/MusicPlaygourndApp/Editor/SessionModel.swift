@@ -1646,20 +1646,21 @@ final class SessionModel {
         } catch { diagnostic = error.localizedDescription }
     }
 
+    var canCreateProjectFile: Bool {
+        project != nil && projectTarget != nil && !isOpeningPackage && documents.count < Self.maximumOpenDocuments
+    }
+
     func newProjectFile() {
         guard let project, let target = projectTarget else { return }
-        let panel = NSSavePanel()
-        panel.allowedContentTypes = [.swiftSource]
-        panel.nameFieldStringValue = "Sound.swift"
-        panel.directoryURL = project.root.appending(path: target.path)
-        guard panel.runModal() == .OK, let url = panel.url else { return }
         do {
-            guard url.standardizedFileURL.path.hasPrefix(project.root.path + "/") else {
+            guard documents.count < Self.maximumOpenDocuments else { throw DocumentFailure.tabLimit }
+            let directory = project.root.appending(path: target.path).standardizedFileURL.resolvingSymlinksInPath()
+            guard directory == project.root || directory.path.hasPrefix(project.root.path + "/") else {
                 throw EvaluationError.invalidSource("Create the file inside the project.")
             }
-            try fileBrowser.create(at: url, source: "import SwiftMusic\n")
-            try fileBrowser.refresh()
+            let url = try fileBrowser.createNumberedSource(in: directory)
             try openDocument(at: url)
+            try fileBrowser.refresh()
         } catch { fileBrowser.errorMessage = error.localizedDescription }
     }
 

@@ -45,8 +45,12 @@ struct FileTabsView: View {
                     .help(document.fileURL?.path ?? "Unsaved session")
                 }
                 if deckName != nil {
-                    Button { activate(); model.openDocument() } label: { Image(systemName: "plus").padding(.horizontal, 7) }
-                        .buttonStyle(.plain).accessibilityLabel("Open file in Deck " + (deckName ?? ""))
+                    Button { activate(); model.newProjectFile() } label: {
+                        Image(systemName: "plus").frame(width: 28, height: 28).contentShape(Rectangle())
+                    }
+                        .buttonStyle(.plain).accessibilityLabel("Create file in Deck " + (deckName ?? ""))
+                        .disabled(!model.canCreateProjectFile)
+                        .help("Create a numbered Swift file in the project")
                 }
             }
         }.scrollIndicators(.hidden).frame(height: 28).clipped()

@@ -19,8 +19,9 @@ struct MusicPlaygourndApp: App {
         .defaultSize(width: 1280, height: 800)
         .windowResizability(.contentSize)
         .windowStyle(.hiddenTitleBar)
-        .windowToolbarStyle(.unified)
+        .windowToolbarStyle(.unifiedCompact)
         .commands {
+            SidebarCommands()
             CommandGroup(replacing: .newItem) {
                 Button("New Project…", action: model.newProject).keyboardShortcut("n", modifiers: [.command, .shift])
                 Button("Open Project…", action: model.chooseProject).keyboardShortcut("o", modifiers: [.command, .shift])

@@ -9,6 +9,8 @@ struct ContentView: View {
     @State private var logsExpanded = false
     @State private var playMode = false
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
+    @State private var workspaceWindowID: ObjectIdentifier?
+    @State private var isFullScreen = false
 
     var body: some View {
         Group {
@@ -36,10 +38,11 @@ struct ContentView: View {
                     Divider()
                     logs
                 }
-                .ignoresSafeArea(.container, edges: deckWorkspace != nil && columnVisibility != .detailOnly ? .top : [])
+                .ignoresSafeArea(.container, edges: deckWorkspace != nil && isFullScreen ? .top : [])
             }
             .navigationSplitViewStyle(.balanced)
             .toolbarBackgroundVisibility(deckWorkspace == nil ? .automatic : .hidden, for: .windowToolbar)
+            .toolbarVisibility(deckWorkspace != nil && isFullScreen ? .hidden : .automatic, for: .windowToolbar)
             .toolbar {
                 if deckWorkspace == nil {
                     ToolbarItem(placement: .principal) { MusicHeaderView(model: model) }
@@ -49,7 +52,12 @@ struct ContentView: View {
         .background(Color(red: 0.06, green: 0.07, blue: 0.08))
         .preferredColorScheme(.dark)
         .frame(minWidth: 850, minHeight: 540)
-        .background(WorkspaceWindowSizeView())
+        .background(WorkspaceWindowSizeView(onWindowChange: { window in
+            workspaceWindowID = window.map(ObjectIdentifier.init)
+            isFullScreen = window?.styleMask.contains(.fullScreen) == true
+        }))
+        .onReceive(NotificationCenter.default.publisher(for: NSWindow.didEnterFullScreenNotification), perform: updateFullScreen)
+        .onReceive(NotificationCenter.default.publisher(for: NSWindow.didExitFullScreenNotification), perform: updateFullScreen)
         .background {
             if let deckWorkspace { TrackpadEdgeView(enabled: $playMode, workspace: deckWorkspace) }
         }
@@ -60,6 +68,12 @@ struct ContentView: View {
                 catch { break }
             }
         }
+    }
+
+    private func updateFullScreen(_ notification: Notification) {
+        guard let window = notification.object as? NSWindow,
+              ObjectIdentifier(window) == workspaceWindowID else { return }
+        isFullScreen = window.styleMask.contains(.fullScreen)
     }
 
     private var workspace: some View {

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.6.1 — Preview — 2026-10-07
+
+- Fix fullscreen toolbar overlap and unintended window zoom when double-clicking deck CUE, TAP or disabled SYNC controls; retain the standard macOS window and native fullscreen/zoom controls.
+- Remove the unused top toolbar space in normal DJ windows, and keep the sidebar toggle in the existing document tab row in both normal and fullscreen modes.
+- Create numbered `Sound1.swift`, `Sound2.swift`, and subsequent Swift files directly in the current project’s source directory from either deck’s plus button. Save and open the new editing tab immediately without a naming or destination dialog, while retaining the loaded Music entry.
+- Skip occupied file and folder names without overwriting them; report creation errors and reject creation before writing when the deck has reached its tab limit.
+
+Validation: five focused filesystem/document checks passed in 3.977s, covering repeated creation, occupied names, fresh-browser numbering, write failure, tab limits and performer/revision retention. Native LiveSet checks verified normal/fullscreen chrome, sidebar toggling, prepared transport double-clicks, FX popovers, native fullscreen/zoom and immediate A/B file creation. The release package is checked for version metadata, strict signature, bundled source identity and runtime digests. SwiftMusic remains pinned to public 0.5.1. This is a source preview requiring Swift 6.4, macOS 15+ and Xcode command-line tools; no notarized binary is provided. Native window dragging and physical trackpad feel are not claimed as verified.
+
 ## 0.6.0 — Preview — 2026-09-15
 
 - Add a circular transport CUE button beside each deck’s play button: set while paused, return and pause while playing, hold to preview, and release to return. Shift+CUE returns to the start.

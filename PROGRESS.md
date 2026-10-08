@@ -1,5 +1,8 @@
 # Progress
 
+- [x] ICON-1 Adopted the approved 60-groove SVG and 10-size macOS ICNS; build script requires, copies, and declares the icon before signing. Release packaging completed in 3.10s; strict signature, asset identity, decoded dimensions/alpha, early missing-icon failure, and identical Finder/running-app native icons verified. `depends:none` `parallel:none`
+- [ ] ICON-INT Verify the final signed application launch, Finder/Dock icon identity, unchanged approved SVG, and task-only commit/upstream delivery. `depends:ICON-1` `parallel:none`
+
 
 - [x] ISSUE-1 Reproduced Issue 1 on macOS 27.0.1 using main 72e5f21 rebuilt with Swift 6.4.0 Release (198.60 seconds, /tmp/music-issue1-build.log): sidebar-visible TAP and CUE double-clicks toggled native window zoom; disabled SYNC region also triggered zoom; fullscreen toolbar covered the transport row; hiding sidebar restored fullscreen controls and normal-window TAP double-click no longer resized; source unchanged and test app quit `depends:none` `parallel:none`
 - [x] ISSUE-1-INT Confirmed both reported symptoms through native mouse/fullscreen operations and sidebar comparison; ContentView top safe-area extension at line 39 matches the observed overlap; enabled SYNC and prepared CUE playback were not tested because this diagnosis concerns window event/layout delivery `depends:ISSUE-1` `parallel:none`

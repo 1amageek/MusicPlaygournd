@@ -1,6 +1,11 @@
 #!/bin/bash
 set -euo pipefail
 package_root="$(cd "$(dirname "$0")/.." && pwd)"
+icon_source="$package_root/Assets/AppIcon.icns"
+if [[ ! -f "$icon_source" ]]; then
+    printf 'Missing application icon: %s\n' "$icon_source" >&2
+    exit 1
+fi
 swift_executable="$(xcrun --find swift)"
 # The 2026-08-14 Swift 6.4 snapshot asserts while round-tripping FileHandle.AsyncBytes debug types.
 "$swift_executable" build --package-path "$package_root" -c release -Xswiftc -Xfrontend -Xswiftc -disable-round-trip-debug-types
@@ -10,6 +15,7 @@ bundle_id="${2:-com.1amageek.MusicPlaygournd}"
 resources="$app_path/Contents/Resources/SwiftMusic"
 mkdir -p "$resources"
 mkdir -p "$app_path/Contents/MacOS" "$resources/MusicPlaygournd"
+cp "$icon_source" "$app_path/Contents/Resources/AppIcon.icns"
 cp "$binary_directory/MusicPlaygournd" "$app_path/Contents/MacOS/MusicPlaygournd"
 cp "$package_root/Package.swift" "$resources/MusicPlaygournd/Package.swift"
 cp -R "$package_root/Sources" "$resources/MusicPlaygournd/"
@@ -51,6 +57,7 @@ info = {
     'CFBundleIdentifier': sys.argv[3],
     'CFBundleName': 'MusicPlaygournd',
     'CFBundleDisplayName': 'MusicPlaygournd',
+    'CFBundleIconFile': 'AppIcon.icns',
     'CFBundlePackageType': 'APPL',
     'CFBundleShortVersionString': '0.6.1',
     'CFBundleVersion': '8',

@@ -27,6 +27,16 @@ The composition root retains the standard hidden-title window style and native r
 
 The app build script bundles the two release object files and matching Swift module directories from the same completed native build plus a compiler-version/SDK/plugin-path manifest. These artifacts form the runtime SDK consumed by [Evaluation](../MusicPlaygourndCore/Evaluation/DESIGN.md). SessionModel passes its bundled SDK URL explicitly for packaged launch; source launch passes nil for the existing SwiftPM backend. Missing or incompatible packaged artifacts are visible failures, not a silent backend switch. The embedded source workspace remains available to the independent SourceKit-LSP completion owner. Build packaging and evaluation must use the same compiler and artifact identity; changing either requires a fresh app build and actual retained-worker verification.
 
+### Packaged application icon
+
+The approved green vinyl design is retained as [the vector master](../../Assets/AppIcon.svg). Its macOS delivery asset, `Assets/AppIcon.icns`, contains 16, 32, 128, 256, and 512 point representations at 1x and 2x, with a rounded tile and transparent exterior. The build script requires this asset, copies it to `Contents/Resources/AppIcon.icns`, and declares `CFBundleIconFile` in the generated Info.plist before signing. Finder and the Dock consume the bundle icon; the application does not override it at runtime. Icon changes preserve the selected design, update the delivery asset, and require native bundle-icon and launched-application verification. This packaging path does not alter command-line `swift run` behavior.
+
+```text
+Assets/AppIcon.svg -> macOS icon export -> Assets/AppIcon.icns
+    -> build-app.sh -> Contents/Resources/AppIcon.icns + Info.plist
+    -> Finder / Dock
+```
+
 ## Failure, Concurrency, and Constraints
 Failure is reported as a diagnostic or typed error; the last adopted loop survives edit failures. Mutable host state is MainActor- or Mutex-isolated.
 

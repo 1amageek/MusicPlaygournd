@@ -1,0 +1,361 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-labelledby="title description">
+  <title id="title">MusicPlayground — Green Vinyl</title>
+  <desc id="description">A finely engraved charcoal vinyl record with recessed grooves and directional edge reflections on an emerald green field, with a mint green label and a slender translucent white curved tonearm with a coupled headshell, cartridge, and fine stylus contacting a groove. Small tonal letterpress lettering reading MusicPlayground repeats four times around the entire label. All artwork and lettering are vector paths.</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="0.6" y2="1">
+      <stop stop-color="#0DDC91"/>
+      <stop offset="0.5" stop-color="#00C991"/>
+      <stop offset="1" stop-color="#00B68F"/>
+    </linearGradient>
+    <radialGradient id="backgroundLight" cx="0.25" cy="0.08" r="0.95">
+      <stop stop-color="#33FFA6" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#33FFA6" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="vinyl" x1="0.12" y1="0.05" x2="0.87" y2="0.94">
+      <stop stop-color="#3E3A3D"/>
+      <stop offset="0.38" stop-color="#272527"/>
+      <stop offset="0.69" stop-color="#141416"/>
+      <stop offset="1" stop-color="#2B2729"/>
+    </linearGradient>
+    <radialGradient id="vinylLight" cx="0.22" cy="0.08" r="0.9">
+      <stop stop-color="#B3AEB1" stop-opacity="0.12"/>
+      <stop offset="0.65" stop-color="#B3AEB1" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="rim" x1="0.22" y1="0" x2="0.72" y2="1">
+      <stop stop-color="#DBDBD5" stop-opacity="0.8"/>
+      <stop offset="0.22" stop-color="#888382" stop-opacity="0.25"/>
+      <stop offset="0.55" stop-color="#242024" stop-opacity="0.2"/>
+      <stop offset="1" stop-color="#050606"/>
+    </linearGradient>
+    <linearGradient id="label" x1="0.1" y1="0.1" x2="0.82" y2="1">
+      <stop stop-color="#6FFFCC"/>
+      <stop offset="0.34" stop-color="#33FFA6"/>
+      <stop offset="0.72" stop-color="#00F1B7"/>
+      <stop offset="1" stop-color="#00E8C2"/>
+    </linearGradient>
+    <linearGradient id="labelRim" x1="0.2" y1="0" x2="0.6" y2="1">
+      <stop stop-color="#E6FFF0" stop-opacity="0.95"/>
+      <stop offset="0.35" stop-color="#ABFFDA" stop-opacity="0.2"/>
+      <stop offset="1" stop-color="#00B38D" stop-opacity="0.35"/>
+    </linearGradient>
+    <radialGradient id="hole" cx="0.3" cy="0.2" r="1">
+      <stop stop-color="#171315"/>
+      <stop offset="1" stop-color="#030506"/>
+    </radialGradient>
+    <linearGradient id="armMaterial" x1="0" y1="0" x2="1" y2="0.25">
+      <stop stop-color="#F5FFF9" stop-opacity="0.86"/>
+      <stop offset="0.2" stop-color="#E8FFF4" stop-opacity="0.66"/>
+      <stop offset="0.65" stop-color="#D1EEE0" stop-opacity="0.46"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0.78"/>
+    </linearGradient>
+    <linearGradient id="cartridgeMaterial" x1="0" y1="0" x2="1" y2="0.7">
+      <stop stop-color="#FFFFFF" stop-opacity="0.88"/>
+      <stop offset="0.25" stop-color="#ECFFF4" stop-opacity="0.69"/>
+      <stop offset="0.7" stop-color="#D3E6DC" stop-opacity="0.5"/>
+      <stop offset="1" stop-color="#F5FFF9" stop-opacity="0.77"/>
+    </linearGradient>
+    <linearGradient id="cartridgeEdge" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#FFFFFF" stop-opacity="0.83"/>
+      <stop offset="0.45" stop-color="#FFFFFF" stop-opacity="0.2"/>
+      <stop offset="1" stop-color="#E5FFF0" stop-opacity="0.56"/>
+    </linearGradient>
+    <linearGradient id="cartridgeUnderbody" x1="0" y1="0" x2="0.7" y2="1">
+      <stop stop-color="#C7DDD0" stop-opacity="0.78"/>
+      <stop offset="1" stop-color="#E5FFF0" stop-opacity="0.7"/>
+    </linearGradient>
+    <filter id="recordShadow" x="-15%" y="-15%" width="130%" height="140%" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="9" stdDeviation="8" flood-color="#003F2A" flood-opacity="0.48"/>
+    </filter>
+    <filter id="satinSurface" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.78" numOctaves="2" seed="17" result="grain"/>
+      <feColorMatrix in="grain" type="saturate" values="0"/>
+      <feComponentTransfer>
+        <feFuncA type="linear" slope="0.035"/>
+      </feComponentTransfer>
+      <feComposite in2="SourceGraphic" operator="over"/>
+      <feComposite in2="SourceAlpha" operator="in"/>
+    </filter>
+    <filter id="labelShadow" x="-10%" y="-10%" width="120%" height="125%" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="1.5" stdDeviation="1.3" flood-color="#000000" flood-opacity="0.22"/>
+    </filter>
+    <filter id="armShadow" x="-40%" y="-20%" width="180%" height="150%" color-interpolation-filters="sRGB">
+      <feDropShadow dx="3" dy="7" stdDeviation="5" flood-color="#041C13" flood-opacity="0.3"/>
+    </filter>
+    <path id="glyph-0" d="M10.5820 0.0000 L6.9082 0.0000 L6.9082 0.4160 Q7.1074 0.4219 7.4209 0.4570 Q7.7344 0.4922 7.8516 0.5566 Q8.0332 0.6680 8.1182 0.8115 Q8.2031 0.9551 8.2031 1.1719 L8.2031 7.2188 L8.1152 7.2188 L5.2793 0.1348 L4.9863 0.1348 L2.2852 7.3652 L2.2090 7.3652 L2.2090 2.4023 Q2.2090 1.6816 2.2998 1.3066 Q2.3906 0.9316 2.5781 0.7676 Q2.7070 0.6445 3.1113 0.5332 Q3.5156 0.4219 3.6387 0.4160 L3.6387 0.0000 L0.2812 0.0000 L0.2812 0.4160 Q0.5449 0.4395 0.8350 0.5039 Q1.1250 0.5684 1.2832 0.6973 Q1.4883 0.8613 1.5645 1.2012 Q1.6406 1.5410 1.6406 2.3379 L1.6406 6.5918 Q1.6406 6.9609 1.5527 7.1953 Q1.4648 7.4297 1.3008 7.5762 Q1.1191 7.7344 0.8555 7.8105 Q0.5918 7.8867 0.3340 7.8984 L0.3340 8.3145 L3.1699 8.3145 L5.5488 2.0801 L7.5820 7.2949 Q7.6934 7.5820 7.7725 7.8955 Q7.8516 8.2090 7.8574 8.3145 L10.5703 8.3145 L10.5703 7.8984 Q10.4062 7.8926 10.1514 7.8457 Q9.8965 7.7988 9.7793 7.7578 Q9.5801 7.6875 9.5098 7.5234 Q9.4395 7.3594 9.4395 7.1660 L9.4395 1.1719 Q9.4395 0.9668 9.5098 0.8262 Q9.5801 0.6855 9.7793 0.5801 Q9.8848 0.5215 10.1543 0.4717 Q10.4238 0.4219 10.5820 0.4160 Z"/>
+    <path id="glyph-1" d="M6.6152 0.1055 L4.7344 -0.0234 L4.6465 0.0586 L4.6465 0.7910 L4.6113 0.7910 Q4.4707 0.6445 4.2949 0.4775 Q4.1191 0.3105 3.8906 0.1758 Q3.6270 0.0176 3.3809 -0.0645 Q3.1348 -0.1465 2.6836 -0.1465 Q1.9160 -0.1465 1.5146 0.3545 Q1.1133 0.8555 1.1133 1.8105 L1.1133 4.5762 Q1.1133 4.7871 1.0342 4.9307 Q0.9551 5.0742 0.8027 5.1797 Q0.6973 5.2500 0.5391 5.2822 Q0.3809 5.3145 0.2051 5.3262 L0.2051 5.7070 L2.1328 5.8477 L2.2207 5.7656 L2.2207 1.7520 Q2.2207 1.1250 2.5020 0.8086 Q2.7832 0.4922 3.1758 0.4922 Q3.4980 0.4922 3.7500 0.5918 Q4.0020 0.6914 4.1719 0.8262 Q4.3301 0.9492 4.4502 1.0869 Q4.5703 1.2246 4.6348 1.3418 L4.6348 4.6172 Q4.6348 4.8105 4.5527 4.9600 Q4.4707 5.1094 4.3242 5.2148 Q4.2188 5.2852 4.0107 5.2998 Q3.8027 5.3145 3.5449 5.3262 L3.5449 5.7070 L5.6426 5.8477 L5.7305 5.7656 L5.7305 1.1777 Q5.7305 0.9785 5.8125 0.8379 Q5.8945 0.6973 6.0410 0.5977 Q6.1465 0.5332 6.2930 0.5127 Q6.4395 0.4922 6.6152 0.4863 Z"/>
+    <path id="glyph-2" d="M4.2363 2.8301 Q4.4766 2.6191 4.6055 2.3438 Q4.7344 2.0684 4.7344 1.6699 Q4.7344 0.8672 4.1338 0.3574 Q3.5332 -0.1523 2.5781 -0.1523 Q2.0742 -0.1523 1.6494 0.0293 Q1.2246 0.2109 1.0430 0.3633 L0.9258 -0.0176 L0.4863 -0.0176 L0.4277 1.9922 L0.8320 1.9922 Q0.8789 1.7637 1.0312 1.4590 Q1.1836 1.1543 1.4004 0.9082 Q1.6289 0.6504 1.9482 0.4746 Q2.2676 0.2988 2.6660 0.2988 Q3.2285 0.2988 3.5332 0.5537 Q3.8379 0.8086 3.8379 1.2832 Q3.8379 1.5293 3.7412 1.7080 Q3.6445 1.8867 3.4570 2.0215 Q3.2637 2.1562 2.9824 2.2646 Q2.7012 2.3730 2.3555 2.4785 Q2.0801 2.5605 1.7432 2.7041 Q1.4062 2.8477 1.1660 3.0410 Q0.9082 3.2461 0.7441 3.5449 Q0.5801 3.8438 0.5801 4.2480 Q0.5801 4.9570 1.1074 5.4492 Q1.6348 5.9414 2.5195 5.9414 Q2.8594 5.9414 3.2139 5.8535 Q3.5684 5.7656 3.7910 5.6426 L3.9258 5.9473 L4.3477 5.9473 L4.4355 4.0898 L4.0312 4.0898 Q3.9082 4.7109 3.5010 5.1006 Q3.0938 5.4902 2.5078 5.4902 Q2.0273 5.4902 1.7520 5.2500 Q1.4766 5.0098 1.4766 4.6699 Q1.4766 4.4062 1.5674 4.2305 Q1.6582 4.0547 1.8398 3.9316 Q2.0156 3.8145 2.2822 3.7119 Q2.5488 3.6094 2.9414 3.4805 Q3.3281 3.3574 3.6709 3.1934 Q4.0137 3.0293 4.2363 2.8301 Z"/>
+    <path id="glyph-3" d="M3.2285 0.0000 L0.4336 0.0000 L0.4336 0.3867 Q0.5684 0.3984 0.7119 0.4102 Q0.8555 0.4219 0.9609 0.4570 Q1.1250 0.5098 1.2041 0.6416 Q1.2832 0.7734 1.2832 0.9844 L1.2832 4.5527 Q1.2832 4.7402 1.1982 4.8955 Q1.1133 5.0508 0.9609 5.1562 Q0.8496 5.2266 0.6387 5.2764 Q0.4277 5.3262 0.2520 5.3379 L0.2520 5.7188 L2.2910 5.8477 L2.3730 5.7656 L2.3730 1.0547 Q2.3730 0.8496 2.4521 0.7148 Q2.5312 0.5801 2.7012 0.5156 Q2.8301 0.4629 2.9531 0.4307 Q3.0762 0.3984 3.2285 0.3867 Z M2.4902 8.1270 Q2.4902 7.7930 2.2705 7.5439 Q2.0508 7.2949 1.7285 7.2949 Q1.4297 7.2949 1.2100 7.5322 Q0.9902 7.7695 0.9902 8.0742 Q0.9902 8.3965 1.2100 8.6367 Q1.4297 8.8770 1.7285 8.8770 Q2.0625 8.8770 2.2764 8.6514 Q2.4902 8.4258 2.4902 8.1270 Z"/>
+    <path id="glyph-4" d="M3.0938 -0.1523 Q1.8398 -0.1523 1.1309 0.6797 Q0.4219 1.5117 0.4219 2.9121 Q0.4219 3.5215 0.6123 4.0518 Q0.8027 4.5820 1.1660 5.0156 Q1.5117 5.4316 2.0332 5.6865 Q2.5547 5.9414 3.1699 5.9414 Q4.0195 5.9414 4.5527 5.5342 Q5.0859 5.1270 5.0859 4.4238 Q5.0859 4.1309 4.9453 3.9053 Q4.8047 3.6797 4.4824 3.6797 Q4.1367 3.6797 3.9463 3.8555 Q3.7559 4.0312 3.7559 4.2480 Q3.7559 4.5117 3.8262 4.7900 Q3.8965 5.0684 3.9082 5.1973 Q3.8027 5.3789 3.5947 5.4404 Q3.3867 5.5020 3.1465 5.5020 Q2.8652 5.5020 2.6104 5.3818 Q2.3555 5.2617 2.1152 4.9395 Q1.8984 4.6465 1.7637 4.1484 Q1.6289 3.6504 1.6289 2.9590 Q1.6289 1.8691 2.1123 1.1807 Q2.5957 0.4922 3.3809 0.4922 Q3.9492 0.4922 4.3330 0.7676 Q4.7168 1.0430 5.0449 1.5938 L5.4199 1.3477 Q5.0332 0.6562 4.4004 0.2520 Q3.7676 -0.1523 3.0938 -0.1523 Z"/>
+    <path id="glyph-5" d="M6.9375 6.2637 Q6.9375 5.6133 6.6826 5.1123 Q6.4277 4.6113 5.9766 4.2832 Q5.5312 3.9551 4.9980 3.8027 Q4.4648 3.6504 3.8672 3.6504 L2.9355 3.6504 L2.9355 1.1309 Q2.9355 0.9258 3.0029 0.7705 Q3.0703 0.6152 3.2812 0.5332 Q3.3867 0.4922 3.6533 0.4570 Q3.9199 0.4219 4.1426 0.4160 L4.1426 0.0000 L0.5742 0.0000 L0.5742 0.4160 Q0.7148 0.4277 0.9814 0.4570 Q1.2480 0.4863 1.3535 0.5332 Q1.5293 0.6094 1.6084 0.7559 Q1.6875 0.9023 1.6875 1.1309 L1.6875 7.1309 Q1.6875 7.3359 1.6289 7.5000 Q1.5703 7.6641 1.3535 7.7461 Q1.1309 7.8223 0.9111 7.8545 Q0.6914 7.8867 0.5332 7.8984 L0.5332 8.3145 L4.3301 8.3145 Q5.4902 8.3145 6.2139 7.7549 Q6.9375 7.1953 6.9375 6.2637 Z M5.1562 4.8457 Q5.3555 5.1270 5.4199 5.4287 Q5.4844 5.7305 5.4844 5.9707 Q5.4844 6.3047 5.4053 6.6504 Q5.3262 6.9961 5.1328 7.2539 Q4.9277 7.5293 4.5938 7.6816 Q4.2598 7.8340 3.7617 7.8340 L2.9355 7.8340 L2.9355 4.1602 L3.5332 4.1602 Q4.1660 4.1602 4.5615 4.3564 Q4.9570 4.5527 5.1562 4.8457 Z"/>
+    <path id="glyph-6" d="M3.1289 0.0000 L0.3105 0.0000 L0.3105 0.3867 Q0.4453 0.3984 0.5977 0.4131 Q0.7500 0.4277 0.8496 0.4570 Q1.0137 0.5098 1.0957 0.6416 Q1.1777 0.7734 1.1777 0.9844 L1.1777 7.6758 Q1.1777 7.8867 1.0869 8.0713 Q0.9961 8.2559 0.8496 8.3613 Q0.7441 8.4316 0.4629 8.4902 Q0.1816 8.5488 0.0117 8.5605 L0.0117 8.9355 L2.1855 9.0703 L2.2676 8.9824 L2.2676 1.0547 Q2.2676 0.8496 2.3438 0.7178 Q2.4199 0.5859 2.5898 0.5156 Q2.7188 0.4570 2.8447 0.4277 Q2.9707 0.3984 3.1289 0.3867 Z"/>
+    <path id="glyph-7" d="M5.8945 0.1055 Q5.6191 0.0059 5.4111 -0.0557 Q5.2031 -0.1172 4.9395 -0.1172 Q4.4824 -0.1172 4.2100 0.0967 Q3.9375 0.3105 3.8613 0.7207 L3.8262 0.7207 Q3.4453 0.2988 3.0088 0.0762 Q2.5723 -0.1465 1.9570 -0.1465 Q1.3066 -0.1465 0.8877 0.2520 Q0.4688 0.6504 0.4688 1.2949 Q0.4688 1.6289 0.5625 1.8926 Q0.6562 2.1562 0.8438 2.3672 Q0.9902 2.5430 1.2305 2.6807 Q1.4707 2.8184 1.6816 2.9004 Q1.9453 3.0000 2.7510 3.2695 Q3.5566 3.5391 3.8379 3.6914 L3.8379 4.2715 Q3.8379 4.3477 3.8057 4.5645 Q3.7734 4.7812 3.6680 4.9746 Q3.5508 5.1914 3.3369 5.3525 Q3.1230 5.5137 2.7305 5.5137 Q2.4609 5.5137 2.2295 5.4229 Q1.9980 5.3320 1.9043 5.2324 Q1.9043 5.1152 1.9600 4.8867 Q2.0156 4.6582 2.0156 4.4648 Q2.0156 4.2598 1.8311 4.0898 Q1.6465 3.9199 1.3184 3.9199 Q1.0254 3.9199 0.8877 4.1279 Q0.7500 4.3359 0.7500 4.5938 Q0.7500 4.8633 0.9404 5.1094 Q1.1309 5.3555 1.4355 5.5488 Q1.6992 5.7129 2.0742 5.8271 Q2.4492 5.9414 2.8066 5.9414 Q3.2988 5.9414 3.6650 5.8740 Q4.0312 5.8066 4.3301 5.5840 Q4.6289 5.3672 4.7842 4.9951 Q4.9395 4.6230 4.9395 4.0371 Q4.9395 3.1992 4.9219 2.5518 Q4.9043 1.9043 4.9043 1.1367 Q4.9043 0.9082 4.9834 0.7734 Q5.0625 0.6387 5.2266 0.5449 Q5.3145 0.4922 5.5049 0.4863 Q5.6953 0.4805 5.8945 0.4805 Z M3.8496 3.1992 Q3.3516 3.0527 2.9766 2.9121 Q2.6016 2.7715 2.2793 2.5605 Q1.9863 2.3613 1.8164 2.0889 Q1.6465 1.8164 1.6465 1.4414 Q1.6465 0.9551 1.9014 0.7266 Q2.1562 0.4980 2.5488 0.4980 Q2.9648 0.4980 3.2812 0.7002 Q3.5977 0.9023 3.8145 1.1777 Z"/>
+    <path id="glyph-8" d="M-0.0176 -1.8867 Q-0.0176 -1.5938 0.1436 -1.4092 Q0.3047 -1.2246 0.5449 -1.2246 Q0.7324 -1.2246 0.8672 -1.2949 Q1.0020 -1.3652 1.1074 -1.4766 Q1.1953 -1.5645 1.2949 -1.7168 Q1.3945 -1.8691 1.4531 -1.9688 Q1.7461 -1.8105 2.1533 -1.1426 Q2.5605 -0.4746 2.7422 0.0293 Q2.1855 1.4180 1.7344 2.5137 Q1.2832 3.6094 0.7910 4.7812 Q0.6797 5.0508 0.4160 5.2002 Q0.1523 5.3496 -0.1113 5.3906 L-0.1113 5.7773 L2.5254 5.7773 L2.5254 5.3672 Q2.3496 5.3613 2.1035 5.2939 Q1.8574 5.2266 1.8574 5.1387 Q1.8574 5.1035 1.8838 5.0215 Q1.9102 4.9395 1.9453 4.8516 Q2.1680 4.2715 2.6250 3.1787 Q3.0820 2.0859 3.3340 1.4297 Q3.5977 2.0566 3.8818 2.7275 Q4.1660 3.3984 4.5176 4.3125 Q4.5586 4.4238 4.6348 4.6201 Q4.7109 4.8164 4.7109 4.9570 Q4.7109 5.1094 4.4443 5.2412 Q4.1777 5.3730 3.9375 5.4023 L3.9375 5.7773 L6.0820 5.7773 L6.0820 5.4141 Q5.9062 5.3848 5.6191 5.2119 Q5.3320 5.0391 5.1914 4.7227 Q4.4941 3.1055 3.9521 1.7754 Q3.4102 0.4453 3.1289 -0.1816 Q2.7598 -1.0020 2.4697 -1.4619 Q2.1797 -1.9219 1.9043 -2.1855 Q1.6348 -2.4316 1.4150 -2.5166 Q1.1953 -2.6016 0.9609 -2.6016 Q0.5039 -2.6016 0.2432 -2.3848 Q-0.0176 -2.1680 -0.0176 -1.8867 Z"/>
+    <path id="glyph-9" d="M5.3730 0.5977 Q5.6074 0.3750 5.7422 0.0938 Q5.8770 -0.1875 5.8770 -0.6035 Q5.8770 -1.0195 5.6953 -1.3857 Q5.5137 -1.7520 5.1445 -2.0215 Q4.7520 -2.2969 4.2070 -2.4492 Q3.6621 -2.6016 2.8594 -2.6016 Q1.5469 -2.6016 0.8965 -2.2178 Q0.2461 -1.8340 0.2461 -1.0957 Q0.2461 -0.4980 0.7148 -0.1523 Q1.1836 0.1934 1.9102 0.2227 L1.9102 0.3047 Q1.7344 0.3574 1.5469 0.4365 Q1.3594 0.5156 1.2246 0.6211 Q1.0723 0.7441 0.9785 0.9111 Q0.8848 1.0781 0.8848 1.3242 Q0.8848 1.6348 1.1045 1.8955 Q1.3242 2.1562 1.7695 2.3438 L1.7695 2.4316 Q1.2070 2.6953 0.8965 3.1084 Q0.5859 3.5215 0.5859 4.0664 Q0.5859 4.8867 1.1982 5.4141 Q1.8105 5.9414 2.7656 5.9414 Q3.0293 5.9414 3.2900 5.8887 Q3.5508 5.8359 3.8203 5.7539 L5.8359 5.7539 L5.8359 5.1914 L4.4766 5.1914 L4.4766 5.1562 Q4.6934 4.9043 4.7988 4.5996 Q4.9043 4.2949 4.9043 4.0020 Q4.9043 3.2402 4.2861 2.7129 Q3.6680 2.1855 2.8477 2.1855 L2.1387 2.1855 Q2.0039 2.1387 1.8574 2.0156 Q1.7109 1.8926 1.7109 1.6816 Q1.7109 1.4648 1.8340 1.3506 Q1.9570 1.2363 2.1328 1.1953 Q2.3027 1.1484 2.5283 1.1367 Q2.7539 1.1250 2.9941 1.1191 Q3.2520 1.1133 3.7002 1.0840 Q4.1484 1.0547 4.3359 1.0488 Q4.6055 1.0371 4.8779 0.9199 Q5.1504 0.8027 5.3730 0.5977 Z M3.7910 4.0254 Q3.7910 4.7109 3.5127 5.1182 Q3.2344 5.5254 2.7305 5.5254 Q2.4551 5.5254 2.2588 5.4111 Q2.0625 5.2969 1.9395 5.0859 Q1.8223 4.8926 1.7725 4.6201 Q1.7227 4.3477 1.7227 4.0605 Q1.7227 3.4102 2.0068 3.0000 Q2.2910 2.5898 2.7422 2.5898 Q3.2461 2.5898 3.5186 2.9971 Q3.7910 3.4043 3.7910 4.0254 Z M4.9160 -0.8203 Q4.9160 -0.4922 4.7637 -0.2812 Q4.6113 -0.0703 4.3008 0.0059 Q4.1367 0.0293 3.6270 0.0586 Q3.1172 0.0879 2.4434 0.0879 Q1.8105 -0.0352 1.5439 -0.3252 Q1.2773 -0.6152 1.2773 -1.0723 Q1.2773 -1.2773 1.3652 -1.4648 Q1.4531 -1.6523 1.6699 -1.8105 Q1.8750 -1.9629 2.2207 -2.0596 Q2.5664 -2.1562 3.0645 -2.1562 Q3.9258 -2.1562 4.4209 -1.8252 Q4.9160 -1.4941 4.9160 -0.8203 Z"/>
+    <path id="glyph-10" d="M4.8457 5.0332 Q4.8457 4.7344 4.6992 4.5029 Q4.5527 4.2715 4.2480 4.2715 Q3.9199 4.2715 3.7471 4.4414 Q3.5742 4.6113 3.5742 4.8164 Q3.5742 4.9453 3.5947 5.0508 Q3.6152 5.1562 3.6328 5.2617 Q3.3574 5.2617 2.9883 5.0391 Q2.6191 4.8164 2.3613 4.4062 L2.3613 1.0430 Q2.3613 0.8379 2.4404 0.7090 Q2.5195 0.5801 2.6895 0.5156 Q2.8359 0.4570 3.0674 0.4277 Q3.2988 0.3984 3.4688 0.3867 L3.4688 0.0000 L0.4219 0.0000 L0.4219 0.3867 Q0.5566 0.3984 0.7002 0.4102 Q0.8438 0.4219 0.9492 0.4570 Q1.1133 0.5098 1.1924 0.6416 Q1.2715 0.7734 1.2715 0.9844 L1.2715 4.5527 Q1.2715 4.7344 1.1865 4.9102 Q1.1016 5.0859 0.9492 5.1914 Q0.8379 5.2617 0.6855 5.2939 Q0.5332 5.3262 0.3574 5.3379 L0.3574 5.7188 L2.2793 5.8477 L2.3613 5.7656 L2.3613 4.9512 L2.3906 4.9512 Q2.7539 5.4258 3.1992 5.6719 Q3.6445 5.9180 4.0137 5.9180 Q4.3828 5.9180 4.6143 5.6777 Q4.8457 5.4375 4.8457 5.0332 Z"/>
+    <path id="glyph-11" d="M6.0527 2.9473 Q6.0527 2.3379 5.8594 1.7490 Q5.6660 1.1602 5.3086 0.7500 Q4.9043 0.2812 4.3711 0.0527 Q3.8379 -0.1758 3.1758 -0.1758 Q2.6250 -0.1758 2.1270 0.0322 Q1.6289 0.2402 1.2422 0.6387 Q0.8613 1.0312 0.6357 1.5967 Q0.4102 2.1621 0.4102 2.8652 Q0.4102 4.2188 1.1982 5.0801 Q1.9863 5.9414 3.2637 5.9414 Q4.4766 5.9414 5.2646 5.1240 Q6.0527 4.3066 6.0527 2.9473 Z M4.8398 2.9355 Q4.8398 3.3750 4.7520 3.8643 Q4.6641 4.3535 4.4883 4.6934 Q4.3008 5.0566 3.9961 5.2764 Q3.6914 5.4961 3.2520 5.4961 Q2.8008 5.4961 2.4814 5.2734 Q2.1621 5.0508 1.9629 4.6641 Q1.7754 4.3066 1.6992 3.8496 Q1.6230 3.3926 1.6230 2.9648 Q1.6230 2.4023 1.7139 1.9248 Q1.8047 1.4473 2.0039 1.0723 Q2.2031 0.6973 2.5049 0.4834 Q2.8066 0.2695 3.2520 0.2695 Q3.9844 0.2695 4.4121 0.9785 Q4.8398 1.6875 4.8398 2.9355 Z"/>
+    <path id="glyph-12" d="M6.6152 0.1055 L4.7344 -0.0234 L4.6465 0.0586 L4.6465 0.7910 L4.6113 0.7910 Q4.4707 0.6445 4.2949 0.4775 Q4.1191 0.3105 3.8906 0.1758 Q3.6270 0.0176 3.3809 -0.0645 Q3.1348 -0.1465 2.6836 -0.1465 Q1.9160 -0.1465 1.5146 0.3545 Q1.1133 0.8555 1.1133 1.8105 L1.1133 4.5762 Q1.1133 4.7871 1.0342 4.9307 Q0.9551 5.0742 0.8027 5.1797 Q0.6973 5.2500 0.5391 5.2822 Q0.3809 5.3145 0.2051 5.3262 L0.2051 5.7070 L2.1328 5.8477 L2.2207 5.7656 L2.2207 1.7520 Q2.2207 1.1250 2.5020 0.8086 Q2.7832 0.4922 3.1758 0.4922 Q3.4980 0.4922 3.7500 0.5918 Q4.0020 0.6914 4.1719 0.8262 Q4.3301 0.9492 4.4502 1.0869 Q4.5703 1.2246 4.6348 1.3418 L4.6348 4.6172 Q4.6348 4.8105 4.5527 4.9600 Q4.4707 5.1094 4.3242 5.2148 Q4.2188 5.2852 4.0107 5.2998 Q3.8027 5.3145 3.5449 5.3262 L3.5449 5.7070 L5.6426 5.8477 L5.7305 5.7656 L5.7305 1.1777 Q5.7305 0.9785 5.8125 0.8379 Q5.8945 0.6973 6.0410 0.5977 Q6.1465 0.5332 6.2930 0.5127 Q6.4395 0.4922 6.6152 0.4863 Z"/>
+    <path id="glyph-13" d="M6.8027 0.0000 L3.9727 0.0000 L3.9727 0.3867 Q4.1074 0.3984 4.2686 0.4102 Q4.4297 0.4219 4.5352 0.4570 Q4.6992 0.5098 4.7783 0.6416 Q4.8574 0.7734 4.8574 0.9844 L4.8574 3.9551 Q4.8574 4.5703 4.5674 4.9043 Q4.2773 5.2383 3.8613 5.2383 Q3.5508 5.2383 3.2930 5.1416 Q3.0352 5.0449 2.8359 4.9043 Q2.6426 4.7695 2.5283 4.6143 Q2.4141 4.4590 2.3613 4.3652 L2.3613 1.0430 Q2.3613 0.8438 2.4434 0.7148 Q2.5254 0.5859 2.6895 0.5156 Q2.8125 0.4570 2.9561 0.4277 Q3.0996 0.3984 3.2520 0.3867 L3.2520 0.0000 L0.4219 0.0000 L0.4219 0.3867 Q0.5566 0.3984 0.7002 0.4102 Q0.8438 0.4219 0.9492 0.4570 Q1.1133 0.5098 1.1924 0.6416 Q1.2715 0.7734 1.2715 0.9844 L1.2715 4.5527 Q1.2715 4.7520 1.1865 4.9189 Q1.1016 5.0859 0.9492 5.1914 Q0.8379 5.2617 0.6855 5.2939 Q0.5332 5.3262 0.3574 5.3379 L0.3574 5.7188 L2.2793 5.8477 L2.3613 5.7656 L2.3613 4.9512 L2.3906 4.9512 Q2.5312 5.0918 2.7422 5.2881 Q2.9531 5.4844 3.1406 5.6074 Q3.3574 5.7480 3.6562 5.8418 Q3.9551 5.9355 4.3301 5.9355 Q5.1621 5.9355 5.5635 5.4170 Q5.9648 4.8984 5.9648 4.0371 L5.9648 1.0312 Q5.9648 0.8262 6.0352 0.7002 Q6.1055 0.5742 6.2754 0.5039 Q6.4160 0.4453 6.5186 0.4219 Q6.6211 0.3984 6.8027 0.3867 Z"/>
+    <path id="glyph-14" d="M6.7500 0.1055 L4.7344 -0.0234 L4.6465 0.0586 L4.6465 0.5977 L4.5996 0.6094 Q4.2949 0.2695 3.8467 0.0527 Q3.3984 -0.1641 2.9238 -0.1641 Q2.4316 -0.1641 1.9717 0.0557 Q1.5117 0.2754 1.1719 0.6738 Q0.8262 1.0781 0.6240 1.6465 Q0.4219 2.2148 0.4219 2.9004 Q0.4219 3.5273 0.6387 4.0898 Q0.8555 4.6523 1.2363 5.0742 Q1.5938 5.4668 2.1123 5.7012 Q2.6309 5.9355 3.1699 5.9355 Q3.5742 5.9355 3.9639 5.8330 Q4.3535 5.7305 4.6348 5.5723 L4.6348 7.5820 Q4.6348 7.8281 4.5527 8.0303 Q4.4707 8.2324 4.3242 8.3379 Q4.1602 8.4492 3.8818 8.4990 Q3.6035 8.5488 3.2812 8.5723 L3.2812 8.9355 L5.6426 9.0703 L5.7305 8.9824 L5.7305 1.1895 Q5.7305 0.9844 5.8096 0.8408 Q5.8887 0.6973 6.0410 0.5977 Q6.1523 0.5273 6.3633 0.5098 Q6.5742 0.4922 6.7500 0.4863 Z M4.6348 1.1191 L4.6348 4.5000 Q4.5879 4.6523 4.4824 4.8281 Q4.3770 5.0039 4.2188 5.1504 Q4.0488 5.2969 3.8203 5.3936 Q3.5918 5.4902 3.2871 5.4902 Q2.9355 5.4902 2.6396 5.3086 Q2.3438 5.1270 2.1152 4.7871 Q1.8984 4.4590 1.7725 3.9521 Q1.6465 3.4453 1.6465 2.8301 Q1.6465 2.3379 1.7402 1.9365 Q1.8340 1.5352 2.0566 1.1895 Q2.2617 0.8613 2.5811 0.6621 Q2.9004 0.4629 3.3398 0.4629 Q3.8086 0.4629 4.1162 0.6680 Q4.4238 0.8730 4.6348 1.1191 Z"/>
+    <linearGradient id="grooveRecess" gradientUnits="userSpaceOnUse" x1="185" y1="135" x2="830" y2="860">
+      <stop stop-color="#050506" stop-opacity="0.72"/>
+      <stop offset="0.5" stop-color="#050506" stop-opacity="0.56"/>
+      <stop offset="1" stop-color="#030304" stop-opacity="0.67"/>
+    </linearGradient>
+    <linearGradient id="grooveLip" gradientUnits="userSpaceOnUse" x1="185" y1="135" x2="830" y2="860">
+      <stop stop-color="#D6D1D6" stop-opacity="0.35"/>
+      <stop offset="0.35" stop-color="#ADA4AF" stop-opacity="0.2"/>
+      <stop offset="0.65" stop-color="#B2A9B3" stop-opacity="0.1"/>
+      <stop offset="1" stop-color="#CEC4CD" stop-opacity="0.24"/>
+    </linearGradient>
+    <linearGradient id="trackBand" gradientUnits="userSpaceOnUse" x1="185" y1="135" x2="830" y2="860">
+      <stop stop-color="#E3DAE0" stop-opacity="0.22"/>
+      <stop offset="0.5" stop-color="#C0B2BF" stop-opacity="0.06"/>
+      <stop offset="1" stop-color="#E0D0DD" stop-opacity="0.12"/>
+    </linearGradient>
+    <g id="lettering"><use href="#glyph-0" transform="translate(412.9162 369.8369) rotate(-41.1689) scale(1 -1) translate(-5.5635 0)"/>
+      <use href="#glyph-1" transform="translate(426.9941 358.9390) rotate(-34.3189) scale(1 -1) translate(-3.4512 0)"/>
+      <use href="#glyph-2" transform="translate(439.6493 351.1945) rotate(-28.6112) scale(1 -1) translate(-2.5928 0)"/>
+      <use href="#glyph-3" transform="translate(451.4560 345.4148) rotate(-23.5547) scale(1 -1) translate(-1.7578 0)"/>
+      <use href="#glyph-4" transform="translate(463.8511 340.6565) rotate(-18.4475) scale(1 -1) translate(-2.7246 0)"/>
+      <use href="#glyph-5" transform="translate(478.4734 336.5936) rotate(-12.6092) scale(1 -1) translate(-3.6592 0)"/>
+      <use href="#glyph-6" transform="translate(492.4328 334.1614) rotate(-7.1584) scale(1 -1) translate(-1.7168 0)"/>
+      <use href="#glyph-7" transform="translate(505.9247 333.0865) rotate(-1.9520) scale(1 -1) translate(-3.0234 0)"/>
+      <use href="#glyph-8" transform="translate(520.6925 333.3156) rotate(3.7297) scale(1 -1) translate(-2.9531 0)"/>
+      <use href="#glyph-9" transform="translate(535.3968 335.0109) rotate(9.4239) scale(1 -1) translate(-3.0557 0)"/>
+      <use href="#glyph-10" transform="translate(549.3822 338.0285) rotate(14.9276) scale(1 -1) translate(-2.4580 0)"/>
+      <use href="#glyph-11" transform="translate(563.1812 342.4359) rotate(20.5001) scale(1 -1) translate(-3.2344 0)"/>
+      <use href="#glyph-12" transform="translate(577.3775 348.6020) rotate(26.4545) scale(1 -1) translate(-3.4512 0)"/>
+      <use href="#glyph-13" transform="translate(591.1197 356.3742) rotate(32.5283) scale(1 -1) translate(-3.5449 0)"/>
+      <use href="#glyph-14" transform="translate(603.9577 365.5532) rotate(38.5998) scale(1 -1) translate(-3.4453 0)"/>
+      <use href="#glyph-0" transform="translate(623.1631 383.9162) rotate(48.8311) scale(1 -1) translate(-5.5635 0)"/>
+      <use href="#glyph-1" transform="translate(634.0610 397.9941) rotate(55.6811) scale(1 -1) translate(-3.4512 0)"/>
+      <use href="#glyph-2" transform="translate(641.8055 410.6493) rotate(61.3888) scale(1 -1) translate(-2.5928 0)"/>
+      <use href="#glyph-3" transform="translate(647.5852 422.4560) rotate(66.4453) scale(1 -1) translate(-1.7578 0)"/>
+      <use href="#glyph-4" transform="translate(652.3435 434.8511) rotate(71.5525) scale(1 -1) translate(-2.7246 0)"/>
+      <use href="#glyph-5" transform="translate(656.4064 449.4734) rotate(77.3908) scale(1 -1) translate(-3.6592 0)"/>
+      <use href="#glyph-6" transform="translate(658.8386 463.4328) rotate(82.8416) scale(1 -1) translate(-1.7168 0)"/>
+      <use href="#glyph-7" transform="translate(659.9135 476.9247) rotate(88.0480) scale(1 -1) translate(-3.0234 0)"/>
+      <use href="#glyph-8" transform="translate(659.6844 491.6925) rotate(93.7297) scale(1 -1) translate(-2.9531 0)"/>
+      <use href="#glyph-9" transform="translate(657.9891 506.3968) rotate(99.4239) scale(1 -1) translate(-3.0557 0)"/>
+      <use href="#glyph-10" transform="translate(654.9715 520.3822) rotate(104.9276) scale(1 -1) translate(-2.4580 0)"/>
+      <use href="#glyph-11" transform="translate(650.5641 534.1812) rotate(110.5001) scale(1 -1) translate(-3.2344 0)"/>
+      <use href="#glyph-12" transform="translate(644.3980 548.3775) rotate(116.4545) scale(1 -1) translate(-3.4512 0)"/>
+      <use href="#glyph-13" transform="translate(636.6258 562.1197) rotate(122.5283) scale(1 -1) translate(-3.5449 0)"/>
+      <use href="#glyph-14" transform="translate(627.4468 574.9577) rotate(128.5998) scale(1 -1) translate(-3.4453 0)"/>
+      <use href="#glyph-0" transform="translate(609.0838 594.1631) rotate(138.8311) scale(1 -1) translate(-5.5635 0)"/>
+      <use href="#glyph-1" transform="translate(595.0059 605.0610) rotate(145.6811) scale(1 -1) translate(-3.4512 0)"/>
+      <use href="#glyph-2" transform="translate(582.3507 612.8055) rotate(151.3888) scale(1 -1) translate(-2.5928 0)"/>
+      <use href="#glyph-3" transform="translate(570.5440 618.5852) rotate(156.4453) scale(1 -1) translate(-1.7578 0)"/>
+      <use href="#glyph-4" transform="translate(558.1489 623.3435) rotate(161.5525) scale(1 -1) translate(-2.7246 0)"/>
+      <use href="#glyph-5" transform="translate(543.5266 627.4064) rotate(167.3908) scale(1 -1) translate(-3.6592 0)"/>
+      <use href="#glyph-6" transform="translate(529.5672 629.8386) rotate(172.8416) scale(1 -1) translate(-1.7168 0)"/>
+      <use href="#glyph-7" transform="translate(516.0753 630.9135) rotate(178.0480) scale(1 -1) translate(-3.0234 0)"/>
+      <use href="#glyph-8" transform="translate(501.3075 630.6844) rotate(183.7297) scale(1 -1) translate(-2.9531 0)"/>
+      <use href="#glyph-9" transform="translate(486.6032 628.9891) rotate(189.4239) scale(1 -1) translate(-3.0557 0)"/>
+      <use href="#glyph-10" transform="translate(472.6178 625.9715) rotate(194.9276) scale(1 -1) translate(-2.4580 0)"/>
+      <use href="#glyph-11" transform="translate(458.8188 621.5641) rotate(200.5001) scale(1 -1) translate(-3.2344 0)"/>
+      <use href="#glyph-12" transform="translate(444.6225 615.3980) rotate(206.4545) scale(1 -1) translate(-3.4512 0)"/>
+      <use href="#glyph-13" transform="translate(430.8803 607.6258) rotate(212.5283) scale(1 -1) translate(-3.5449 0)"/>
+      <use href="#glyph-14" transform="translate(418.0423 598.4468) rotate(218.5998) scale(1 -1) translate(-3.4453 0)"/>
+      <use href="#glyph-0" transform="translate(398.8369 580.0838) rotate(228.8311) scale(1 -1) translate(-5.5635 0)"/>
+      <use href="#glyph-1" transform="translate(387.9390 566.0059) rotate(235.6811) scale(1 -1) translate(-3.4512 0)"/>
+      <use href="#glyph-2" transform="translate(380.1945 553.3507) rotate(241.3888) scale(1 -1) translate(-2.5928 0)"/>
+      <use href="#glyph-3" transform="translate(374.4148 541.5440) rotate(246.4453) scale(1 -1) translate(-1.7578 0)"/>
+      <use href="#glyph-4" transform="translate(369.6565 529.1489) rotate(251.5525) scale(1 -1) translate(-2.7246 0)"/>
+      <use href="#glyph-5" transform="translate(365.5936 514.5266) rotate(257.3908) scale(1 -1) translate(-3.6592 0)"/>
+      <use href="#glyph-6" transform="translate(363.1614 500.5672) rotate(262.8416) scale(1 -1) translate(-1.7168 0)"/>
+      <use href="#glyph-7" transform="translate(362.0865 487.0753) rotate(268.0480) scale(1 -1) translate(-3.0234 0)"/>
+      <use href="#glyph-8" transform="translate(362.3156 472.3075) rotate(273.7297) scale(1 -1) translate(-2.9531 0)"/>
+      <use href="#glyph-9" transform="translate(364.0109 457.6032) rotate(279.4239) scale(1 -1) translate(-3.0557 0)"/>
+      <use href="#glyph-10" transform="translate(367.0285 443.6178) rotate(284.9276) scale(1 -1) translate(-2.4580 0)"/>
+      <use href="#glyph-11" transform="translate(371.4359 429.8188) rotate(290.5001) scale(1 -1) translate(-3.2344 0)"/>
+      <use href="#glyph-12" transform="translate(377.6020 415.6225) rotate(296.4545) scale(1 -1) translate(-3.4512 0)"/>
+      <use href="#glyph-13" transform="translate(385.3742 401.8803) rotate(302.5283) scale(1 -1) translate(-3.5449 0)"/>
+      <use href="#glyph-14" transform="translate(394.5532 389.0423) rotate(308.5998) scale(1 -1) translate(-3.4453 0)"/></g>
+  </defs>
+  <g id="green-background">
+    <path fill="url(#background)" d="M0 0H1024V1024H0Z"/>
+    <path fill="url(#backgroundLight)" d="M0 0H1024V1024H0Z"/>
+  </g>
+  <g id="vinyl-record">
+    <circle cx="511" cy="488" r="417" fill="url(#vinyl)" filter="url(#recordShadow)"/>
+    <g filter="url(#satinSurface)">
+      <circle cx="511" cy="488" r="415.5" fill="url(#vinyl)"/>
+      <circle cx="511" cy="488" r="415.5" fill="url(#vinylLight)"/>
+    </g>
+    <circle cx="511" cy="488" r="415.5" fill="none" stroke="url(#rim)" stroke-width="2.2"/>
+    <g id="engraved-grooves" fill="none">
+      <g stroke="url(#grooveRecess)" stroke-width="1.5">
+        <circle cx="511" cy="488" r="182.00"/>
+        <circle cx="511" cy="488" r="185.76"/>
+        <circle cx="511" cy="488" r="189.53"/>
+        <circle cx="511" cy="488" r="193.29"/>
+        <circle cx="511" cy="488" r="197.05"/>
+        <circle cx="511" cy="488" r="200.81"/>
+        <circle cx="511" cy="488" r="204.58"/>
+        <circle cx="511" cy="488" r="208.34"/>
+        <circle cx="511" cy="488" r="212.10"/>
+        <circle cx="511" cy="488" r="215.86"/>
+        <circle cx="511" cy="488" r="219.63"/>
+        <circle cx="511" cy="488" r="223.39"/>
+        <circle cx="511" cy="488" r="227.15"/>
+        <circle cx="511" cy="488" r="230.92"/>
+        <circle cx="511" cy="488" r="234.68"/>
+        <circle cx="511" cy="488" r="238.44"/>
+        <circle cx="511" cy="488" r="242.20"/>
+        <circle cx="511" cy="488" r="245.97"/>
+        <circle cx="511" cy="488" r="249.73"/>
+        <circle cx="511" cy="488" r="253.49"/>
+        <circle cx="511" cy="488" r="257.25"/>
+        <circle cx="511" cy="488" r="261.02"/>
+        <circle cx="511" cy="488" r="264.78"/>
+        <circle cx="511" cy="488" r="268.54"/>
+        <circle cx="511" cy="488" r="272.31"/>
+        <circle cx="511" cy="488" r="276.07"/>
+        <circle cx="511" cy="488" r="279.83"/>
+        <circle cx="511" cy="488" r="283.59"/>
+        <circle cx="511" cy="488" r="287.36"/>
+        <circle cx="511" cy="488" r="291.12"/>
+        <circle cx="511" cy="488" r="294.88"/>
+        <circle cx="511" cy="488" r="298.64"/>
+        <circle cx="511" cy="488" r="302.41"/>
+        <circle cx="511" cy="488" r="306.17"/>
+        <circle cx="511" cy="488" r="309.93"/>
+        <circle cx="511" cy="488" r="313.69"/>
+        <circle cx="511" cy="488" r="317.46"/>
+        <circle cx="511" cy="488" r="321.22"/>
+        <circle cx="511" cy="488" r="324.98"/>
+        <circle cx="511" cy="488" r="328.75"/>
+        <circle cx="511" cy="488" r="332.51"/>
+        <circle cx="511" cy="488" r="336.27"/>
+        <circle cx="511" cy="488" r="340.03"/>
+        <circle cx="511" cy="488" r="343.80"/>
+        <circle cx="511" cy="488" r="347.56"/>
+        <circle cx="511" cy="488" r="351.32"/>
+        <circle cx="511" cy="488" r="355.08"/>
+        <circle cx="511" cy="488" r="358.85"/>
+        <circle cx="511" cy="488" r="362.61"/>
+        <circle cx="511" cy="488" r="366.37"/>
+        <circle cx="511" cy="488" r="370.14"/>
+        <circle cx="511" cy="488" r="373.90"/>
+        <circle cx="511" cy="488" r="377.66"/>
+        <circle cx="511" cy="488" r="381.42"/>
+        <circle cx="511" cy="488" r="385.19"/>
+        <circle cx="511" cy="488" r="388.95"/>
+        <circle cx="511" cy="488" r="392.71"/>
+        <circle cx="511" cy="488" r="396.47"/>
+        <circle cx="511" cy="488" r="400.24"/>
+        <circle cx="511" cy="488" r="404.00"/>
+      </g>
+      <g stroke="url(#grooveLip)" stroke-width="0.8">
+        <circle cx="511" cy="488" r="181.15"/>
+        <circle cx="511" cy="488" r="184.91"/>
+        <circle cx="511" cy="488" r="188.68"/>
+        <circle cx="511" cy="488" r="192.44"/>
+        <circle cx="511" cy="488" r="196.20"/>
+        <circle cx="511" cy="488" r="199.96"/>
+        <circle cx="511" cy="488" r="203.73"/>
+        <circle cx="511" cy="488" r="207.49"/>
+        <circle cx="511" cy="488" r="211.25"/>
+        <circle cx="511" cy="488" r="215.01"/>
+        <circle cx="511" cy="488" r="218.78"/>
+        <circle cx="511" cy="488" r="222.54"/>
+        <circle cx="511" cy="488" r="226.30"/>
+        <circle cx="511" cy="488" r="230.07"/>
+        <circle cx="511" cy="488" r="233.83"/>
+        <circle cx="511" cy="488" r="237.59"/>
+        <circle cx="511" cy="488" r="241.35"/>
+        <circle cx="511" cy="488" r="245.12"/>
+        <circle cx="511" cy="488" r="248.88"/>
+        <circle cx="511" cy="488" r="252.64"/>
+        <circle cx="511" cy="488" r="256.40"/>
+        <circle cx="511" cy="488" r="260.17"/>
+        <circle cx="511" cy="488" r="263.93"/>
+        <circle cx="511" cy="488" r="267.69"/>
+        <circle cx="511" cy="488" r="271.46"/>
+        <circle cx="511" cy="488" r="275.22"/>
+        <circle cx="511" cy="488" r="278.98"/>
+        <circle cx="511" cy="488" r="282.74"/>
+        <circle cx="511" cy="488" r="286.51"/>
+        <circle cx="511" cy="488" r="290.27"/>
+        <circle cx="511" cy="488" r="294.03"/>
+        <circle cx="511" cy="488" r="297.79"/>
+        <circle cx="511" cy="488" r="301.56"/>
+        <circle cx="511" cy="488" r="305.32"/>
+        <circle cx="511" cy="488" r="309.08"/>
+        <circle cx="511" cy="488" r="312.84"/>
+        <circle cx="511" cy="488" r="316.61"/>
+        <circle cx="511" cy="488" r="320.37"/>
+        <circle cx="511" cy="488" r="324.13"/>
+        <circle cx="511" cy="488" r="327.90"/>
+        <circle cx="511" cy="488" r="331.66"/>
+        <circle cx="511" cy="488" r="335.42"/>
+        <circle cx="511" cy="488" r="339.18"/>
+        <circle cx="511" cy="488" r="342.95"/>
+        <circle cx="511" cy="488" r="346.71"/>
+        <circle cx="511" cy="488" r="350.47"/>
+        <circle cx="511" cy="488" r="354.23"/>
+        <circle cx="511" cy="488" r="358.00"/>
+        <circle cx="511" cy="488" r="361.76"/>
+        <circle cx="511" cy="488" r="365.52"/>
+        <circle cx="511" cy="488" r="369.29"/>
+        <circle cx="511" cy="488" r="373.05"/>
+        <circle cx="511" cy="488" r="376.81"/>
+        <circle cx="511" cy="488" r="380.57"/>
+        <circle cx="511" cy="488" r="384.34"/>
+        <circle cx="511" cy="488" r="388.10"/>
+        <circle cx="511" cy="488" r="391.86"/>
+        <circle cx="511" cy="488" r="395.62"/>
+        <circle cx="511" cy="488" r="399.39"/>
+        <circle cx="511" cy="488" r="403.15"/>
+      </g>
+      <g id="track-separators" stroke="url(#trackBand)" stroke-width="1.1">
+        <circle cx="511" cy="488" r="195"/>
+        <circle cx="511" cy="488" r="263"/>
+        <circle cx="511" cy="488" r="331"/>
+      </g>
+      <circle cx="511" cy="488" r="409" stroke="url(#grooveLip)" stroke-width="0.6"/>
+    </g>
+  </g>
+  <g id="mint-label">
+    <g filter="url(#labelShadow)">
+      <circle cx="511" cy="482" r="165" fill="url(#label)" filter="url(#satinSurface)"/>
+    </g>
+    <circle cx="511" cy="482" r="164.3" fill="none" stroke="url(#labelRim)" stroke-width="1.5"/>
+    <use href="#lettering" fill="#BBFFDD" opacity="0.19" transform="translate(0 0.35)"/>
+    <use href="#lettering" fill="#04895F" opacity="0.53"/>
+    <circle cx="511" cy="482" r="24" fill="url(#hole)" stroke="#08C891" stroke-opacity="0.5" stroke-width="0.8"/>
+  </g>
+  <g id="translucent-tonearm" filter="url(#armShadow)">
+    <g id="curved-arm-tube">
+      <path d="M1009 -35L909 284C893 334 903 384 885 423C872 448 864 469 847.659 483.736L874.529 510.606C894 490 906 463 918 439C939 396 930 347 947 296L1047 -35Z" fill="url(#armMaterial)" stroke="url(#cartridgeEdge)" stroke-width="1.2" stroke-linejoin="round"/>
+      <path d="M1013 -35L913 286C897 336 907 385 889 425C877 450 866 473 851.094 487.171" fill="none" stroke="#FFFFFF" stroke-opacity="0.33" stroke-width="2.2" stroke-linecap="round"/>
+    </g>
+    <g id="pickup-assembly" transform="translate(797.455 560.810) rotate(45)">
+      <g id="arm-coupling">
+        <rect x="-20" y="-95" width="40" height="34" rx="5" fill="url(#armMaterial)" stroke="url(#cartridgeEdge)" stroke-width="1.2"/>
+        <path d="M-18 -84H18" stroke="#648573" stroke-opacity="0.3" stroke-width="1.1"/>
+        <path d="M-15 -91V-66" stroke="#FFFFFF" stroke-opacity="0.38" stroke-width="1.2"/>
+      </g>
+      <g id="cartridge-and-stylus">
+        <rect x="-20" y="28" width="40" height="32" rx="6" fill="url(#cartridgeUnderbody)" stroke="#EBFFF1" stroke-opacity="0.4" stroke-width="1"/>
+        <path d="M-11 56H11L8 69H-8Z" fill="#D8F6E4" fill-opacity="0.81" stroke="#F6FFF9" stroke-opacity="0.5" stroke-width="0.8"/>
+        <path d="M0 67V81" fill="none" stroke="#EBFFF3" stroke-opacity="0.94" stroke-width="2.2" stroke-linecap="round"/>
+        <path id="stylus-contact" d="M0 79L2.2 81L0 83L-2.2 81Z" fill="#F4FFF8"/>
+      </g>
+      <g id="headshell" transform="scale(1.125 1)">
+        <path d="M-24 -65H24Q32 -65 32 -56V29Q32 39 24 44L16 49H-16L-24 44Q-32 39 -32 29V-56Q-32 -65 -24 -65Z" fill="url(#cartridgeMaterial)" stroke="url(#cartridgeEdge)" stroke-width="1.4"/>
+        <path d="M-26 -53V27Q-26 36 -18 41" fill="none" stroke="#FFFFFF" stroke-opacity="0.27" stroke-width="1.4" stroke-linecap="round"/>
+        <g fill="#203D2E" fill-opacity="0.27" stroke="#F3FFF7" stroke-opacity="0.25" stroke-width="0.8">
+          <rect x="-14" y="-27" width="8" height="34" rx="4"/>
+          <rect x="6" y="-27" width="8" height="34" rx="4"/>
+        </g>
+        <g fill="#B5CFC0" fill-opacity="0.72" stroke="#F6FFF9" stroke-opacity="0.65" stroke-width="0.8">
+          <circle cx="-15" cy="-45" r="3.3"/>
+          <circle cx="15" cy="-45" r="3.3"/>
+        </g>
+        <path d="M29 1L46 -15Q50 -18 53 -15" fill="none" stroke="#EFFFF5" stroke-opacity="0.74" stroke-width="6" stroke-linecap="round"/>
+      </g>
+    </g>
+  </g>
+</svg>

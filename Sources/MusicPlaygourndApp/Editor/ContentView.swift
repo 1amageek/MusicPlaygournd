@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import MusicPlaygroundUI
 
 struct ContentView: View {
     @Bindable var model: SessionModel
@@ -25,9 +26,8 @@ struct ContentView: View {
 
     private var editorWorkspace: some View {
         VStack(spacing: 0) {
-            NavigationSplitView(columnVisibility: $columnVisibility) {
+            WorkspaceSplitView(visibility: $columnVisibility) {
                 FileSidebarView(model: model, browser: model.fileBrowser, deckWorkspace: deckWorkspace)
-                    .navigationSplitViewColumnWidth(min: 160, ideal: 220, max: 320)
             } detail: {
                 VStack(spacing: 0) {
                     if let deckWorkspace {
@@ -40,7 +40,6 @@ struct ContentView: View {
                 }
                 .ignoresSafeArea(.container, edges: deckWorkspace != nil ? .top : [])
             }
-            .navigationSplitViewStyle(.balanced)
             .toolbar(removing: deckWorkspace != nil ? .sidebarToggle : nil)
             .toolbarBackgroundVisibility(deckWorkspace == nil ? .automatic : .hidden, for: .windowToolbar)
             .toolbarVisibility(deckWorkspace != nil && isFullScreen ? .hidden : .automatic, for: .windowToolbar)
@@ -78,20 +77,10 @@ struct ContentView: View {
     }
 
     private var workspace: some View {
-        VStack(spacing: 0) {
-            if model.hasOpenDocument || deckWorkspace != nil {
+        EditorPane(showsTabs: model.hasOpenDocument || deckWorkspace != nil) {
                 HStack(spacing: 0) {
                     if deckWorkspace != nil {
-                        Button {
-                            columnVisibility = columnVisibility == .detailOnly ? .all : .detailOnly
-                        } label: {
-                            Image(systemName: "sidebar.left")
-                                .frame(width: 28, height: 28)
-                                .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel(columnVisibility == .detailOnly ? "Show Sidebar" : "Hide Sidebar")
-                        .help("Show or hide the file sidebar")
+                        SidebarToggle(visibility: $columnVisibility)
                         Divider()
                     }
                     if let deckWorkspace {
@@ -110,9 +99,7 @@ struct ContentView: View {
                         layoutMenu.padding(.horizontal, 6)
                     }
                 }
-                .frame(height: 28)
-                Divider()
-            }
+        } content: {
             Group {
                 if model.hasOpenDocument {
                     VSplitView {

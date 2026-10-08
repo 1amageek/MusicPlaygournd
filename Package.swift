@@ -3,16 +3,18 @@ import PackageDescription
 
 let package = Package(
     name: "MusicPlaygournd",
-    platforms: [.macOS(.v15)],
+    platforms: [.macOS(.v15), .iOS(.v27)],
     products: [
         .executable(name: "MusicPlaygournd", targets: ["MusicPlaygourndApp"]),
         .library(name: "MusicPlaygourndCore", targets: ["MusicPlaygourndCore"]),
-        .library(name: "MusicPlayground", targets: ["MusicPlayground"])
+        .library(name: "MusicPlayground", targets: ["MusicPlayground"]),
+        .library(name: "MusicPlaygroundUI", targets: ["MusicPlaygroundUI"])
     ],
     dependencies: [
         .package(url: "https://github.com/1amageek/SwiftMusic.git", exact: "0.5.1")
     ],
     targets: [
+        .target(name: "MusicPlaygroundUI", exclude: ["DESIGN.md", "Workspace/DESIGN.md", "Sidebar/DESIGN.md", "Deck/DESIGN.md", "Editor/DESIGN.md", "Effect/DESIGN.md", "Wave/DESIGN.md"]),
         .target(name: "MusicPlayground", dependencies: [.product(name: "SwiftMusic", package: "SwiftMusic")], exclude: ["DESIGN.md"]),
         .target(
             name: "MusicPlaygourndCore",
@@ -21,7 +23,7 @@ let package = Package(
         ),
         .executableTarget(
             name: "MusicPlaygourndApp",
-            dependencies: ["MusicPlaygourndCore", .product(name: "SwiftMusic", package: "SwiftMusic")],
+            dependencies: ["MusicPlaygroundUI", "MusicPlaygourndCore", .product(name: "SwiftMusic", package: "SwiftMusic")],
             exclude: ["DESIGN.md", "Editor/DESIGN.md"]
         ),
         .executableTarget(name: "MIDINativeTestHost", dependencies: ["MusicPlaygourndCore"],

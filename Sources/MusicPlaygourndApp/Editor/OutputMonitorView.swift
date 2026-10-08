@@ -1,4 +1,5 @@
 import SwiftUI
+import MusicPlaygroundUI
 import MusicPlaygourndCore
 
 struct OutputMonitorView: View {

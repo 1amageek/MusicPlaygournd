@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import MusicPlaygroundUI
 
 struct FileSidebarView: View {
     @Bindable var model: SessionModel
@@ -10,8 +11,7 @@ struct FileSidebarView: View {
     @SwiftUI.State private var selection: URL?
 
     var body: some View {
-        VStack(spacing: 0) {
-            List(selection: $selection) {
+        ProjectSidebar(selection: $selection, error: browser.errorMessage) {
                 if let root = browser.directory {
                     DisclosureGroup(isExpanded: $rootExpanded) {
                         let children = Dictionary(grouping: visibleEntries, by: { $0.url.deletingLastPathComponent() })
@@ -50,20 +50,7 @@ struct FileSidebarView: View {
                         }
                     }
                 }
-            }
-            .listStyle(.sidebar)
-            .font(.system(size: 12))
-            .controlSize(.small)
-            .environment(\.defaultMinListRowHeight, 22)
-            .onChange(of: selection) { _, url in
-                guard let url, let entry = browser.entries.first(where: { $0.url == url }), !entry.isDirectory else { return }
-                open(entry)
-            }
-            .onChange(of: model.fileURL, initial: true) { _, url in selection = url }
-            if let error = browser.errorMessage {
-                Text(error).font(.system(size: 11)).foregroundStyle(.orange).textSelection(.enabled).padding(8)
-            }
-            Divider()
+        } footer: {
             HStack(spacing: 7) {
                 Menu {
                     Button("New Project…", action: model.newProject)
@@ -97,7 +84,11 @@ struct FileSidebarView: View {
                 .overlay(Capsule().strokeBorder(.primary.opacity(0.1)))
             }.padding(.horizontal, 6).frame(height: 36)
         }
-        .background(.bar)
+        .onChange(of: selection) { _, url in
+            guard let url, let entry = browser.entries.first(where: { $0.url == url }), !entry.isDirectory else { return }
+            open(entry)
+        }
+        .onChange(of: model.fileURL, initial: true) { _, url in selection = url }
         .onChange(of: browser.directory) { _, _ in rootExpanded = true; filter = "" }
         .accessibilityIdentifier("project-sidebar")
     }

@@ -1,9 +1,11 @@
 import SwiftUI
 
-struct WaveformView: View {
-    let samples: [Float]
+public struct WaveformView: View {
+    private let samples: [Float]
 
-    var body: some View {
+    public init(samples: [Float]) { self.samples = samples }
+
+    public var body: some View {
         Canvas { context, size in
             let frames = samples.count / 2
             let columns = max(1, min(512, Int(size.width)))

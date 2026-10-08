@@ -7,7 +7,7 @@ Executable module. Parent: [Package](../../DESIGN.md). Child: [Editor](Editor/DE
 Composition root assembles Core and SwiftUI. No musical reinterpretation in UI.
 
 ## Related Designs
-Use the parent/child links above. Dependencies: [MusicPlayground](../MusicPlayground/DESIGN.md) supplies inline slider metadata; SwiftMusic owns event semantics; Core owns rendering/playback/evaluation contracts; App consumes Core.
+Use the parent/child links above. [MusicPlaygroundUI](../MusicPlaygroundUI/DESIGN.md) supplies shared SwiftUI presentation through the Editor adapter. Dependencies: [MusicPlayground](../MusicPlayground/DESIGN.md) supplies inline slider metadata; SwiftMusic owns event semantics; Core owns rendering/playback/evaluation contracts; App consumes Core.
 
 ## Architecture
 ```text

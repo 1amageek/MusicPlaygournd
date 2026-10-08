@@ -1,7 +1,7 @@
 # MusicPlaygournd
 
 ## Purpose and Scope
-Standalone macOS 15+ live Swift editor and native iPad audio prototype; the native package owns the app and host runtime. Parent: none. Children: [iPad app](MusicPlayground/DESIGN.md), [Declarations](Sources/MusicPlayground/DESIGN.md), [Core](Sources/MusicPlaygourndCore/DESIGN.md), [App](Sources/MusicPlaygourndApp/DESIGN.md).
+Standalone macOS 15+ live Swift editor and native iPad audio prototype; the native package owns the app and host runtime. Parent: none. Children: [UI](Sources/MusicPlaygroundUI/DESIGN.md), [iPad app](MusicPlayground/DESIGN.md), [Declarations](Sources/MusicPlayground/DESIGN.md), [Core](Sources/MusicPlaygourndCore/DESIGN.md), [App](Sources/MusicPlaygourndApp/DESIGN.md).
 
 ## Responsibilities and Boundaries
 Uses the exact public SwiftMusic 0.5.1 package from GitHub. The build bundles the host source and matching runtime objects. Evaluation and completion workspaces resolve the same public SwiftMusic version rather than assuming an adjacent checkout. Editor code is trusted local Swift, evaluated in a separate process, not a security sandbox. Playback, transport, rendering, file editing, diagnostics, and visualization belong to this package.
@@ -48,3 +48,7 @@ Verification owners: Playback verifies native mixed PCM, exact endpoints, indepe
 ## Native iPad audio prototype
 
 [iPad](MusicPlayground/DESIGN.md) owns a separate native Xcode application, consuming the exact same SwiftMusic 0.5.1 pin and shared Rendering source. It evaluates bundled build-time Swift declarations and performs native PCM playback without a Mac connection. Editable source compilation on iPad remains an unimplemented research outcome, not a capability of this prototype. Mac source evaluation, audio routing and deployment contracts are unchanged.
+
+## Shared SwiftUI presentation
+
+[MusicPlaygroundUI](Sources/MusicPlaygroundUI/DESIGN.md) owns platform-independent Workspace, Sidebar, Deck, Editor, Effect and Wave components. Mac and iPad adapters supply native models, editors and capabilities; audio, files and compiler authority remain in their existing owners.

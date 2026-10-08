@@ -1,6 +1,7 @@
 import AppKit
 import MusicPlaygourndCore
 import SwiftUI
+import MusicPlaygroundUI
 import UniformTypeIdentifiers
 
 struct DeckHeaderView: View {
@@ -13,18 +14,13 @@ struct DeckHeaderView: View {
     @State private var maximumTakeMinutes = 10
 
     var body: some View {
-        GeometryReader { geometry in
-            let centerWidth = min(260, max(170, geometry.size.width * 0.22))
-            HStack(spacing: 0) {
-                deck(workspace.a, index: 0)
-                Divider()
-                master.frame(width: centerWidth)
-                Divider()
-                deck(workspace.b, index: 1)
-            }
+        DeckRack {
+            deck(workspace.a, index: 0)
+        } master: {
+            master
+        } b: {
+            deck(workspace.b, index: 1)
         }
-        .frame(height: 208)
-        .background(LinearGradient(colors: [Color(red: 0.055, green: 0.07, blue: 0.08), .black.opacity(0.45)], startPoint: .top, endPoint: .bottom))
     }
 
     private var master: some View {
@@ -84,7 +80,7 @@ struct DeckHeaderView: View {
         let name = index == 0 ? "A" : "B"
         let duration = model.loop?.beatCount ?? 0
         let position = duration > 0 ? model.beatPosition.truncatingRemainder(dividingBy: duration) / duration : 0
-        return VStack(alignment: .leading, spacing: 7) {
+        return DeckPanel {
             HStack(spacing: 4) {
                 Button { colorDeck[index] = true } label: {
                     Text(name).font(.system(size: 12, weight: .bold)).foregroundStyle(.black)
@@ -106,12 +102,10 @@ struct DeckHeaderView: View {
                 }.menuStyle(.borderlessButton).menuIndicator(.hidden)
                     .frame(minWidth: 0, maxWidth: .infinity).layoutPriority(-1)
                     .help(model.loadedDocument?.fileURL?.path ?? "Drop a Swift Music file here")
-                Button { model.togglePlayback() } label: {
-                    Image(systemName: model.isPlaying || model.isPlaybackQueued ? "pause.fill" : "play.fill")
-                        .font(.system(size: 13)).frame(width: 30, height: 30)
-                        .overlay(Circle().strokeBorder(.white.opacity(0.85), lineWidth: 1.3)).contentShape(Circle())
-                }.buttonStyle(.plain).accessibilityLabel("Deck \(name) play pause")
-                    .accessibilityValue(model.isPlaybackQueued ? "Preparing playback" : (model.isPlaying ? "Playing" : "Paused"))
+                TransportButton(symbol: model.isPlaying || model.isPlaybackQueued ? "pause.fill" : "play.fill",
+                    label: "Deck \(name) play pause",
+                    value: model.isPlaybackQueued ? "Preparing playback" : (model.isPlaying ? "Playing" : "Paused"),
+                    action: model.togglePlayback)
                 TransportCueButton(cue: model.loop == nil ? nil : model.transportCue, color: color, name: name)
                     .frame(width: 30, height: 30)
                 TextField("BPM", value: Binding(get: { model.displayedBPM }, set: { model.bpm = $0 }), format: .number.precision(.fractionLength(0)))
@@ -164,6 +158,7 @@ struct DeckHeaderView: View {
                         LiveControlsView(model: model, maximumTakeMinutes: $maximumTakeMinutes).frame(width: 780, height: 420)
                     }
             }.font(.system(size: 8, weight: .medium)).buttonStyle(.borderless).frame(height: 32)
+        } controls: {
             HStack(spacing: 8) {
                 DeckGainControl(value: index == 0 ? $workspace.gainA : $workspace.gainB, color: color, name: name,
                                 valueLabel: (index == 0 ? workspace.gainA : workspace.gainB) == 0 ? "−∞" : String(format: "%.0f dB", 20 * log10(index == 0 ? workspace.gainA : workspace.gainB)))
@@ -177,21 +172,10 @@ struct DeckHeaderView: View {
                 HeaderXYPad(model: model, bipolar: true, tint: color, name: "Deck \(name)")
                     .frame(width: 104, height: 82)
             }.frame(height: 92)
+        } wave: {
             Button { compressorDeck[index] = true } label: {
-                Canvas { context, size in
-                    let values = model.loopPeaks
-                    guard !values.isEmpty, size.width >= 1, size.height > 0 else { return }
-                    var wave = Path()
-                    for x in 0..<max(1, Int(size.width)) {
-                        let peak = Self.waveformPeak(values, at: position + Double(x) / size.width - 0.5)
-                        let height = min(1, CGFloat(peak) * 2) * size.height * 0.5
-                        wave.move(to: CGPoint(x: CGFloat(x), y: size.height / 2 - height))
-                        wave.addLine(to: CGPoint(x: CGFloat(x), y: size.height / 2 + height))
-                    }
-                    context.stroke(wave, with: .linearGradient(Gradient(colors: [color.opacity(0.5), color, color.opacity(0.5)]), startPoint: .zero, endPoint: CGPoint(x: 0, y: size.height)), lineWidth: 1)
-                    let x = size.width / 2
-                    context.fill(Path(CGRect(x: x, y: 0, width: 1, height: size.height)), with: .color(.white))
-                }.frame(height: 36).contentShape(Rectangle())
+                LoopWaveView(peaks: model.loopPeaks, position: position, color: color)
+                    .frame(height: 36).contentShape(Rectangle())
             }.buttonStyle(.plain).accessibilityLabel("Deck \(name) waveform, open master compressor")
                 .background(MultiFingerGestureView(reversesHorizontalMotion: true, onMotion: model.scratch, onEnd: model.endScratch, onRelease: model.releaseScratch))
                 .help("Scratch with two or three fingers, even while paused. Drag right to rewind, left to advance. Up advances; down rewinds.")
@@ -199,7 +183,7 @@ struct DeckHeaderView: View {
                     WaveCompressorView(settings: workspace.a.compressorSettings, snapshot: workspace.a.compressorMeter, onChange: workspace.a.setCompressor, tint: color)
                         .frame(width: 460, height: 300).padding(12)
                 }
-        }.padding(.horizontal, 10).padding(.vertical, 10).frame(maxWidth: .infinity)
+        }
             .contentShape(Rectangle())
             .onDrop(of: [.fileURL, .url], isTargeted: nil) { providers in
                 workspace.receiveDrop(providers, into: index)
@@ -207,11 +191,7 @@ struct DeckHeaderView: View {
     }
 
     static func waveformPeak(_ peaks: [Float], at phase: Double) -> Float {
-        guard !peaks.isEmpty, phase.isFinite else { return 0 }
-        let offset = (phase - floor(phase)) * Double(peaks.count)
-        let index = min(peaks.count - 1, Int(offset))
-        let fraction = Float(offset - Double(index))
-        return peaks[index] + (peaks[(index + 1) % peaks.count] - peaks[index]) * fraction
+        LoopWaveView.peak(peaks, at: phase)
     }
 
     private func record() {

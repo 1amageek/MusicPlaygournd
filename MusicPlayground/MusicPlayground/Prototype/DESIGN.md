@@ -44,3 +44,7 @@ App-hosted tests assert expected score events/pitches, finite nonzero rendered P
 | Shared mute-cache snapshots | existing MuteRenderCache / Mutex on Mac and iPad | immutable render-cache snapshots owned by renderer | existing renderer tests; synchronization unchanged |
 
 The iPad prototype is a native target only. It introduces no WASM/Embedded backend, conditional Sendable contract or conditional raw mutable storage.
+
+## Shared UI adapter
+
+[MusicPlaygroundUI](../../../Sources/MusicPlaygroundUI/DESIGN.md) owns the same sidebar, deck rack, source shell and wave presentation as Mac. This adapter exposes the actual bundled source and its prepared-loop peaks through existing PlaybackModel. Sidebar selection is read-only bundled content; toggling columns does not affect playback. Deck B, arbitrary source editing/compilation and live FX are explicitly unavailable in this milestone. The shared Effect component provides the unavailability presentation; it does not imply DSP support. Physical UI tests own sidebar selection/toggle and retained audio lifecycle.

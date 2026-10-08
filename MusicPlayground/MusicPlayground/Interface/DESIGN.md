@@ -37,3 +37,5 @@ User command failures are surfaced in alerts or host diagnostics, cancellation i
 
 ## Verification and Change Impact
 Physical UI workflows must operate both decks, FX/EQ/filter, real waveform scratch, master mix/recording, MIDI/AU choices, accepted results/mutes, text highlighting/undo and sidebar restoration in both landscape orientations. The app declares landscape-only iPad orientation support; attempted portrait rotation must retain a landscape workspace. App-hosted behavioral tests cover command cancellation, failed edited-source load, tab reorder and result source identity. Mac regression tests and normal/fullscreen inspection cover shared rendering changes.
+
+Workspace tint is scoped to the deck/editor detail column. The project sidebar inherits the system default selection appearance rather than the music-control mint tint.

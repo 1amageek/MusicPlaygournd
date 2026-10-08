@@ -1,9 +1,52 @@
 import XCTest
+import UIKit
 
 @MainActor
 final class PlaybackUITests: XCTestCase {
     private func evidence(_ app: XCUIApplication) -> String {
         app.descendants(matching: .any).matching(identifier: "master-output").firstMatch.value as? String ?? ""
+    }
+    func testCompactSidebarKeepsNamesReadableAndTreeSelectionNative() {
+        XCUIDevice.shared.orientation = .landscapeLeft
+        let app = XCUIApplication(); app.launch()
+        XCTAssertTrue(app.textViews["source-editor"].waitForExistence(timeout: 15))
+        for orientation in [UIDeviceOrientation.landscapeLeft, .landscapeRight] {
+            XCUIDevice.shared.orientation = orientation
+            let row = app.descendants(matching: .any).matching(identifier: "source-file-Session.swift").firstMatch
+            if !row.exists { app.buttons["sidebar-toggle"].tap() }
+            XCTAssertTrue(row.waitForExistence(timeout: 5))
+            let sidebar = app.descendants(matching: .any).matching(identifier: "project-sidebar").firstMatch
+            let name = sidebar.staticTexts["Session.swift"].firstMatch
+            XCTAssertTrue(name.exists)
+            let fullNameWidth = ("Session.swift" as NSString).size(withAttributes: [.font: UIFont.systemFont(ofSize: 12)]).width
+            XCTAssertGreaterThanOrEqual(name.frame.width, fullNameWidth - 2)
+            let nameInset = name.frame.minX - sidebar.frame.minX
+            // Content margin + row inset + three tree levels + icon + spacing, with pixel rounding.
+            XCTAssertLessThanOrEqual(nameInset, CGFloat(52))
+            let manifest = sidebar.staticTexts["Package.swift"].firstMatch
+            XCTAssertTrue(manifest.exists)
+            let manifestWidth = ("Package.swift" as NSString).size(withAttributes: [.font: UIFont.systemFont(ofSize: 12)]).width
+            XCTAssertGreaterThanOrEqual(manifest.frame.width, manifestWidth - 2)
+            let sources = sidebar.buttons["sidebar-disclosure-Sources"]
+            XCTAssertEqual(sources.value as? String, "Expanded")
+            sources.tap()
+            expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: row)
+            waitForExpectations(timeout: 5)
+            XCTAssertEqual(sources.value as? String, "Collapsed")
+            XCTAssertTrue(manifest.exists)
+            sources.tap()
+            XCTAssertTrue(row.waitForExistence(timeout: 5))
+            row.tap()
+            XCTAssertTrue(app.buttons["Select Session.swift"].exists)
+            manifest.tap()
+            expectation(for: NSPredicate { _, _ in (app.textViews["source-editor"].value as? String)?.contains("import PackageDescription") == true }, evaluatedWith: app)
+            waitForExpectations(timeout: 5)
+            row.tap()
+            expectation(for: NSPredicate { _, _ in (app.textViews["source-editor"].value as? String)?.contains("struct Session: Music") == true }, evaluatedWith: app)
+            waitForExpectations(timeout: 5)
+            print("SIDEBAR_NAME_WIDTH Session=\(name.frame.width) Package=\(manifest.frame.width)")
+            attach("Compact sidebar with readable names, \(orientation)")
+        }
     }
     func testNativeEditingAndSidebarChangesKeepActualTextAndAcceptedAudio() {
         let app = XCUIApplication(); app.launch()

@@ -13,8 +13,20 @@ public struct ProjectSidebar<Selection: Hashable, Rows: View, Footer: View>: Vie
 
     public var body: some View {
         VStack(spacing: 0) {
-            List(selection: $selection) { rows }
+            List(selection: $selection) {
+                #if os(macOS)
+                rows
+                #else
+                rows.listRowInsets(EdgeInsets(top: 0, leading: 6, bottom: 0, trailing: 6))
+                    .listRowSeparator(.hidden)
+                #endif
+            }
+                #if os(macOS)
                 .listStyle(.sidebar)
+                #else
+                .listStyle(.plain)
+                .contentMargins(.horizontal, 4, for: .scrollContent)
+                #endif
                 .font(.system(size: 12))
                 .controlSize(.small)
                 .environment(\.defaultMinListRowHeight, minimumRowHeight)

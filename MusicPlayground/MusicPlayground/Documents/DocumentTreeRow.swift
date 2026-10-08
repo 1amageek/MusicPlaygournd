@@ -6,6 +6,7 @@ struct DocumentTreeRow: View {
     let children: [URL: [ProjectTreeEntry]]
     @Bindable var workspace: DocumentWorkspace
     var readOnly = false
+    var depth = 1
     let load: (URL, Int) -> Void
 
     var body: some View {
@@ -13,9 +14,9 @@ struct DocumentTreeRow: View {
                         isDirty: workspace.documents.contains { $0.url == entry.url && $0.isDirty },
                         expanded: Binding(get: { workspace.expanded.contains(entry.url) }, set: { value in
                             if value { workspace.expanded.insert(entry.url) } else { workspace.expanded.remove(entry.url) }
-                        }), load: readOnly ? nil : load) {
+                        }), indentation: CGFloat(depth * 8), load: readOnly ? nil : load) {
             ForEach(children[entry.url] ?? []) { child in
-                DocumentTreeRow(entry: child, children: children, workspace: workspace, readOnly: readOnly, load: load)
+                DocumentTreeRow(entry: child, children: children, workspace: workspace, readOnly: readOnly, depth: depth + 1, load: load)
             }
         }
     }

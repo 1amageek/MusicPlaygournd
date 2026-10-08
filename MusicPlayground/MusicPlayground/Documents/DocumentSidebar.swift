@@ -12,28 +12,31 @@ struct DocumentSidebar: View {
     var body: some View {
         ProjectSidebar(selection: $selection, error: workspace.errorMessage) {
             if let project = workspace.project {
-                DisclosureGroup(isExpanded: expansion(project.root)) {
+                SidebarDisclosureGroup(isExpanded: expansion(project.root), name: project.root.lastPathComponent) {
                     let children = Dictionary(grouping: workspace.visibleEntries(project.entries, root: project.root), by: { $0.url.deletingLastPathComponent() })
                     ForEach(children[project.root] ?? []) { entry in
                         DocumentTreeRow(entry: entry, children: children, workspace: workspace, load: load)
                     }
                 } label: {
-                    Label {
-                        Text(project.root.lastPathComponent).fontWeight(.semibold)
-                    } icon: {
+                    HStack(spacing: 4) {
                         Image(systemName: "music.note.list").font(.system(size: 10, weight: .medium))
                             .frame(width: 12, height: 12).foregroundStyle(.mint)
+                        Text(project.root.lastPathComponent).fontWeight(.semibold)
+                            .lineLimit(1).truncationMode(.middle).frame(maxWidth: .infinity, alignment: .leading)
                     }.contentShape(Rectangle())
                 }
                 if let dependency = project.dependencyRoot {
                     Section("Package Dependencies") {
-                        DisclosureGroup(isExpanded: expansion(dependency)) {
+                        SidebarDisclosureGroup(isExpanded: expansion(dependency), name: "SwiftMusic 0.5.1") {
                             let children = Dictionary(grouping: workspace.visibleEntries(project.dependencyEntries, root: dependency), by: { $0.url.deletingLastPathComponent() })
                             ForEach(children[dependency] ?? []) { entry in
                                 DocumentTreeRow(entry: entry, children: children, workspace: workspace, readOnly: true, load: load)
                             }
                         } label: {
-                            Label("SwiftMusic 0.5.1", systemImage: "shippingbox").contentShape(Rectangle())
+                            HStack(spacing: 4) {
+                                Image(systemName: "shippingbox").font(.system(size: 10)).frame(width: 12, height: 12)
+                                Text("SwiftMusic 0.5.1").lineLimit(1).frame(maxWidth: .infinity, alignment: .leading)
+                            }.contentShape(Rectangle())
                         }
                     }
                 }

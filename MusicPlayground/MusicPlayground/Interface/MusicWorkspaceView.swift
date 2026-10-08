@@ -43,9 +43,9 @@ struct MusicWorkspaceView: View {
                 Divider()
                 DocumentEditor(workspace: documents, audibleIDs: audio.map { [$0.a.isPlaying ? $0.a.documentID : nil, $0.b.isPlaying ? $0.b.documentID : nil] } ?? [nil, nil],
                     colors: colors, load: { document, index in Task { await load(document, into: index) } }, audio: audio, visibility: $visibility)
-            }.frame(maxWidth: .infinity, maxHeight: .infinity)
+            }.frame(maxWidth: .infinity, maxHeight: .infinity).tint(.mint)
                 .navigationTitle("").toolbar(removing: .sidebarToggle).toolbarVisibility(.hidden, for: .navigationBar)
-        }.preferredColorScheme(.dark).tint(.mint)
+        }.preferredColorScheme(.dark)
         .task(id: retry) {
             do {
                 if audio == nil { audio = try AudioWorkspace() }

@@ -3,31 +3,40 @@ import SwiftUI
 public struct FileTreeItemRow<Children: View>: View {
     private let url: URL
     private let isDirectory: Bool
+    private let indentation: CGFloat
     private let isDirty: Bool
     @Binding private var expanded: Bool
     private let children: @MainActor () -> Children
     private let load: ((URL, Int) -> Void)?
 
     public init(url: URL, isDirectory: Bool, isDirty: Bool, expanded: Binding<Bool>,
-                load: ((URL, Int) -> Void)? = nil, @ViewBuilder children: @escaping @MainActor () -> Children) {
+                indentation: CGFloat = 0, load: ((URL, Int) -> Void)? = nil, @ViewBuilder children: @escaping @MainActor () -> Children) {
         self.url = url; self.isDirectory = isDirectory; self.isDirty = isDirty
-        _expanded = expanded; self.load = load; self.children = children
+        _expanded = expanded; self.indentation = indentation; self.load = load; self.children = children
     }
 
     public var body: some View {
         if isDirectory {
-            DisclosureGroup(isExpanded: $expanded) { children() } label: {
-                Label { Text(url.lastPathComponent).lineLimit(1).truncationMode(.middle) } icon: { icon("folder") }
-                    .contentShape(Rectangle())
-            }.tag(url).help(url.path)
+            SidebarDisclosureGroup(isExpanded: $expanded, indentation: indentation, name: url.lastPathComponent) {
+                children()
+            } label: {
+                fileLabel.contentShape(Rectangle())
+            }
+            #if os(macOS)
+            .tag(url)
+            #endif
+            .help(url.path)
         } else {
             HStack {
-                Label { Text(url.lastPathComponent).lineLimit(1).truncationMode(.middle) } icon: { icon(fileIcon) }
+                fileLabel
                 if isDirty {
                     Spacer(minLength: 0)
                     Circle().fill(.secondary).frame(width: 4, height: 4).accessibilityLabel("Unsaved changes")
                 }
             }.contentShape(Rectangle()).tag(url).draggable(url).help(url.path)
+                #if !os(macOS)
+                .listRowInsets(EdgeInsets(top: 0, leading: 6 + indentation, bottom: 0, trailing: 6))
+                #endif
                 .accessibilityIdentifier("source-file-" + url.lastPathComponent)
                 .contextMenu {
                     if let load, url.pathExtension.lowercased() == "swift", url.lastPathComponent != "Package.swift" {
@@ -36,6 +45,18 @@ public struct FileTreeItemRow<Children: View>: View {
                     }
                 }
         }
+    }
+
+    private var fileLabel: some View {
+        #if os(macOS)
+        Label { Text(url.lastPathComponent).lineLimit(1).truncationMode(.middle) } icon: { icon(isDirectory ? "folder" : fileIcon) }
+        #else
+        HStack(spacing: 4) {
+            icon(isDirectory ? "folder" : fileIcon)
+            Text(url.lastPathComponent).lineLimit(1).truncationMode(.middle)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        #endif
     }
 
     private func icon(_ name: String) -> some View {

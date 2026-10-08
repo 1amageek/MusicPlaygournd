@@ -1,7 +1,7 @@
 # MusicPlaygournd
 
 ## Purpose and Scope
-Standalone macOS 15+ live Swift editor; the native package owns the app and host runtime. Parent: none. Children: [Declarations](Sources/MusicPlayground/DESIGN.md), [Core](Sources/MusicPlaygourndCore/DESIGN.md), [App](Sources/MusicPlaygourndApp/DESIGN.md).
+Standalone macOS 15+ live Swift editor and native iPad audio prototype; the native package owns the app and host runtime. Parent: none. Children: [iPad app](MusicPlayground/DESIGN.md), [Declarations](Sources/MusicPlayground/DESIGN.md), [Core](Sources/MusicPlaygourndCore/DESIGN.md), [App](Sources/MusicPlaygourndApp/DESIGN.md).
 
 ## Responsibilities and Boundaries
 Uses the exact public SwiftMusic 0.5.1 package from GitHub. The build bundles the host source and matching runtime objects. Evaluation and completion workspaces resolve the same public SwiftMusic version rather than assuming an adjacent checkout. Editor code is trusted local Swift, evaluated in a separate process, not a security sandbox. Playback, transport, rendering, file editing, diagnostics, and visualization belong to this package.
@@ -44,3 +44,7 @@ TAP measures monotonic inter-tap intervals per deck, admits 40–240 BPM, uses a
 The [Editor design](Sources/MusicPlaygourndApp/Editor/DESIGN.md#accepted-dj-presentation-and-loading) owns the accepted visual geometry, file-drop routing, automatic entry choice and control gestures. The header contains two independent decks and a central scope above the crossfader. Each deck has BPM, TAP, Sync, transport, EQ and gain. Left/right tab groups can contain the same file. Only the active editing group renders the wide editor. A/B color pickers persist validated colors and drive deck waveforms, tab playing indicators and fade endpoints; syntax themes remain independent and text labels identify A/B without color.
 
 Verification owners: Playback verifies native mixed PCM, exact endpoints, independent pause/rate/state, smoothing, phase sync and master recording; Evaluation verifies separate workers with same-source State isolation and distinct entry selection; Editor verifies shared edits/undo/save, loaded-versus-selected distinction, failed-load retention, independent tabs, tap timing, color restoration and shutdown. Existing single-deck clients retain their behavior. Physical gestures are not marked verified from type checks or accessibility actions alone.
+
+## Native iPad audio prototype
+
+[iPad](MusicPlayground/DESIGN.md) owns a separate native Xcode application, consuming the exact same SwiftMusic 0.5.1 pin and shared Rendering source. It evaluates bundled build-time Swift declarations and performs native PCM playback without a Mac connection. Editable source compilation on iPad remains an unimplemented research outcome, not a capability of this prototype. Mac source evaluation, audio routing and deployment contracts are unchanged.

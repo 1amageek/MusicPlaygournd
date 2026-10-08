@@ -1,5 +1,6 @@
 import AVFoundation
 import Foundation
+import SwiftMusic
 
 public struct AVAudioFileSampleLoader: SampleLoading {
     public init() {}

@@ -1,4 +1,5 @@
 import Foundation
+import SwiftMusic
 
 public struct PreparedLoop: Codable, Sendable, Equatable {
     public static let requiredSampleRate = 44_100.0
@@ -58,11 +59,16 @@ public struct PreparedLoop: Codable, Sendable, Equatable {
         rows = try values.decode([LoopRow].self, forKey: .rows)
         meters = try values.decodeIfPresent([PreparedMeterEnvelope].self, forKey: .meters)
         if values.contains(.pcmRange) {
+            #if os(macOS)
             guard let context = decoder.userInfo[PCMFileTransport.codingKey] as? PCMFileTransport.Context else {
                 throw DecodingError.dataCorruptedError(forKey: .pcmRange, in: values,
                     debugDescription: "PCM file requires a transport context.")
             }
             pcm = try context.read(values.decode([Int].self, forKey: .pcmRange))
+            #else
+            throw DecodingError.dataCorruptedError(forKey: .pcmRange, in: values,
+                debugDescription: "Worker PCM ranges require the macOS transport context.")
+            #endif
         } else if values.contains(.pcmFloat32LE) {
             let bytes = try values.decode(Data.self, forKey: .pcmFloat32LE)
             guard bytes.count <= PCMBuffer.maximumBytes, bytes.count.isMultiple(of: 4) else {
@@ -84,12 +90,14 @@ public struct PreparedLoop: Codable, Sendable, Equatable {
         try values.encode(events, forKey: .events)
         try values.encode(rows, forKey: .rows)
         try values.encodeIfPresent(meters, forKey: .meters)
+        #if os(macOS)
         if let context = encoder.userInfo[PCMFileTransport.codingKey] as? PCMFileTransport.Context {
             try values.encode(context.write(pcm), forKey: .pcmRange)
-        } else {
-            // Standalone serialization must own bytes beyond this scoped borrow.
-            try values.encode(pcm.withLittleEndianBytes { Data($0) }, forKey: .pcmFloat32LE)
+            return
         }
+        #endif
+        // Standalone serialization must own bytes beyond this scoped borrow.
+        try values.encode(pcm.withLittleEndianBytes { Data($0) }, forKey: .pcmFloat32LE)
     }
 
     public func validate() throws {

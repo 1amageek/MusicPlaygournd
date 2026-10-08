@@ -245,3 +245,7 @@ VoiceScheduler advances each active voice through one mutating element access pe
 The frame order, event admission/stealing/choke rules, termination gain arithmetic, output accumulation order, cancellation checks, and exact boundary-state equality remain unchanged. VoiceSchedulingTests and the full-buffer unison PCM regression in VoiceSchedulingTests verify this contract; release sampling and the 4-second 8/16-track fixture measure the avoided copy/retain/release work. Playback consumes identical PreparedLoop PCM and requires no contract change.
 
 Playback reuses ModulationProcessor causal DelayState and PhaserState steps for live FX; periodic offline processing and its contracts remain unchanged.
+
+### Native iPad shared-source consumer
+
+The [iPad project](../../../MusicPlayground/DESIGN.md) compiles the same renderer/DSP files into its native app module without copying or changing synthesis. It excludes LoopRenderSession (Mac retained performance controls) and PCMFileTransport (Mac worker IPC). PreparedLoop on iPad supports standalone samples/Float32 encoding and explicitly rejects Mac worker pcmRange data without a transport context. All Mac codec branches remain unchanged. This is an API/platform boundary only; mutex-protected cache state is identical on both targets. Xcode native score/PCM/playback tests and focused Mac renderer tests verify compatibility.

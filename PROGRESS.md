@@ -1,7 +1,5 @@
 # Progress
 
-- [x] ICON-1 Adopted the approved 60-groove SVG and 10-size macOS ICNS; build script requires, copies, and declares the icon before signing. Release packaging completed in 3.10s; strict signature, asset identity, decoded dimensions/alpha, early missing-icon failure, and identical Finder/running-app native icons verified. `depends:none` `parallel:none`
-- [ ] ICON-INT Verify the final signed application launch, Finder/Dock icon identity, unchanged approved SVG, and task-only commit/upstream delivery. `depends:ICON-1` `parallel:none`
 
 
 - [x] ISSUE-1 Reproduced Issue 1 on macOS 27.0.1 using main 72e5f21 rebuilt with Swift 6.4.0 Release (198.60 seconds, /tmp/music-issue1-build.log): sidebar-visible TAP and CUE double-clicks toggled native window zoom; disabled SYNC region also triggered zoom; fullscreen toolbar covered the transport row; hiding sidebar restored fullscreen controls and normal-window TAP double-click no longer resized; source unchanged and test app quit `depends:none` `parallel:none`
@@ -286,3 +284,6 @@
 
 - [x] REL060-1 ddd28a0: Updated 0.6.0 build 7, release notes, README and website install/shortcut guidance; preserved SwiftMusic 0.5.1. Scoped review and website checks passed `depends:none` `parallel:none`
 - [x] REL060-INT Seven focused native tests passed in 0.865s; 0.6.0 build 7, runtime digests, strict signature and website checks passed. Source-only Preview publication authorized; SwiftMusic public pin verified without local overrides `depends:REL060-1` `parallel:none`
+
+- [x] ICON-1 a45f63f: Adopted the approved 60-groove SVG and 10-size ICNS; build script requires, copies, and declares the icon before signing. Release package built in 3.10s; signature, asset identity, dimensions/alpha, missing-icon failure, and identical Finder/running-app icons verified. `depends:none` `parallel:none`
+- [x] ICON-INT Committed SVG matches the accepted vector exactly; packaged icon matches committed ICNS. Native 0.6.1 launch and icon loading verified; all 201 bundled Swift sources and 12 runtime hashes match. Only this icon task is ahead of configured origin/main. `depends:ICON-1` `parallel:none`

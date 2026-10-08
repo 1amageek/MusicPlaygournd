@@ -84,7 +84,7 @@ struct ProjectWorkspace {
             let original = package.targets[index]
             package.targets[index] = .executableTarget(
                 name: original.name,
-                dependencies: original.dependencies + [.product(name: "MusicPlaygourndCore", package: "MusicPlaygournd")],
+                dependencies: original.dependencies + [.product(name: "MusicPlaygourndCore", package: \(literal(host.lastPathComponent)))],
                 path: original.path, exclude: original.exclude, sources: original.sources,
                 resources: original.resources, cSettings: original.cSettings, cxxSettings: original.cxxSettings,
                 swiftSettings: original.swiftSettings, linkerSettings: original.linkerSettings, plugins: original.plugins)

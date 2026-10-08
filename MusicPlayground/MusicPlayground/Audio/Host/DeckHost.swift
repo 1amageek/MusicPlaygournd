@@ -165,6 +165,7 @@ final class DeckHost {
         }
         learning = address
     }
+    func cancelLearn() { learning = nil }
     func clearLearn(_ address: LiveControlAddress) { bindings.removeAll { $0.address == address }; if learning == address { learning = nil } }
     private func acceptedChanged() {
         let next = controls.map { DocumentHostStateStore.sourceDigest($0.acceptedSource) }

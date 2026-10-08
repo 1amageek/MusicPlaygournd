@@ -1,7 +1,7 @@
 # Editor
 
 ## Purpose and Scope
-Component. Parent: [App](../DESIGN.md). Children: none.
+Component. Parent: [App](../DESIGN.md). Children: [Presentation](Presentation/DESIGN.md).
 
 ## Responsibilities and Boundaries
 MainActor session model owns editable source, revision allocation, evaluation task, diagnostics, open/save and UI state.
@@ -396,3 +396,11 @@ DJ FX sync is SessionModel-owned for the deck lifetime. One LFO cycle spans the 
 [MusicPlaygroundUI](../../MusicPlaygroundUI/DESIGN.md) owns workspace/sidebar/deck/editor shells, FX gesture presentation and waveform drawing. This component adapts SessionModel and DeckWorkspace through values, bindings and actions; AppKit editing, fullscreen policy, file I/O, trackpad gestures and transport cue remain native here. Existing DSP validation, source/undo/IME and document lifetime contracts are unchanged.
 
 The five EditorTheme palettes are owned by [shared Editor](../../MusicPlaygroundUI/Editor/DESIGN.md). AppKit still owns native text storage and SourceKit semantic tokens; moving palette ownership preserves all existing hexadecimal color values and document/IME/undo semantics.
+
+Child: [Presentation](Presentation/DESIGN.md) supplies stateless native value conformances to shared UI. The transport CUE and TAP implementations now belong to [Playback](../../MusicPlaygourndCore/Playback/DESIGN.md); Editor retains native event delivery.
+
+Tab reorder changes only the owning deck membership array, preserving selected UUID, source/undo owner and audible UUID. URL drops resolve a current member before movement; unknown/external URLs are rejected. Shared rhythm presentation consumes the renderer's actual events, pitch projection, track IDs and timing through presentation protocols. Adapters preserve voice intervals and boundary wrapping without copying PCM.
+
+Tab reordering retains the selected document UUID, dirty buffer and accepted performer. After changing the document array, the owner resolves the active index from that retained UUID; it does not perform source selection or evaluation.
+
+The MIDI presentation owns labeled device/notes/clock/Learn groups. The model admits routing and learning; Cancel Learn clears only the pending address, while Remove Binding deletes an accepted assignment.

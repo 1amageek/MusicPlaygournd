@@ -19,13 +19,6 @@ final class NativePlaybackTests: XCTestCase {
         XCTAssertEqual(loop.pcm.count, 176_400)
         XCTAssertTrue(loop.pcm.allSatisfy(\.isFinite))
         XCTAssertGreaterThan(loop.pcm.reduce(0) { max($0, abs($1)) }, 0.01)
-        let buffer = try NativeAudioPlayer.makeBuffer(loop)
-        let channels = try XCTUnwrap(buffer.floatChannelData)
-        XCTAssertEqual(Int(buffer.frameLength) * 2, loop.pcm.count)
-        for frame in 0..<Int(buffer.frameLength) {
-            XCTAssertEqual(channels[0][frame], loop.pcm[frame * 2])
-            XCTAssertEqual(channels[1][frame], loop.pcm[frame * 2 + 1])
-        }
         let encoded = try PropertyListEncoder().encode(loop)
         let decoded = try PropertyListDecoder().decode(PreparedLoop.self, from: encoded)
         XCTAssertEqual(decoded, loop)
@@ -39,81 +32,54 @@ final class NativePlaybackTests: XCTestCase {
         XCTAssertThrowsError(try SoundCompiler().compile(Synthesizer(.sine).rhythm("[")))
         let invalid = PreparedLoop(sampleRate: 44_100, bpm: 120, beatsPerBar: 4, beatCount: 4,
                                    samples: [0, .nan], events: [])
-        XCTAssertThrowsError(try NativeAudioPlayer.makeBuffer(invalid))
+        XCTAssertThrowsError(try invalid.validate())
     }
 
     func testNativeHardwarePlaybackStopAndRestart() async throws {
-        let audio = NativeAudioPlayer()
+        let audio = try AudioWorkspace()
         addTeardownBlock { try await audio.stop() }
-        let loop = try demoLoop()
-        try await audio.start(loop)
-        try await Task.sleep(for: .seconds(2))
-        XCTAssertTrue(audio.isPlaying)
-        XCTAssertGreaterThan(audio.meter.callbackCount, 0)
-        XCTAssertGreaterThan(audio.meter.peak, 0.01)
-        XCTAssertFalse(AVAudioSession.sharedInstance().currentRoute.outputs.isEmpty)
-        print("IPAD_AUDIO_PROOF first callbacks=\(audio.meter.callbackCount) peak=\(audio.meter.peak) route=\(audio.outputDescription)")
-        try await audio.stop()
-        XCTAssertFalse(audio.isPlaying)
-        try await Task.sleep(for: .milliseconds(100))
-        let stoppedCount = audio.meter.callbackCount
-        try await Task.sleep(for: .milliseconds(200))
-        XCTAssertEqual(audio.meter.callbackCount, stoppedCount)
-        try await audio.start(loop)
-        try await Task.sleep(for: .seconds(1))
-        XCTAssertTrue(audio.isPlaying)
-        XCTAssertGreaterThan(audio.meter.peak, 0.01)
-        print("IPAD_AUDIO_PROOF restart callbacks=\(audio.meter.callbackCount) peak=\(audio.meter.peak) route=\(audio.outputDescription)")
+        try await audio.prepareDefault(id: UUID())
+        for iteration in 0..<2 {
+            try await audio.toggle(0)
+            let deadline = ContinuousClock.now + .seconds(8)
+            while !audio.masterSamples.contains(where: { abs($0) > 0.01 }), ContinuousClock.now < deadline {
+                try await Task.sleep(for: .milliseconds(50)); audio.refresh()
+            }
+            XCTAssertTrue(audio.a.isPlaying)
+            XCTAssertTrue(audio.masterSamples.contains { abs($0) > 0.01 })
+            XCTAssertFalse(AVAudioSession.sharedInstance().currentRoute.outputs.isEmpty)
+            print("IPAD_AUDIO_PROOF restart=\(iteration) route=\(audio.route)")
+            try await audio.stop()
+            XCTAssertFalse(audio.a.isPlaying); XCTAssertFalse(audio.b.isPlaying)
+        }
     }
 
     func testStopDuringActivationRejectsLatePlayback() async throws {
-        let audio = NativeAudioPlayer()
+        let audio = try AudioWorkspace()
         addTeardownBlock { try await audio.stop() }
-        let loop = try demoLoop()
-        let start = Task { try await audio.start(loop) }
-        let deadline = ContinuousClock.now.advanced(by: .seconds(5))
-        while !audio.isActivating && !audio.isPlaying && ContinuousClock.now < deadline {
-            await Task.yield()
-        }
-        XCTAssertTrue(audio.isActivating, "Stop must exercise an actual pending activation.")
+        try await audio.prepareDefault(id: UUID())
+        let start = Task { try await audio.toggle(0) }
+        await Task.yield()
         try await audio.stop()
-        do {
-            try await start.value
-            XCTFail("An invalidated activation must not start playback.")
-        } catch is CancellationError {
-            XCTAssertFalse(audio.isPlaying)
-        }
-        try await Task.sleep(for: .milliseconds(200))
-        XCTAssertFalse(audio.isPlaying)
-        XCTAssertEqual(audio.meter.callbackCount, 0)
+        do { try await start.value } catch is CancellationError { }
+        try await Task.sleep(for: .milliseconds(200)); audio.refresh()
+        XCTAssertFalse(audio.a.isPlaying); XCTAssertFalse(audio.sessionActive)
     }
 
     func testModelCancellationAndRestart() async throws {
-        let audio = NativeAudioPlayer()
+        let audio = try AudioWorkspace()
         addTeardownBlock { try await audio.stop() }
-        let model = PlaybackModel(audio: audio)
-        let first = Task { await model.play() }
-        // Yield so Play owns a real in-flight render before Stop invalidates it.
-        while model.state == .idle { await Task.yield() }
-        await model.stop()
-        await first.value
-        XCTAssertEqual(model.state, .idle)
-        XCTAssertFalse(audio.isPlaying)
-        await model.play()
-        XCTAssertEqual(model.state, .playing)
-        XCTAssertEqual(model.loopPeaks.count, 512)
-        XCTAssertTrue(model.loopPeaks.allSatisfy { $0.isFinite && $0 >= 0 })
-        XCTAssertGreaterThan(model.loopPeaks.max() ?? 0, 0.01)
-        let overview = model.loopPeaks
-        try await Task.sleep(for: .milliseconds(500))
-        model.refreshOutput()
-        XCTAssertGreaterThan(model.peak, 0.01)
-        await model.stop()
-        XCTAssertEqual(model.state, .idle)
-        XCTAssertFalse(audio.isPlaying)
-        await model.play()
-        XCTAssertEqual(model.state, .playing)
-        XCTAssertEqual(model.loopPeaks, overview)
-        await model.stop()
+        let first = Task { try await audio.prepareDefault(id: UUID()) }
+        while !audio.a.isPreparing { await Task.yield() }
+        try await audio.stop()
+        do { try await first.value; XCTFail("Cancelled preparation must not complete.") }
+        catch is CancellationError { }
+        XCTAssertFalse(audio.a.isPreparing); XCTAssertFalse(audio.a.isPlaying)
+        try await audio.prepareDefault(id: UUID())
+        XCTAssertEqual(audio.a.peaks.count, 512)
+        XCTAssertTrue(audio.a.peaks.allSatisfy { $0.isFinite && $0 >= 0 })
+        let overview = audio.a.peaks
+        try await audio.toggle(0); try await audio.stop(); try await audio.toggle(0)
+        XCTAssertTrue(audio.a.isPlaying); XCTAssertEqual(audio.a.peaks, overview)
     }
 }

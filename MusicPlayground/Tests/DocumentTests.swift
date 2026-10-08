@@ -19,6 +19,27 @@ final class DocumentTests: XCTestCase {
         try XCTUnwrap(UserDefaults(suiteName: "DocumentTests.\(UUID().uuidString)"))
     }
 
+    func testCommittedEditsRejectMismatchAndKeepUnicodeReplacementWhole() async throws {
+        let root = try temporaryDirectory()
+        defer { cleanup(root) }
+        let workspace = DocumentWorkspace(files: ProjectFiles(projectsDirectory: root), defaults: try preferences())
+        await workspace.start(template: "😀\nlet value = 1\n")
+        let document = try XCTUnwrap(workspace.activeDocument)
+        let original = document.source
+        var changes: [(NSRange, String)] = []
+        workspace.sourceDidChange = { _, range, text in changes.append((range, text)) }
+        workspace.edit(document.id, source: "😃\nlet value = 1\n")
+        XCTAssertEqual(changes.count, 1)
+        XCTAssertEqual(changes[0].0, NSRange(location: 0, length: 2))
+        XCTAssertEqual(changes[0].1, "😃")
+        XCTAssertEqual((original as NSString).replacingCharacters(in: changes[0].0, with: changes[0].1), document.source)
+        let accepted = document.source
+        workspace.edit(document.id, source: "unrelated", edits: [(NSRange(location: 0, length: 1), "x")])
+        XCTAssertEqual(document.source, accepted)
+        XCTAssertEqual(changes.count, 1)
+        XCTAssertEqual(workspace.errorMessage, DocumentFailure.invalidSourceEdit.localizedDescription)
+    }
+
     func testNumberedFilesUseActualTargetAndNeverOverwrite() async throws {
         let root = try temporaryDirectory()
         defer { cleanup(root) }

@@ -7,6 +7,7 @@ enum DocumentFailure: Error, LocalizedError, Sendable {
     case readOnly
     case tooManyEntries
     case tooManyDocuments
+    case invalidSourceEdit
     case sourceTooLarge
     case externalModification
     case changedDuringSave
@@ -21,6 +22,7 @@ enum DocumentFailure: Error, LocalizedError, Sendable {
         case .readOnly: "Dependency source is read-only."
         case .tooManyEntries: "The project exceeds the 4096-entry limit."
         case .tooManyDocuments: "Close a document before opening another; the limit is 32."
+        case .invalidSourceEdit: "The committed edit does not match the document snapshot; existing source is retained."
         case .sourceTooLarge: "The document exceeds the 64 KiB file limit; existing text is retained."
         case .externalModification: "The file changed outside the editor. Your edits are retained; reopen or resolve the conflict before saving."
         case .changedDuringSave: "The document changed while saving. The saved snapshot is on disk and newer edits are retained."

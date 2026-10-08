@@ -39,3 +39,5 @@ All endpoint, AU, file and control errors remain visible. Restore validates endp
 Physical native endpoint loopback must exercise CC Learn, note/clock sending, received transport, stream shutdown and settings round trip. Native AU catalog/load/render/bypass/invalid-ID checks establish actual graph use. Parent integration verifies session activation and lifecycle; existing Mac host tests verify shared schema remains compatible.
 
 AU selections are owned cancellable tasks, checked against host lifecycle generation. Suspend cancels and awaits the selection before releasing the session; a delayed native instantiation cannot attach or restart playback after stop. The existing engine's cancellable native request owns timeout/callback completion. Selection is rejected while recording; unchanged accepted unit is retained on failure. UI calls this host entry point, not the raw engine selection method.
+
+Cancel Learn clears only the pending learning address and preserves existing assignments. Remove Binding explicitly deletes the selected assignment. Shared presentation displays the selected accepted control and its current assignment.

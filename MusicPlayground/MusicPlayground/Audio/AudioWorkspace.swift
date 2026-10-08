@@ -13,6 +13,8 @@ final class AudioWorkspace {
     private(set) var isRecording = false
     private(set) var compressorSettings = MasterCompressorSettings.defaults
     private(set) var compressorMeter = MasterCompressorSnapshot.empty
+    private(set) var cueDeviceID: UInt32?
+    private(set) var cueDecks: Set<Int> = []
     private(set) var crossfade = 0.5
     private(set) var volume = 1.0
     private(set) var balance: Float = 0
@@ -118,6 +120,7 @@ final class AudioWorkspace {
         defer { cleanup = nil; isStopping = false; refresh() }
         try await task.value
     }
+    func setCue(_ value: Bool, deck: Int) throws { try output.setCue(value, deck: deck); refresh() }
     func setCrossfade(_ value: Double) throws { try output.setCrossfade(Float(value)); crossfade = value }
     func setVolume(_ value: Double) throws { try output.setMasterVolume(Float(value)); volume = value }
     func setBalance(_ value: Float) throws { try output.setBalance(value); balance = value }
@@ -125,6 +128,7 @@ final class AudioWorkspace {
     func setCompressor(_ value: MasterCompressorSettings) throws { try output.setCompressor(value); compressorSettings = output.compressorSettings }
     func refresh() {
         a.refresh(); b.refresh()
+        cueDeviceID = output.cueDeviceID; cueDecks = output.cueDecks
         isRecording = output.isRecording; compressorSettings = output.compressorSettings
         let capture = output.outputMeter()
         masterSamples = capture.interleavedSamples; compressorMeter = output.compressorSnapshot()

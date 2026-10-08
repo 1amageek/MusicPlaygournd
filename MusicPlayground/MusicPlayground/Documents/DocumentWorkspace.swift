@@ -8,6 +8,7 @@ final class DocumentWorkspace {
     private(set) var isBusy = false
     private(set) var staleListing = false
     var errorMessage: String?
+    var sourceDidChange: ((UUID, NSRange, String) -> Void)?
     var filter = ""
     var expanded: Set<URL> = []
     var editingDeck = 0
@@ -55,6 +56,20 @@ final class DocumentWorkspace {
         } catch { errorMessage = error.localizedDescription }
     }
 
+    func attach(_ id: UUID, to deck: Int) throws {
+        guard (0...1).contains(deck), documents.contains(where: { $0.id == id }) else { throw DocumentFailure.outsideProject }
+        if !memberships[deck].contains(id) { memberships[deck].append(id) }
+        if selections[deck] == nil { selections[deck] = id }
+    }
+
+    func reorder(_ id: UUID, before target: UUID, deck: Int) {
+        guard (0...1).contains(deck), id != target,
+              let old = memberships[deck].firstIndex(of: id), memberships[deck].contains(target) else { return }
+        memberships[deck].remove(at: old)
+        guard let destination = memberships[deck].firstIndex(of: target) else { return }
+        memberships[deck].insert(id, at: destination)
+    }
+
     func select(_ id: UUID, deck: Int) {
         guard (0...1).contains(deck), memberships[deck].contains(id) else { return }
         editingDeck = deck; selections[deck] = id
@@ -68,10 +83,47 @@ final class DocumentWorkspace {
         catch { errorMessage = error.localizedDescription }
     }
 
-    func edit(_ id: UUID, source: String) {
+    func edit(_ id: UUID, source: String, edits: [(NSRange, String)] = []) {
         guard let document = documents.first(where: { $0.id == id }) else { return }
-        do { try document.edit(source) }
+        do {
+            let original = document.source
+            guard original != source else { return }
+            let before = original.utf16, after = source.utf16
+            var prefix = 0
+            for (old, new) in zip(before, after) {
+                guard old == new else { break }; prefix += 1
+            }
+            while prefix > 0 && (!Self.isScalarBoundary(prefix, in: before) || !Self.isScalarBoundary(prefix, in: after)) { prefix -= 1 }
+            var suffix = 0
+            let available = min(before.count, after.count) - prefix
+            for (old, new) in zip(before.reversed(), after.reversed()) {
+                guard suffix < available, old == new else { break }; suffix += 1
+            }
+            while suffix > 0 && (!Self.isScalarBoundary(before.count - suffix, in: before) || !Self.isScalarBoundary(after.count - suffix, in: after)) { suffix -= 1 }
+            let range = NSRange(location: prefix, length: before.count - prefix - suffix)
+            let replacement = (source as NSString).substring(with: NSRange(location: prefix, length: after.count - prefix - suffix))
+            if !edits.isEmpty {
+                var replay = document.source
+                for (range, replacement) in edits {
+                    let text = replay as NSString
+                    guard range.location >= 0, range.length >= 0, range.location <= text.length,
+                          range.length <= text.length - range.location, Self.isScalarBoundary(range.location, in: replay.utf16),
+                          Self.isScalarBoundary(range.location + range.length, in: replay.utf16) else { throw DocumentFailure.invalidSourceEdit }
+                    replay = text.replacingCharacters(in: range, with: replacement)
+                }
+                guard replay == source else { throw DocumentFailure.invalidSourceEdit }
+            }
+            try document.edit(source)
+            if edits.isEmpty { sourceDidChange?(id, range, replacement) }
+            else { for (range, replacement) in edits { sourceDidChange?(id, range, replacement) } }
+        }
         catch { errorMessage = error.localizedDescription }
+    }
+
+    private static func isScalarBoundary(_ offset: Int, in units: String.UTF16View) -> Bool {
+        guard offset > 0 && offset < units.count else { return true }
+        let index = units.index(units.startIndex, offsetBy: offset)
+        return !((0xD800...0xDBFF).contains(units[units.index(before: index)]) && (0xDC00...0xDFFF).contains(units[index]))
     }
 
     func save(_ id: UUID) async {

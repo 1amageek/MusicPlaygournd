@@ -7,6 +7,10 @@ public struct SourceEditor: UIViewRepresentable {
     @AppStorage("editor.theme") private var theme: EditorTheme = .midnight
     public let documentID: UUID
     public let source: String
+    public var inlineResults: [InlineSourceResult]
+    public var requestedLines: Set<Int>
+    public var scrollPosition: Double
+    public var onLineRects: ([Int: CGRect]) -> Void
     public var retainedDocuments: Set<UUID>
     public var isReadOnly: Bool
     public var formatRequest: Int
@@ -16,6 +20,7 @@ public struct SourceEditor: UIViewRepresentable {
     public var revealRange: NSRange?
     public var analyzer: any SwiftSourceAnalyzing
     public var onEdit: (UUID, String) -> Void
+    public var onCommittedEdits: ((UUID, String, [(NSRange, String)]) -> Void)?
     public var onAnalysis: (UUID, SourceAnalysis) -> Void
     public var onFailure: (String) -> Void
 
@@ -24,13 +29,15 @@ public struct SourceEditor: UIViewRepresentable {
                 isSyntaxEnabled: Bool = true, revealRequest: Int = 0, revealRange: NSRange? = nil,
                 analyzer: any SwiftSourceAnalyzing = SwiftSourceAnalyzer(),
                 onEdit: @escaping (UUID, String) -> Void,
+                onCommittedEdits: ((UUID, String, [(NSRange, String)]) -> Void)? = nil,
                 onAnalysis: @escaping (UUID, SourceAnalysis) -> Void = { _, _ in },
-                onFailure: @escaping (String) -> Void) {
+                onFailure: @escaping (String) -> Void, inlineResults: [InlineSourceResult] = [], requestedLines: Set<Int> = [], scrollPosition: Double = 0, onLineRects: @escaping ([Int: CGRect]) -> Void = { _ in }) {
+        self.inlineResults = inlineResults; self.requestedLines = requestedLines; self.scrollPosition = scrollPosition; self.onLineRects = onLineRects
         self.documentID = documentID; self.source = source
         self.retainedDocuments = retainedDocuments ?? [documentID]
         self.isReadOnly = isReadOnly; self.formatRequest = formatRequest; self.completionRequest = completionRequest; self.analyzer = analyzer
         self.isSyntaxEnabled = isSyntaxEnabled; self.revealRequest = revealRequest; self.revealRange = revealRange
-        self.onEdit = onEdit; self.onAnalysis = onAnalysis; self.onFailure = onFailure
+        self.onCommittedEdits = onCommittedEdits; self.onEdit = onEdit; self.onAnalysis = onAnalysis; self.onFailure = onFailure
     }
 
     public func makeCoordinator() -> Coordinator { Coordinator(self) }
@@ -56,7 +63,10 @@ public struct SourceEditor: UIViewRepresentable {
         private var lastCompletionRequest = 0
         private var lastRevealRequest = 0
         private var appearanceKey = ""
+        private var previousScroll = 0.0
+        private var previousRects: [Int: CGRect] = [:]
         private var updating = false
+        private var pendingEdits: [UUID: [(NSRange, String)]] = [:]
         init(_ parent: SourceEditor) {
             self.parent = parent
             lastFormatRequest = parent.formatRequest; lastCompletionRequest = parent.completionRequest
@@ -70,7 +80,7 @@ public struct SourceEditor: UIViewRepresentable {
             self.parent = parent
             guard let host, active?.markedTextRange == nil else { return }
             for id in editors.keys where !parent.retainedDocuments.contains(id) {
-                editors[id]?.undoManager?.removeAllActions(); editors.removeValue(forKey: id)
+                editors[id]?.undoManager?.removeAllActions(); editors.removeValue(forKey: id); pendingEdits.removeValue(forKey: id)
             }
             if active?.documentID != parent.documentID {
                 task?.cancel(); generation += 1; tokenSource = nil
@@ -92,6 +102,20 @@ public struct SourceEditor: UIViewRepresentable {
                 editor.selectedRange = Self.bounded(selection, length: editor.textStorage.length)
                 editor.contentOffset = offset; tokenSource = nil; editor.refreshLines()
             }
+            do { try editor.inlineLayout.update(parent.inlineResults) }
+            catch {
+                let identity = editor.documentID, message = error.localizedDescription
+                Task { @MainActor [weak self] in
+                    guard let self, self.active?.documentID == identity else { return }
+                    self.parent.onFailure(message)
+                }
+            }
+            if previousScroll != parent.scrollPosition {
+                let delta = parent.scrollPosition - previousScroll; previousScroll = parent.scrollPosition
+                let maxY = max(0, editor.contentSize.height - editor.bounds.height)
+                editor.setContentOffset(CGPoint(x: editor.contentOffset.x, y: min(maxY, max(0, editor.contentOffset.y - delta))), animated: false)
+            }
+            publishLineRects()
             let key = "\(parent.theme.rawValue):\(parent.fontSize):\(parent.isSyntaxEnabled)"
             if appearanceKey != key {
                 editor.appearance(theme: parent.theme, size: parent.fontSize)
@@ -120,9 +144,25 @@ public struct SourceEditor: UIViewRepresentable {
             } else if tokenSource != editor.text { analyze(editor) }
         }
 
+        public func textView(_ textView: UITextView, shouldChangeTextIn range: NSRange, replacementText text: String) -> Bool {
+            guard !updating, let editor = textView as? SourceTextView, editor.isEditable else { return false }
+            pendingEdits[editor.documentID, default: []].append((range, text))
+            return true
+        }
         public func textViewDidChange(_ textView: UITextView) {
             guard !updating, let editor = textView as? SourceTextView, editor.markedTextRange == nil else { return }
-            parent.onEdit(editor.documentID, editor.text)
+            let candidates = pendingEdits.removeValue(forKey: editor.documentID) ?? []
+            var replay = parent.source
+            var valid = true
+            for (range, replacement) in candidates {
+                let text = replay as NSString
+                guard range.location >= 0, range.length >= 0, range.location <= text.length,
+                      range.length <= text.length - range.location else { valid = false; break }
+                replay = text.replacingCharacters(in: range, with: replacement)
+            }
+            if let commit = parent.onCommittedEdits {
+                commit(editor.documentID, editor.text, valid && replay == editor.text ? candidates : [])
+            } else { parent.onEdit(editor.documentID, editor.text) }
             editor.analyzedSource = nil; editor.symbols = []
             editor.refreshLines(); tokenSource = nil
             if editor === active { analyze(editor) }
@@ -131,7 +171,26 @@ public struct SourceEditor: UIViewRepresentable {
         public func textViewDidChangeSelection(_ textView: UITextView) {
             if !updating, textView.markedTextRange == nil, active?.documentID != parent.documentID { update(parent) }
         }
-        public func scrollViewDidScroll(_ scrollView: UIScrollView) { active?.gutter.setNeedsDisplay() }
+        public func scrollViewDidScroll(_ scrollView: UIScrollView) { active?.gutter.setNeedsDisplay(); publishLineRects() }
+        private func publishLineRects() {
+            guard let editor = active else { return }
+            editor.layoutManager.ensureLayout(for: editor.textContainer)
+            var rects: [Int: CGRect] = [:]
+            for line in parent.requestedLines where line > 0 && line <= editor.lineStarts.count {
+                let start = editor.lineStarts[line - 1]
+                guard start < editor.textStorage.length else { continue }
+                let glyph = editor.layoutManager.glyphIndexForCharacter(at: start)
+                var rect = editor.layoutManager.lineFragmentUsedRect(forGlyphAt: glyph, effectiveRange: nil)
+                rect.origin.y += editor.textContainerInset.top - editor.contentOffset.y
+                rects[line] = rect
+            }
+            guard rects != previousRects else { return }; previousRects = rects
+            let id = parent.documentID
+            Task { [weak self] in
+                guard let self, parent.documentID == id else { return }
+                parent.onLineRects(rects)
+            }
+        }
 
         private func analyze(_ editor: SourceTextView) {
             task?.cancel(); generation += 1
@@ -196,7 +255,7 @@ public struct SourceEditor: UIViewRepresentable {
             let start = min(length, max(0, range.location))
             return NSRange(location: start, length: min(max(0, range.length), length - start))
         }
-        func shutdown() { task?.cancel(); task = nil; generation += 1; editors.removeAll(); active = nil }
+        func shutdown() { task?.cancel(); task = nil; generation += 1; editors.removeAll(); pendingEdits.removeAll(); active = nil }
     }
 }
 #endif

@@ -35,19 +35,33 @@ struct CodeEditorDocumentTests {
     }
 
     @Test(.timeLimit(.minutes(1)))
-    func stringsKeepCommentDelimitersLiteral() throws {
+    func stringsKeepCommentDelimitersLiteral() async throws {
         let defaults = UserDefaults.standard
         let previous = defaults.object(forKey: "editor.theme")
         defer {
             if let previous { defaults.set(previous, forKey: "editor.theme") }
             else { defaults.removeObject(forKey: "editor.theme") }
         }
+        let package = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        let executable = try #require(try NativeHostTests.SwiftCompletionConnectionTests.resolveSourceKitLSP())
+        let service = SwiftCompletionService(packageURL: package, workspace: FileManager.default.temporaryDirectory.appending(path: "Palette-" + UUID().uuidString),
+            sourceKitLSPExecutable: executable, hostModuleDirectory: package.appending(path: ".build/debug"))
+        do {
         for theme in EditorTheme.allCases {
             defaults.set(theme.rawValue, forKey: "editor.theme")
-            let view = makeCodeEditor(documentID: UUID(), completions: { _, _ in [] }, onCompletionStatus: { _ in })
+            var view = makeCodeEditor(documentID: UUID(), completions: { _, _ in [] }, onCompletionStatus: { _ in })
             let editor = CompletionTextView()
             editor.string = #"let url = "https://github.com/1amageek/SwiftMusic.git" // "comment""#
-            view.makeCoordinator().highlight(editor)
+            var delivered = false
+            view.semanticTokens = { try await service.semanticTokens(source: $0) }
+            view.onHighlightStatus = { status in #expect(status.isEmpty); delivered = true }
+            let coordinator = view.makeCoordinator()
+            coordinator.installDocument(view.documentID, editor: editor, state: EditorDocumentState())
+            coordinator.highlight(editor)
+            let deadline = ContinuousClock.now + .seconds(20)
+            while !delivered && ContinuousClock.now < deadline { try await Task.sleep(for: .milliseconds(10)) }
+            #expect(delivered)
+            defer { coordinator.cancelHighlight() }
             let storage = try #require(editor.textStorage)
             let source = editor.string as NSString
             for token in ["https:", "//github.com", "SwiftMusic.git"] {
@@ -55,6 +69,8 @@ struct CodeEditorDocumentTests {
             }
             #expect(storage.attribute(.foregroundColor, at: source.range(of: "comment").location, effectiveRange: nil) as? NSColor == theme.palette.comment)
         }
+        try await service.shutdown()
+        } catch { try await service.shutdown(); throw error }
     }
 
     @Test(.timeLimit(.minutes(1)))

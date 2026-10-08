@@ -19,6 +19,7 @@
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin PBXBuildFile section */
+        AA0000000000000000000002 = {isa = PBXBuildFile; fileRef = AA0000000000000000000001;};
         A80000000000000000000003 = {isa = PBXBuildFile; fileRef = A80000000000000000000001;};
         A80000000000000000000004 = {isa = PBXBuildFile; fileRef = A80000000000000000000002;};
         A60000000000000000000004 = {isa = PBXBuildFile; productRef = A60000000000000000000002;};
@@ -48,6 +49,7 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+        A90000000000000000000002 = {isa = PBXFileSystemSynchronizedBuildFileExceptionSet; membershipExceptions = (DESIGN.md,); target = 000000000000000100000000;};
         A70000000000000000000002 = {isa = PBXFileSystemSynchronizedBuildFileExceptionSet; membershipExceptions = (DESIGN.md,); target = 000000000000000100000000;};
         A70000000000000000000004 = {isa = PBXFileSystemSynchronizedBuildFileExceptionSet; membershipExceptions = (DESIGN.md,); target = 000000000000000100000000;};
         A70000000000000000000006 = {isa = PBXFileSystemSynchronizedBuildFileExceptionSet; membershipExceptions = (DESIGN.md,); target = 000000000000000100000000;};
@@ -58,12 +60,13 @@
         };
         A10000000000000000000004 = {
             isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-            membershipExceptions = (DESIGN.md, Prototype/DESIGN.md, Documents/DESIGN.md, Documents/Storage/DESIGN.md, Audio/DESIGN.md, Audio/Host/DESIGN.md, Info.plist,);
+            membershipExceptions = (DESIGN.md, Interface/DESIGN.md, Documents/DESIGN.md, Documents/Storage/DESIGN.md, Audio/DESIGN.md, Audio/Host/DESIGN.md, Info.plist,);
             target = 000000000000000100000000;
         };
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileReference section */
+        AA0000000000000000000001 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SourceLineMap.swift; path = ../Sources/MusicPlaygourndCore/Evaluation/SourceLineMap.swift; sourceTree = "<group>";};
         A80000000000000000000001 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MIDISessionRoute.swift; path = ../Sources/MusicPlaygourndApp/Editor/MIDISessionRoute.swift; sourceTree = "<group>";};
         A80000000000000000000002 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DocumentHostStateStore.swift; path = ../Sources/MusicPlaygourndApp/Editor/DocumentHostStateStore.swift; sourceTree = "<group>";};
 		000000000000000000000120 /* MusicPlayground.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MusicPlayground.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -72,6 +75,7 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+        A90000000000000000000001 = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (A90000000000000000000002,); name = "Shared Presentation Adapters"; path = ../Sources/MusicPlaygourndApp/Editor/Presentation; sourceTree = "<group>";};
         A70000000000000000000001 = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (A70000000000000000000002,); name = "Shared Playback"; path = ../Sources/MusicPlaygourndCore/Playback; sourceTree = "<group>";};
         A70000000000000000000003 = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (A70000000000000000000004,); name = "Shared AudioUnits"; path = ../Sources/MusicPlaygourndCore/AudioUnits; sourceTree = "<group>";};
         A70000000000000000000005 = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (A70000000000000000000006,); name = "Shared MIDI"; path = ../Sources/MusicPlaygourndCore/MIDI; sourceTree = "<group>";};
@@ -115,10 +119,10 @@
 			isa = PBXGroup;
 			children = (
 				000000000000000000000010 /* MusicPlayground */,
-                A80000000000000000000001, A80000000000000000000002,
+                A80000000000000000000001, A80000000000000000000002, AA0000000000000000000001,
 				000000000000000000000020 /* Products */,
                 A10000000000000000000001 /* Shared Rendering */,
-                A70000000000000000000001, A70000000000000000000003, A70000000000000000000005,
+                A70000000000000000000001, A70000000000000000000003, A70000000000000000000005, A90000000000000000000001,
                 A10000000000000000000003 /* Tests */,
                 A40000000000000000000001 /* UI Tests */,
 			);
@@ -151,7 +155,7 @@
 			fileSystemSynchronizedGroups = (
 				000000000000000000000010 /* MusicPlayground */,
                 A10000000000000000000001 /* Shared Rendering */,
-                A70000000000000000000001, A70000000000000000000003, A70000000000000000000005,
+                A70000000000000000000001, A70000000000000000000003, A70000000000000000000005, A90000000000000000000001,
 			);
 			packageProductDependencies = (A30000000000000000000002, A50000000000000000000002, A60000000000000000000002, A60000000000000000000003,);
 			name = MusicPlaygroundApp;
@@ -248,7 +252,7 @@
 /* Begin PBXSourcesBuildPhase section */
 		000000000000000120000000 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
-			files = (A80000000000000000000003, A80000000000000000000004,
+			files = (A80000000000000000000003, A80000000000000000000004, AA0000000000000000000002,
 			);
 		};
         A20000000000000000000004 = {isa = PBXSourcesBuildPhase; files = ();};
@@ -410,7 +414,8 @@
 				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault;
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UIRequiresFullScreen = YES;
+                INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
@@ -453,7 +458,8 @@
 				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault;
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UIRequiresFullScreen = YES;
+                INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";

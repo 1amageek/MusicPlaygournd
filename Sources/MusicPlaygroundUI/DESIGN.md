@@ -16,7 +16,7 @@ Owns shared presentation and gestures; has no Core, SwiftMusic, process, audio e
 | [Effect](Effect/DESIGN.md) | child | EffectSettings, EffectView, UnavailableEffectView | Display-only settings protocol and FX selection/mix/depth/rate/feedback interaction | app owns runtime state |
 | [Wave](Wave/DESIGN.md) | child | LoopWaveView, WaveformView | Draw actual supplied loop peaks/stereo samples using bounded Canvas columns | app owns runtime state |
 | [Mac Editor](../MusicPlaygourndApp/Editor/DESIGN.md) | used by | app-owned bindings and actions | native models/editing retained | preserve fullscreen and native editor identity |
-| [iPad Prototype](../../MusicPlayground/MusicPlayground/Prototype/DESIGN.md) | used by | app-owned playback snapshot | sidebar and bundled audio | native compilation is separate; remaining Deck B/FX parity is tracked explicitly |
+| [iPad Interface](../../MusicPlayground/MusicPlayground/Interface/DESIGN.md) | used by | app-owned playback snapshot | real documents and independent audio | arbitrary native compilation is separate |
 
 ## Architecture
 ```text
@@ -38,3 +38,5 @@ Binding lifetime is the caller view/model lifetime. Views own local disclosure/p
 
 ## Verification and Change Impact
 Mac focused native tests cover editor selection/undo, shared waveform and FX pad/model behavior. Physical iPad tests cover shared sidebar selection/toggling, actual PCM-derived waveform, play/stop/restart and background stop. Both apps must build and display the shared components before completion. Root owns cumulative integration.
+
+Child: [Control](Control/DESIGN.md) owns accepted knob/host/trajectory presentation.

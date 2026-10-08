@@ -298,6 +298,9 @@ extension NativeHostTests {
                 }
                 #expect(model.learnAddress == nil)
                 #expect(model.learnedBindings.first?.address == gain)
+                let assignment = model.learnedBindings
+                try model.beginMIDILearn(gain); model.cancelMIDILearn()
+                #expect(model.learnAddress == nil && model.learnedBindings == assignment)
                 #expect(model.controlValue(try #require(model.controlCatalog?.descriptor(for: gain))) == 128.0 / 127)
                 let old = LiveControlAddress(revision: 0, target: .source(0), parameter: .gain)
                 let binding = DocumentHostStateStore.LearnBinding(endpoint: midi.input, channel: 1, controller: 74, address: old, range: 0...4)
@@ -378,7 +381,15 @@ extension NativeHostTests {
                     model.refresh()
                     return model.controlVisualization?.address == gain
                 }
-                let pcmAfterCancellation = try Self.render(harness.engine)
+                // Reject the queued code candidate before advancing PCM across its adoption boundary.
+                model.source = "struct Session: Music {"
+                model.scheduleEvaluation(immediate: true)
+                try await Self.waitUntil("failed edit clears queued candidate", timeout: .seconds(45)) {
+                    model.refresh()
+                    return !model.isPreparing && !model.diagnostic.isEmpty
+                        && model.currentRevision == gain.revision && model.controlsAvailable
+                }
+                let pcmAfterCancellation = try Self.render(harness.engine, stopAfterRendering: false)
                 #expect(Self.energy(pcmAfterCancellation) > 0.0001)
 
                 model.selectedControl = unsupported
@@ -821,11 +832,12 @@ extension NativeHostTests {
         }
 
         @MainActor
-        private static func render(_ engine: AudioLoopEngine) throws -> [Float] {
+        private static func render(_ engine: AudioLoopEngine, stopAfterRendering: Bool = true) throws -> [Float] {
             try engine.prepareOfflineRenderingForTests()
             try engine.play()
             let samples = try engine.renderOfflineForTests(frameCount: 4_096)
-            engine.stop()
+            // Keep transport running when the fixture must retain its audible worker over queued edits.
+            if stopAfterRendering { engine.stop() }
             return samples
         }
 
@@ -988,8 +1000,12 @@ extension NativeHostTests {
                 completionService = SwiftCompletionService(packageURL: package,
                     workspace: completionWorkspace, sourceKitLSPExecutable: "/usr/bin/sourcekit-lsp")
                 engine = try AudioLoopEngine()
+                try engine.prepareOfflineRenderingForTests()
                 model = SessionModel(evaluator: evaluator, completionService: completionService, engine: engine, midiService: midiService,
                     hostStateStore: DocumentHostStateStore(directory: completionWorkspace.appending(path: "HostState")))
+                let sourceFile = completionWorkspace.appending(path: "Session.swift")
+                try model.source.write(to: sourceFile, atomically: true, encoding: .utf8)
+                model.fileURL = sourceFile
             }
 
             func shutdown() async throws {

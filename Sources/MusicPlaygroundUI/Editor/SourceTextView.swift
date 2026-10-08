@@ -12,6 +12,7 @@ public final class SourceTextView: UITextView, @MainActor UIEditMenuInteractionD
     var symbols: [String] = []
     var identifierRanges: [NSRange] = []
     var analyzedSource: String?
+    lazy var inlineLayout = SourceInlineLayout(editor: self)
     private lazy var symbolMenu = UIEditMenuInteraction(delegate: self)
 
     public init() {
@@ -115,6 +116,7 @@ public final class SourceTextView: UITextView, @MainActor UIEditMenuInteractionD
         super.layoutSubviews()
         gutter.frame = CGRect(x: contentOffset.x, y: contentOffset.y, width: 42, height: bounds.height)
         gutter.setNeedsDisplay()
+        inlineLayout.layout()
     }
 
     override public func insertText(_ text: String) {

@@ -1,6 +1,7 @@
 import AppKit
 import MusicPlaygourndCore
 import SwiftUI
+import MusicPlaygroundUI
 
 /// Draws retained renderer trajectories without changing their timing or voice identity.
 @MainActor
@@ -45,13 +46,7 @@ final class ControlTracePlot: NSView {
     }
 }
 
-struct ControlTraceResult: NSViewRepresentable {
+struct ControlTraceResult: View {
     let visualization: PreparedControlVisualization
-    func makeNSView(context: Context) -> ControlTracePlot { ControlTracePlot() }
-    func updateNSView(_ view: ControlTracePlot, context: Context) {
-        view.visualization = visualization
-        view.setAccessibilityElement(true)
-        view.setAccessibilityRole(.image)
-        view.setAccessibilityLabel("\(visualization.address.parameter) trajectories, \(visualization.traces.count) voices; selected value mint, amplitude cyan, pitch orange, filter purple; channels individually scaled")
-    }
+    var body: some View { ControlTraceView(value: visualization) }
 }

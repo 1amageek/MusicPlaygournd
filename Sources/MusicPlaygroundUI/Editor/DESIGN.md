@@ -11,7 +11,7 @@ EditorPane composes tabs/content. UIKit SourceEditor owns native text storage, s
 |---|---|---|---|---|
 | [UI module](../DESIGN.md) | parent | values/actions composition | shared presentation | preserve native editor identity |
 | [Mac Editor](../../MusicPlaygourndApp/Editor/DESIGN.md) | used by | canonical EditorTheme palettes | SourceKit remains the semantic owner | palette changes affect both platforms |
-| [iPad adapter](../../../MusicPlayground/MusicPlayground/Prototype/DESIGN.md) | used by | SourceEditor edits/analysis/errors | caller retains text and accepted audio | editing does not evaluate source |
+| [iPad adapter](../../../MusicPlayground/MusicPlayground/Interface/DESIGN.md) | used by | SourceEditor edits/analysis/errors | caller retains text and accepted audio | editing does not evaluate source |
 
 ## Architecture
 ```text
@@ -38,3 +38,14 @@ Parsing runs outside MainActor. Admission permits at most 2 MiB UTF-8, with a bo
 [SharedSourceAnalysisTests](../../../Tests/MusicPlaygourndCoreTests/SharedSourceAnalysisTests.swift) verifies grammar categories, Unicode, raw strings/interpolation/nested comments, actual edits, formatting and failures/cancellation. [SourceEditingTests](../../../MusicPlayground/Tests/SourceEditingTests.swift) hosts the real UIKit view and verifies attributes, edits, selection, undo and IME. [CompletionEditorTests](../../../Tests/MusicPlaygourndCoreTests/CompletionEditorTests.swift) owns Mac semantic-color regressions. Document retention integration belongs to native document tests. Palette/parser/native storage changes require these focused tests and actual editor inspection on both apps.
 
 FileTabStrip is the canonical A/B tab presentation. FileTabItem supplies immutable identity/name/URL/dirty/read-only values. The caller supplies selected/audible identities and real select/close/create/load actions; the shared view owns no file or transport state. Both native adapters must consume this presentation.
+
+## Complete Native Interface Parity
+This component's visual implementation is shared by Mac and iPad. App adapters supply accepted values and actions; presentation protocols preserve concrete runtime validation and callback ownership. Native gesture/chooser adapters remain explicit at the platform boundary. Buttons and menus have explicit content shapes. Platform API adapters cannot change control meaning or synthesize samples/metadata. Narrow width uses an adaptive complete rack; all actions remain reachable. [Parity requirements](../../../docs/UI-PARITY.md) and actual platform UI tests own visual/workflow completion.
+
+Tab reorder changes only the owning deck membership array, preserving selected UUID, source/undo owner and audible UUID. URL drops resolve a current member before movement; unknown/external URLs are rejected. Shared rhythm presentation consumes the renderer's actual events, pitch projection, track IDs and timing through presentation protocols. Adapters preserve voice intervals and boundary wrapping without copying PCM.
+
+InlineSourceResult owns only an id, validated one-based source line and read-only SwiftUI card. SourceInlineLayout reserves 52 points per card through NSLayoutManagerDelegate paragraph spacing, with no character or attribute edits. SourceTextView retains the layout delegate and UIKit hosting configurations. Changing source identity removes anchors. Committed edits transform accepted anchors through the shared SourceLineMap; only anchors deleted by the edit are omitted. Requested line frames report actual native layout coordinates relative to the viewport; Side Timeline consumes those frames and relays scrolling to the same text owner. Changes require native selection/undo/IME/layout and actual mute tests. The built-in score uses compiler source-location directives matching its displayed source; adapters verify row pattern metadata against that exact source and compute expression ends within its known track blocks.
+
+Inline result admission rejects duplicate identifiers, invalid one-based lines and more than 32 cards with SourceResultError; it preserves the previous valid layout and reports failure without changing source storage.
+
+UIKit retains native replacement ranges until marked-text composition commits. The document callback receives a validated sequence whose replay matches the committed text. Programmatic replacements use the document owner’s snapshot difference when no native sequence is available.

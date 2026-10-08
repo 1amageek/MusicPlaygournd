@@ -1697,6 +1697,16 @@ final class SessionModel {
         selectDocument(document.id)
     }
 
+    func reorderDocument(_ id: UUID, before target: UUID) {
+        guard id != target, let old = documents.firstIndex(where: { $0.id == id }),
+              documents.contains(where: { $0.id == target }) else { return }
+        let selected = activeDocumentID
+        let document = documents.remove(at: old)
+        guard let destination = documents.firstIndex(where: { $0.id == target }) else { return }
+        documents.insert(document, at: destination)
+        activeDocumentIndex = documents.firstIndex { $0.id == selected }!
+    }
+
     func selectDocument(_ id: UUID) {
         guard let index = documents.firstIndex(where: { $0.id == id }), index != activeDocumentIndex else { return }
         let sameProject = isProjectManifest(documents[index]) || (isProjectDocument && (documents[index].isReadOnly || documents[index].fileURL.map { $0.path.hasPrefix(project!.root.path + "/") } == true))
@@ -2247,6 +2257,7 @@ final class SessionModel {
         learnAddress = address
     }
 
+    func cancelMIDILearn() { learnAddress = nil }
     func clearMIDILearn(_ address: LiveControlAddress) {
         learnedBindings.removeAll { $0.address == address }
         if learnAddress == address { learnAddress = nil }

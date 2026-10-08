@@ -20,7 +20,7 @@ struct FileTabsView: View {
             create: { activate(); model.newProjectFile() },
             load: load.map { operation in { id, deck in
                 if let document = model.documents.first(where: { $0.id == id }) { operation(document, deck) }
-            } }
+            } }, reorder: { model.reorderDocument($0, before: $1) }
         )
     }
 }

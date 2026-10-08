@@ -6,6 +6,7 @@ import SwiftMusic
 final class AudioDeck {
     let engine: AudioLoopEngine
     let cue: TransportCue
+    var selectedControl: LiveControlAddress?
     private(set) var documentID: UUID?
     private(set) var acceptedSource = ""
     private(set) var loop: PreparedLoop?
@@ -25,6 +26,12 @@ final class AudioDeck {
     private(set) var delay = 0.0
     private(set) var fxBeats: Double?
     var error: String?
+    @ObservationIgnored private var lineMap = SourceLineMap(source: "", lines: [])
+    @ObservationIgnored private var originalRows: [Int: Int] = [:]
+    @ObservationIgnored private var originalResults: [Int: Int] = [:]
+    @ObservationIgnored private var mappedSource: String?
+    @ObservationIgnored private var mappedRows: [Int: Int] = [:]
+    @ObservationIgnored private var mappedResults: [Int: Int] = [:]
     private var session: LoopRenderSession?
     private var pendingSession: (revision: UInt64, session: LoopRenderSession, id: UUID?, source: String)?
     private var requestedOverrides: [LiveControlAddress: LiveControlValue] = [:]
@@ -52,6 +59,9 @@ final class AudioDeck {
     var eventCount: Int { loop?.events.count ?? 0 }
 
     func prepare(id: UUID?, source: String) async throws {
+        // FIXME(INCOMPLETE_IMPLEMENTATION): Arbitrary on-device Swift compilation is a separate task.
+        // The production load action accepts the compiled built-in score only; edited source must
+        // fail explicitly and retain accepted audio until a verified compiler backend is provided.
         guard source == DemoMusic.source else {
             throw DocumentFailure.compilerRequired("Loading an edited Swift entry")
         }
@@ -77,6 +87,19 @@ final class AudioDeck {
         pendingControls = nil
         error = nil; refresh()
         try await waitForAdoption(revision: nextRevision, override: nil, identity: token)
+    }
+    func sourceEdited(id: UUID, range: NSRange, replacement: String) {
+        guard documentID == id else { return }
+        lineMap.applyEdit(range: range, replacement: replacement)
+        mappedSource = nil
+    }
+    func sourceLines(in source: String) -> (rows: [Int: Int], results: [Int: Int]) {
+        if mappedSource != source {
+            mappedRows = originalRows.compactMapValues { lineMap.currentLine(for: $0, in: source) }
+            mappedResults = originalResults.compactMapValues { lineMap.currentLine(for: $0, in: source) }
+            mappedSource = source
+        }
+        return (mappedRows, mappedResults)
     }
     func play() throws { try engine.play(); refresh() }
     func pause() { cue.release(); engine.stop(); refresh() }
@@ -163,6 +186,19 @@ final class AudioDeck {
         }
         try await setControl(descriptor.address, value: .number(controlValue(descriptor) == 1 ? 0 : 1))
     }
+    func visualization(for address: LiveControlAddress) async throws -> PreparedControlVisualization {
+        guard let session, address.revision == revision, pendingSession == nil else {
+            throw LiveControlError.staleRevision(expected: revision, actual: address.revision)
+        }
+        let token = generation, accepted = overrides
+        let values = accepted.map { LiveControlOverride(address: $0.key, value: $0.value) }
+        let task = Task.detached(priority: .userInitiated) { try session.visualization(for: address, overrides: values) }
+        let result = try await withTaskCancellationHandler { try await task.value } onCancel: { task.cancel() }
+        try Task.checkCancellation()
+        guard token == generation, overrides == accepted else { throw CancellationError() }
+        return result
+    }
+
     func export(to url: URL) async throws -> [StemExportManifest] {
         try Task.checkCancellation()
         guard exportTask == nil else { throw PlaybackError.audioSetupFailed("A stem export is already running.") }
@@ -195,7 +231,16 @@ final class AudioDeck {
         equalizer = engine.equalizerBands; fx = engine.fxSettings; hosted = engine.audioEffectSnapshot()
         if let pending = pendingSession, snapshot.revision == pending.revision {
             session = pending.session; catalog = pending.session.catalog
+            let selected = selectedControl
+            selectedControl = catalog?.descriptors.first { $0.address.target == selected?.target && $0.address.parameter == selected?.parameter }?.address ?? catalog?.descriptors.first?.address
             documentID = pending.id; acceptedSource = pending.source
+            originalRows = Dictionary(uniqueKeysWithValues: pending.session.baseline.rows.compactMap { row in
+                guard let anchor = row.anchor, anchor.fileID.hasSuffix("Session.swift") else { return nil }
+                return (row.sourceID, anchor.line)
+            })
+            originalResults = DemoMusic.resultLines(for: pending.session.baseline)
+            lineMap = SourceLineMap(source: acceptedSource, lines: Array(Set(originalRows.values).union(originalResults.values)))
+            mappedSource = nil
             overrides = [:]; requestedOverrides = [:]; renderGeneration = 0; pendingSession = nil
             cue.reset()
         }

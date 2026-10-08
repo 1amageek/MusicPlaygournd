@@ -13,7 +13,7 @@ DocumentWorkspace owns shared file identity, A/B tab membership, selected docume
 | [Storage](Storage/DESIGN.md) | child | ProjectFileAccess | async project/file operations | adoption checks current identity/revision |
 | [Shared Editor](../../../Sources/MusicPlaygroundUI/Editor/DESIGN.md) | depends on | SourceEditor retained document IDs | native selection/undo/IME | close releases only unreferenced buffers |
 | [Shared Sidebar](../../../Sources/MusicPlaygroundUI/Sidebar/DESIGN.md) | depends on | rows/footer/error slots | real source/dependency tree | stale listing is explicit |
-| [Prototype](../Prototype/DESIGN.md) | coordinates with | accepted audio identity | editing does not replace audio | native compilation is separate |
+| [Audio](../Audio/DESIGN.md) | coordinates with | accepted audio identity | editing does not replace audio | native compilation is separate |
 
 ## Architecture
 ```text
@@ -39,3 +39,7 @@ Typed storage failures remain visible; successful UI construction is not file-op
 
 ## Verification and Change Impact
 Native DocumentTests must exercise real temporary files: no-overwrite numbering, filter ancestry, dirty A/B switching, shared identity, failed save/conflict, Save/Discard/Cancel, read-only dependencies, stale refresh, static targets and project bookmark restoration. Integrated physical UI tests create/edit/save/switch/close files while real audio remains accepted. Storage changes require lower-level behavioral tests before document composition; shared tab changes require Mac regression and final visual integration.
+
+Tab reorder changes only the owning deck membership array, preserving selected UUID, source/undo owner and audible UUID. URL drops resolve a current member before movement; unknown/external URLs are rejected. Shared rhythm presentation consumes the renderer's actual events, pitch projection, track IDs and timing through presentation protocols. Adapters preserve voice intervals and boundary wrapping without copying PCM.
+
+Committed source changes validate and replay native replacement ranges before document admission; a mismatch returns invalidSourceEdit and preserves both the buffer and accepted anchors. Without native ranges, the owner compares borrowed UTF-16 views and expands the minimal replacement to Unicode scalar boundaries before publishing. Committed source changes publish replacements only after successful document admission. Audio consumes that replacement solely to transform accepted source anchors; document and audio identities remain independent. Undo follows the same path.

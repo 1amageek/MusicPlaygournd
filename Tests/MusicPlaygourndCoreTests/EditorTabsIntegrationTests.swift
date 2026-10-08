@@ -7,6 +7,29 @@ extension NativeHostTests {
     @MainActor
     struct EditorTabsIntegrationTests {
         @Test(.timeLimit(.minutes(1)))
+        func reorderingTabsPreservesSelectedBufferAndAcceptedPerformer() async throws {
+            let root = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+            try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false)
+            defer { do { try FileManager.default.removeItem(at: root) } catch { Issue.record(error) } }
+            let a = root.appending(path: "A.txt"), b = root.appending(path: "B.txt")
+            try "A".write(to: a, atomically: true, encoding: .utf8)
+            try "B".write(to: b, atomically: true, encoding: .utf8)
+            let model = SessionModel(audioEnabled: false)
+            do {
+                try model.openDocument(at: a); let first = model.activeDocument
+                try model.openDocument(at: b); let selected = model.activeDocument
+                model.source = "Dirty B"; model.sourceChanged()
+                let performer = model.loadedDocument, revision = model.revision
+                model.reorderDocument(selected.id, before: first.id)
+                #expect(model.activeDocument === selected)
+                #expect(model.source == "Dirty B" && selected.isDirty)
+                #expect(model.documents.firstIndex { $0 === selected }! < model.documents.firstIndex { $0 === first }!)
+                #expect(model.loadedDocument === performer && model.revision == revision)
+                try await model.shutdown()
+            } catch { try await model.shutdown(); throw error }
+        }
+
+        @Test(.timeLimit(.minutes(1)))
         func longDocumentDrawingStaysInsideViewport() async throws {
             let root = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
             try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false)

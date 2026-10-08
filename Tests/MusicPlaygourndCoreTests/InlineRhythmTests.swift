@@ -43,7 +43,7 @@ extension NativeHostTests {
                 return try [100.0, 350.0].map { x in
                     let color = try #require(bitmap.colorAt(
                         x: Int(x * Double(bitmap.pixelsWide) / 400),
-                        y: Int(50 * Double(bitmap.pixelsHigh) / 100)))
+                        y: Int(32 * Double(bitmap.pixelsHigh) / 100)))
                     return try #require(color.usingColorSpace(.deviceRGB))
                 }
             }

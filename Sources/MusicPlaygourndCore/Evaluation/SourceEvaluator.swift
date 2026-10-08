@@ -345,7 +345,7 @@ public actor SourceEvaluator {
                 .package(path: \(Self.swiftLiteral(packageURL.path)))
             ],
             targets: [.executableTarget(name: "Evaluation", dependencies: [
-                .product(name: "MusicPlaygourndCore", package: "MusicPlaygournd"),
+                .product(name: "MusicPlaygourndCore", package: \(Self.swiftLiteral(packageURL.lastPathComponent))),
                 .product(name: "SwiftMusic", package: "SwiftMusic")
             ])]
         )

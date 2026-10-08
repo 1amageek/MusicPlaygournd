@@ -17,12 +17,12 @@ public struct FileTreeItemRow<Children: View>: View {
     public var body: some View {
         if isDirectory {
             DisclosureGroup(isExpanded: $expanded) { children() } label: {
-                Label { Text(url.lastPathComponent) } icon: { icon("folder") }
+                Label { Text(url.lastPathComponent).lineLimit(1).truncationMode(.middle) } icon: { icon("folder") }
                     .contentShape(Rectangle())
             }.tag(url).help(url.path)
         } else {
             HStack {
-                Label { Text(url.lastPathComponent) } icon: { icon(fileIcon) }
+                Label { Text(url.lastPathComponent).lineLimit(1).truncationMode(.middle) } icon: { icon(fileIcon) }
                 if isDirty {
                     Spacer(minLength: 0)
                     Circle().fill(.secondary).frame(width: 4, height: 4).accessibilityLabel("Unsaved changes")

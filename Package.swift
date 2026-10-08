@@ -15,7 +15,7 @@ let package = Package(
         .package(url: "https://github.com/swiftlang/swift-syntax.git", exact: "604.0.0")
     ],
     targets: [
-        .target(name: "MusicPlaygroundUI", dependencies: [.product(name: "SwiftSyntax", package: "swift-syntax"), .product(name: "SwiftParser", package: "swift-syntax"), .product(name: "SwiftIDEUtils", package: "swift-syntax"), .product(name: "SwiftParserDiagnostics", package: "swift-syntax"), .product(name: "SwiftBasicFormat", package: "swift-syntax")], exclude: ["DESIGN.md", "Workspace/DESIGN.md", "Sidebar/DESIGN.md", "Deck/DESIGN.md", "Editor/DESIGN.md", "Effect/DESIGN.md", "Wave/DESIGN.md"]),
+        .target(name: "MusicPlaygroundUI", dependencies: [.product(name: "SwiftSyntax", package: "swift-syntax"), .product(name: "SwiftParser", package: "swift-syntax"), .product(name: "SwiftIDEUtils", package: "swift-syntax"), .product(name: "SwiftParserDiagnostics", package: "swift-syntax"), .product(name: "SwiftBasicFormat", package: "swift-syntax")], exclude: ["DESIGN.md", "Workspace/DESIGN.md", "Sidebar/DESIGN.md", "Deck/DESIGN.md", "Editor/DESIGN.md", "Effect/DESIGN.md", "Wave/DESIGN.md", "Control/DESIGN.md"]),
         .target(name: "MusicPlayground", dependencies: [.product(name: "SwiftMusic", package: "SwiftMusic")], exclude: ["DESIGN.md"]),
         .target(
             name: "MusicPlaygourndCore",
@@ -25,7 +25,7 @@ let package = Package(
         .executableTarget(
             name: "MusicPlaygourndApp",
             dependencies: ["MusicPlaygroundUI", "MusicPlaygourndCore", .product(name: "SwiftMusic", package: "SwiftMusic")],
-            exclude: ["DESIGN.md", "Editor/DESIGN.md"]
+            exclude: ["DESIGN.md", "Editor/DESIGN.md", "Editor/Presentation/DESIGN.md"]
         ),
         .executableTarget(name: "MIDINativeTestHost", dependencies: ["MusicPlaygourndCore"],
             path: "Tests/MIDINativeTestHost"),

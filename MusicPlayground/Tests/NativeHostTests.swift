@@ -37,6 +37,9 @@ final class NativeHostTests: XCTestCase {
             host.clearLearn(control.address); try await host.configure(.disabled)
             try await host.restore(for: document)
             XCTAssertEqual(host.route, route); XCTAssertEqual(host.bindings.count, 1)
+            let assignment = host.bindings
+            try host.beginLearn(control.address); host.cancelLearn()
+            XCTAssertNil(host.learning); XCTAssertEqual(host.bindings, assignment)
             try await workspace.toggle(0)
             try await wait {
                 probe.capture.words.withLock { words in

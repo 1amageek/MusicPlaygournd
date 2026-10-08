@@ -11,15 +11,16 @@ public struct FileTabStrip: View {
     private let select: (UUID) -> Void
     private let close: (UUID) -> Void
     private let create: () -> Void
+    private let reorder: ((UUID, UUID) -> Void)?
     private let load: ((UUID, Int) -> Void)?
 
     public init(tabs: [FileTabItem], selected: UUID?, audible: UUID?, accent: Color, deckName: String?,
                 editing: Bool, canCreate: Bool, select: @escaping (UUID) -> Void,
                 close: @escaping (UUID) -> Void, create: @escaping () -> Void,
-                load: ((UUID, Int) -> Void)? = nil) {
+                load: ((UUID, Int) -> Void)? = nil, reorder: ((UUID, UUID) -> Void)? = nil) {
         self.tabs = tabs; self.selected = selected; self.audible = audible; self.accent = accent
         self.deckName = deckName; self.editing = editing; self.canCreate = canCreate
-        self.select = select; self.close = close; self.create = create; self.load = load
+        self.select = select; self.close = close; self.create = create; self.load = load; self.reorder = reorder
     }
 
     public var body: some View {
@@ -75,6 +76,11 @@ public struct FileTabStrip: View {
             }
         }
         .draggableFile(document.fileURL)
+        .dropDestination(for: URL.self) { urls, _ in
+            guard let source = tabs.first(where: { $0.fileURL == urls.first }), source.id != document.id,
+                  let reorder else { return false }
+            reorder(source.id, document.id); return true
+        }
         .help(document.fileURL?.path ?? "Unsaved session")
     }
 }

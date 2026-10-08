@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct ContentView: View {
-    var body: some View { PrototypeView() }
+    var body: some View { MusicWorkspaceView() }
 }
 
 #Preview { ContentView() }

@@ -11,10 +11,11 @@ let package = Package(
         .library(name: "MusicPlaygroundUI", targets: ["MusicPlaygroundUI"])
     ],
     dependencies: [
-        .package(url: "https://github.com/1amageek/SwiftMusic.git", exact: "0.5.1")
+        .package(url: "https://github.com/1amageek/SwiftMusic.git", exact: "0.5.1"),
+        .package(url: "https://github.com/swiftlang/swift-syntax.git", exact: "604.0.0")
     ],
     targets: [
-        .target(name: "MusicPlaygroundUI", exclude: ["DESIGN.md", "Workspace/DESIGN.md", "Sidebar/DESIGN.md", "Deck/DESIGN.md", "Editor/DESIGN.md", "Effect/DESIGN.md", "Wave/DESIGN.md"]),
+        .target(name: "MusicPlaygroundUI", dependencies: [.product(name: "SwiftSyntax", package: "swift-syntax"), .product(name: "SwiftParser", package: "swift-syntax"), .product(name: "SwiftIDEUtils", package: "swift-syntax"), .product(name: "SwiftParserDiagnostics", package: "swift-syntax"), .product(name: "SwiftBasicFormat", package: "swift-syntax")], exclude: ["DESIGN.md", "Workspace/DESIGN.md", "Sidebar/DESIGN.md", "Deck/DESIGN.md", "Editor/DESIGN.md", "Effect/DESIGN.md", "Wave/DESIGN.md"]),
         .target(name: "MusicPlayground", dependencies: [.product(name: "SwiftMusic", package: "SwiftMusic")], exclude: ["DESIGN.md"]),
         .target(
             name: "MusicPlaygourndCore",
@@ -28,7 +29,7 @@ let package = Package(
         ),
         .executableTarget(name: "MIDINativeTestHost", dependencies: ["MusicPlaygourndCore"],
             path: "Tests/MIDINativeTestHost"),
-        .testTarget(name: "MusicPlaygourndCoreTests", dependencies: ["MusicPlaygourndCore", "MusicPlaygourndApp", "MIDINativeTestHost"],
+        .testTarget(name: "MusicPlaygourndCoreTests", dependencies: ["MusicPlaygroundUI", "MusicPlaygourndCore", "MusicPlaygourndApp", "MIDINativeTestHost"],
             path: "Tests/MusicPlaygourndCoreTests")
     ]
 )

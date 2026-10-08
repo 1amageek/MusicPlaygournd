@@ -1,3 +1,4 @@
+import MusicPlaygroundUI
 import AppKit
 import MusicPlayground
 import SwiftUI
@@ -109,14 +110,18 @@ struct CodeEditorDocumentTests {
         let scroll = NSScrollView(frame: NSRect(x: 0, y: 0, width: 300, height: 150))
         let editor = CompletionTextView(frame: NSRect(x: 0, y: 0, width: 1500, height: 1500))
         editor.isRichText = false
+        editor.font = .monospacedSystemFont(ofSize: 12, weight: .regular)
+        let sourceA = (0..<80).map { "let a\($0) = \($0) // " + String(repeating: "wide ", count: 40) }.joined(separator: "\n")
+        let sourceB = (0..<80).map { "let b\($0) = \($0) // " + String(repeating: "wide ", count: 40) }.joined(separator: "\n")
+        editor.string = sourceA
         scroll.documentView = editor
         coordinator.scroll = scroll
         coordinator.installDocument(first, editor: editor, state: .init())
         scroll.contentView.scroll(to: CGPoint(x: 160, y: 250))
-        coordinator.switchDocument(to: second, text: "B", editor: editor, scroll: scroll,
+        coordinator.switchDocument(to: second, text: sourceB, editor: editor, scroll: scroll,
             state: EditorDocumentState(scrollOffset: 80, horizontalScrollOffset: 45))
         #expect(scroll.contentView.bounds.origin == CGPoint(x: 45, y: 80))
-        coordinator.switchDocument(to: first, text: "A", editor: editor, scroll: scroll,
+        coordinator.switchDocument(to: first, text: sourceA, editor: editor, scroll: scroll,
             state: EditorDocumentState(scrollOffset: 250, horizontalScrollOffset: 160))
         #expect(scroll.contentView.bounds.origin == CGPoint(x: 160, y: 250))
     }

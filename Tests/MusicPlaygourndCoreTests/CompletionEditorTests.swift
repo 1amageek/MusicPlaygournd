@@ -1,3 +1,4 @@
+import MusicPlaygroundUI
 import AppKit
 import SwiftUI
 import MusicPlaygourndCore
@@ -482,7 +483,7 @@ extension NativeHostTests {
             #expect(editor.string == markedSource)
             editor.unmarkText()
             for theme in EditorTheme.allCases {
-                #expect(theme.palette.color(for: SwiftSemanticToken(range: NSRange(location: 0, length: 1), kind: "struct")) == theme.palette.type)
+                #expect(theme.palette.color(for: "struct") == theme.palette.type)
                 #expect(theme.palette.function != theme.palette.foreground)
             }
             coordinator.cancelHighlight()

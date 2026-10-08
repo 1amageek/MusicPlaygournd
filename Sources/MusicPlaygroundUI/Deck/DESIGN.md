@@ -20,3 +20,5 @@ Public views implement SwiftUI.View; EffectSettings supplies the settings contra
 
 ## Verification and Change Impact
 [Mac tests](../../../Tests/MusicPlaygourndCoreTests) exercise real model/editor/FX behavior and waveform interpolation. [iPad tests](../../../MusicPlayground/UITests/PlaybackUITests.swift) exercise actual selection, sidebar toggle and playback through the integrated shared UI. Changing slots/layout requires inspecting both native apps; changing waveform or pad mapping requires focused behavioral regression.
+
+DeckRack assigns explicit equal A/B widths around its bounded center from the actual proposed container width. Deck slot builders execute on MainActor during body evaluation so observable app snapshots are read by the rendering owner, rather than retaining constructor-time audio data. Native editor embedding must preserve full detail width; integrated playback tests reject a stale or zero-width waveform.

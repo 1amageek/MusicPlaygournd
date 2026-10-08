@@ -2,6 +2,29 @@ import XCTest
 
 @MainActor
 final class PlaybackUITests: XCTestCase {
+    func testNativeEditingAndSidebarChangesKeepActualTextAndAcceptedAudio() {
+        let app = XCUIApplication()
+        app.launch()
+        let source = app.textViews["source-editor"]
+        XCTAssertTrue(source.waitForExistence(timeout: 10))
+        source.tap()
+        source.typeText("\n// edited on iPad\n")
+        let edited = source.value as? String
+        XCTAssertTrue(edited?.contains("// edited on iPad") == true)
+        let toggle = app.buttons["sidebar-toggle"]
+        toggle.tap()
+        XCTAssertEqual(source.value as? String, edited)
+        toggle.tap()
+        XCTAssertEqual(source.value as? String, edited)
+        app.buttons["play"].tap()
+        let status = app.staticTexts["playbackStatus"]
+        expectation(for: NSPredicate(format: "label == 'Playing on iPad'"), evaluatedWith: status)
+        waitForExpectations(timeout: 10)
+        XCTAssertEqual(source.value as? String, edited)
+        XCTAssertTrue(app.staticTexts["outputEvidence"].label.contains("14 events"))
+        app.buttons["stop"].tap()
+    }
+
     func testPlayStopRestartAndBackgroundLifecycle() {
         let app = XCUIApplication()
         app.launch()
@@ -11,7 +34,7 @@ final class PlaybackUITests: XCTestCase {
         let evidence = app.staticTexts["outputEvidence"]
         XCTAssertTrue(play.waitForExistence(timeout: 10))
         XCTAssertEqual(status.label, "Ready")
-        let source = app.staticTexts["source-code"]
+        let source = app.textViews["source-editor"]
         XCTAssertTrue(source.exists)
         app.descendants(matching: .any).matching(identifier: "audio-output-item").firstMatch.tap()
         XCTAssertTrue(app.staticTexts["44100 Hz · Stereo · Native AVAudioEngine"].waitForExistence(timeout: 5))

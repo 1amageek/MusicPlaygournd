@@ -9,6 +9,13 @@ struct PrototypeView: View {
     @State private var visibility: NavigationSplitViewVisibility = .all
     @State private var selection: String? = "Session.swift"
     @State private var effectInfo = false
+    @State private var editorID = UUID()
+    @State private var source = DemoMusic.source
+    @State private var syntaxFailure = ""
+    @State private var sourceAnalysis = SourceAnalysis(tokens: [], diagnostics: [])
+    @State private var formatRequest = 0
+    @State private var completionRequest = 0
+    @State private var editorSettings = false
 
     var body: some View {
         WorkspaceSplitView(visibility: $visibility) {
@@ -26,7 +33,7 @@ struct PrototypeView: View {
                         .foregroundStyle(.secondary)
                 }
             } footer: {
-                Label("Bundled project · read only", systemImage: "lock")
+                Label("Bundled score · editable source", systemImage: "text.cursor")
                     .font(.system(size: 11)).foregroundStyle(.secondary)
                     .padding(.horizontal, 8).frame(height: 36)
             }
@@ -42,14 +49,20 @@ struct PrototypeView: View {
                         Text("A").fontWeight(.bold).foregroundStyle(.mint)
                         Label(selection ?? "No Selection", systemImage: selection == "Session.swift" ? "swift" : "speaker.wave.2")
                         Spacer()
-                        Text("Read only").foregroundStyle(.secondary).padding(.trailing, 12)
+                        Menu {
+                            Button("Format Source") { formatRequest += 1 }
+                            Button("Syntax Symbols") { completionRequest += 1 }
+                            Button("Themes & Fonts") { editorSettings = true }
+                        } label: { Image(systemName: "text.alignleft").frame(width: 28, height: 28).contentShape(Rectangle()) }
+                        .accessibilityLabel("Editor actions").padding(.trailing, 8)
                     }.font(.system(size: 11))
                 } content: {
                     if selection == "Session.swift" {
-                        // FIXME(INCOMPLETE_IMPLEMENTATION): The iPad workspace displays bundled read-only source here.
-                        // PrototypeView uses this production path; editable source execution needs a real backend
-                        // and success/failure verification before editing or compile controls may be enabled.
-                        SourceCodeView(source: DemoMusic.source)
+                        SourceEditor(documentID: editorID, source: source, formatRequest: formatRequest, completionRequest: completionRequest,
+                            analyzer: SwiftSourceAnalyzer(importedTypes: ["Music", "Sound", "Track", "Sample", "Synthesizer"]),
+                            onEdit: { _, text in source = text },
+                            onAnalysis: { _, result in sourceAnalysis = result },
+                            onFailure: { syntaxFailure = $0 })
                     } else if selection == "Audio Output" {
                         VStack(alignment: .leading, spacing: 16) {
                             Label("Audio Output", systemImage: "speaker.wave.2").font(.headline)
@@ -63,6 +76,15 @@ struct PrototypeView: View {
                         Text("No Selection").frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
                 }
+                if !syntaxFailure.isEmpty || !sourceAnalysis.diagnostics.isEmpty {
+                    VStack(alignment: .leading, spacing: 4) {
+                        if !syntaxFailure.isEmpty { Text(syntaxFailure) }
+                        ForEach(sourceAnalysis.diagnostics) { issue in
+                            Text("Parsing \(issue.line):\(issue.column): \(issue.message)")
+                        }
+                    }.font(.system(size: 11, design: .monospaced)).foregroundStyle(.orange)
+                        .frame(maxWidth: .infinity, alignment: .leading).padding(8)
+                }
                 Divider()
                 HStack(spacing: 12) {
                     Text(status).accessibilityIdentifier("playbackStatus")
@@ -71,11 +93,20 @@ struct PrototypeView: View {
                         .accessibilityIdentifier("outputEvidence")
                 }.font(.system(size: 11, design: .monospaced)).padding(.horizontal, 12).frame(height: 36)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .navigationTitle("")
             .toolbar(removing: .sidebarToggle)
             .toolbarVisibility(.hidden, for: .navigationBar)
         }
         .preferredColorScheme(.dark)
+        .sheet(isPresented: $editorSettings) {
+            NavigationStack {
+                EditorAppearanceControls().padding(24).navigationTitle("Themes & Fonts")
+                    .toolbar { ToolbarItem(placement: .confirmationAction) {
+                        Button("Done") { editorSettings = false }.contentShape(Rectangle())
+                    } }
+            }.presentationDetents([.medium])
+        }
         .tint(.mint)
         .onChange(of: scenePhase) { _, phase in
             if phase != .active { Task { await model.stop() } }

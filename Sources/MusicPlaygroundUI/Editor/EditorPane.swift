@@ -12,7 +12,8 @@ public struct EditorPane<Tabs: View, Content: View>: View {
     public var body: some View {
         VStack(spacing: 0) {
             if showsTabs { tabs.frame(height: 28); Divider() }
-            content
+            content.frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }

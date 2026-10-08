@@ -1,6 +1,15 @@
 {
-  "originHash" : "26e4818bcc993f98b6cc3a69f70636b9519522086b86ad34d68e8daff995708f",
+  "originHash" : "3cd0b117bad04c7d3d4c5542a3d28406ed78b96c50b87ae93a35ea4b9fa53a3a",
   "pins" : [
+    {
+      "identity" : "swift-syntax",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/swiftlang/swift-syntax.git",
+      "state" : {
+        "revision" : "050f1a346fbbac0ca2cfb15a95274f7bd1cf0ccf",
+        "version" : "604.0.0"
+      }
+    },
     {
       "identity" : "swiftmusic",
       "kind" : "remoteSourceControl",

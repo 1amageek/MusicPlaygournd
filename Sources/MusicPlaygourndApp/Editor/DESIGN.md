@@ -394,3 +394,5 @@ DJ FX sync is SessionModel-owned for the deck lifetime. One LFO cycle spans the 
 ## Shared UI adapter
 
 [MusicPlaygroundUI](../../MusicPlaygroundUI/DESIGN.md) owns workspace/sidebar/deck/editor shells, FX gesture presentation and waveform drawing. This component adapts SessionModel and DeckWorkspace through values, bindings and actions; AppKit editing, fullscreen policy, file I/O, trackpad gestures and transport cue remain native here. Existing DSP validation, source/undo/IME and document lifetime contracts are unchanged.
+
+The five EditorTheme palettes are owned by [shared Editor](../../MusicPlaygroundUI/Editor/DESIGN.md). AppKit still owns native text storage and SourceKit semantic tokens; moving palette ownership preserves all existing hexadecimal color values and document/IME/undo semantics.

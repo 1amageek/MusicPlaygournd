@@ -14,7 +14,7 @@ Requirement ID -> shared component -> native adapter -> real document/audio oper
                        +------------ actual UI ------------+-> behavioral evidence
 ```
 
-macOS reference: `Sources/MusicPlaygourndApp/Editor/ContentView.swift`, `DeckHeaderView.swift`, `FileSidebarView.swift`, `FileTabsView.swift`, `CodeEditor.swift`, `EditorTheme.swift`, `HeaderXYPad.swift`, `SpectrumEqualizerView.swift`, `WaveCompressorView.swift`, `VectorscopeControlView.swift`, `LiveControlsView.swift` and `DeckWorkspace.swift`. These paths define existing behavior; their corresponding DESIGN.md files own implementation contracts. [Shared UI design](../Sources/MusicPlaygroundUI/DESIGN.md) owns the component hierarchy.
+macOS reference: `Sources/MusicPlaygourndApp/Editor/ContentView.swift`, `DeckHeaderView.swift`, `FileSidebarView.swift`, `FileTabsView.swift`, `CodeEditor.swift`, shared `Sources/MusicPlaygroundUI/Editor/EditorTheme.swift`, `HeaderXYPad.swift`, `SpectrumEqualizerView.swift`, `WaveCompressorView.swift`, `VectorscopeControlView.swift`, `LiveControlsView.swift` and `DeckWorkspace.swift`. These paths define existing behavior; their corresponding DESIGN.md files own implementation contracts. [Shared UI design](../Sources/MusicPlaygroundUI/DESIGN.md) owns the component hierarchy.
 
 ## Workspace and Sidebar
 
@@ -81,12 +81,13 @@ macOS reference: `Sources/MusicPlaygourndApp/Editor/ContentView.swift`, `DeckHea
 
 ## Implementation and Evidence Mapping
 
-Each sprint records implementation paths and behavioral evidence here after the paths are verified. The requirements above remain fixed; a change in scope requires user resolution. All requirements are currently open for the corrected parity task, including behavior present on Mac but absent on iPad. Native parser/formatter is independent of the excluded native compiler.
+Each sprint records implementation paths and behavioral evidence here after the paths are verified. The requirements above remain fixed; a change in scope requires user resolution. Requirements close only for the verified behavior recorded below; the remaining task includes behavior present on Mac but absent on iPad. Native parser/formatter is independent of the excluded native compiler.
 
 | Requirements | Implementation owner | Evidence |
 |---|---|---|
 | W01-W03, S01-S04 | Shared Workspace/Sidebar, native document adapters | Pending |
-| E01-E09 | Shared Editor, AppKit/UIKit adapters and document owner | Pending |
+| E01-E03, E05, E09 | Shared Editor: EditorTheme, SourceEditor/SourceTextView/SourceLineGutter, SwiftSourceAnalyzer and EditorAppearanceControls; Mac CodeEditor palette adapter | Native SourceEditingTests: four actual UIKit tests (4.362s), identity/Unicode/line endings, attributes, selection/Undo/IME, syntax completion/format/indentation. Mac SharedSourceAnalysisTests: three grammar/format/admission/cancellation cases; CompletionEditorTests: two semantic color/recovery cases; CodeEditorDocumentTests: isolated undo/insertion plus real scrollable-source fixture. Physical UI typing/sidebar/audio retention (16.522s), playback/stop/restart/background with actual 512-bin wave (33.823s). Final integration owns full visual comparison and persistent multi-document workflows. |
+| E04, E06-E08 | Shared Editor and native document/metadata owners | Pending |
 | D01-D05, F01-F02, V01-V03 | Shared Deck/Effect/Wave, native transport and DSP | Pending |
 | M01-M04, H01-H04 | Shared master/control presentation, native output and host adapters | Pending |
 | G01-G04 | Module owners and task integration | Pending |

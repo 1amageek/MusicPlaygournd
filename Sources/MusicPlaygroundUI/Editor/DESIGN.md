@@ -1,22 +1,38 @@
 # Editor
 
 ## Purpose and Scope
-Shared SwiftUI component. Parent: [UI module](../DESIGN.md). Children: none.
+Shared SwiftUI component. Parent: [UI module](../DESIGN.md). Children: none. Owns source presentation, canonical palettes and native syntax analysis under [E01–E09](../../../docs/UI-PARITY.md).
 
 ## Responsibilities and Boundaries
-Tab/content layout, explicit sidebar toggle and read-only source presentation. Native text storage, undo, IME, completion and source compilation belong to platform editors.
+EditorPane composes tabs/content. UIKit SourceEditor owns native text storage, selection, scrolling, marked text and undo. AppKit retains its existing SourceKit semantic adapter. Callers own documents, saving, accepted music and compilation. Syntax-derived completion names are actual declarations and explicitly supplied imported types; they do not claim scope resolution or compiler semantics.
 
 ## Related Designs
-[Mac adapter](../../MusicPlaygourndApp/Editor/DESIGN.md) and [iPad adapter](../../../MusicPlayground/MusicPlayground/Prototype/DESIGN.md) consume this component. Both retain their runtime ownership.
+| Design | Relationship | Contract Used | Summary | Cautions |
+|---|---|---|---|---|
+| [UI module](../DESIGN.md) | parent | values/actions composition | shared presentation | preserve native editor identity |
+| [Mac Editor](../../MusicPlaygourndApp/Editor/DESIGN.md) | used by | canonical EditorTheme palettes | SourceKit remains the semantic owner | palette changes affect both platforms |
+| [iPad adapter](../../../MusicPlayground/MusicPlayground/Prototype/DESIGN.md) | used by | SourceEditor edits/analysis/errors | caller retains text and accepted audio | editing does not evaluate source |
 
 ## Architecture
 ```text
-App-owned values/bindings -> EditorPane, SidebarToggle, SourceCodeView -> user action -> app owner
+Native text storage -> committed source snapshot -> SwiftSourceAnalyzing
+       ↑                                                |
+selection/undo/IME owner <- identity-checked tokens/diagnostics/format
+       ↑
+canonical EditorTheme palettes <- AppKit SourceKit semantic adapter
 ```
 
 ## Contracts and Invariants
-Embedding the Mac editor preserves its identity and bindings; read-only iPad code is never advertised as editable or evaluated dynamically.
-Public views implement SwiftUI.View; EffectSettings supplies the settings contract. UI is MainActor isolated by SwiftUI; this component owns only presentation state.
+SwiftSourceAnalyzing provides async throwing analyze/format operations. Official swift-syntax 604.0.0 (050f1a346fbbac0ca2cfb15a95274f7bd1cf0ccf) parses actual source. Analysis maps UTF-8 grammar offsets to checked UTF-16 native ranges. Formatting rejects parser diagnostics. The five palette values match the existing Mac values exactly. Color access and UIKit state are MainActor-owned.
+
+## Runtime Flows
+Committed edits publish document identity and actual text, then schedule coalesced analysis. Only matching document, source and generation adopt results. Marked text defers coloring, replacement and formatting until commit. Attribute changes preserve selection, scroll and undo. Syntax symbol insertion uses native character editing and undo.
+
+## State, Ownership, and Lifecycle
+The coordinator retains one native text view per caller-retained document ID; switching tabs reuses storage/undo. Closing releases its undo state and view. One cancellable analysis/format task belongs to the coordinator; shutdown invalidates generations, cancels the task and releases views. Shared module has no mutable cross-thread state.
+
+## Failure, Concurrency, and Constraints
+Parsing runs outside MainActor. Admission permits at most 2 MiB UTF-8, with a bounded byte-to-UTF16 map. Cancellation is checked before/after parser work; its synchronous parser cannot be interrupted mid-parse. Typed oversize, invalid range and invalid syntax failures preserve characters and are published to the owner. Grammar analysis never compiles, evaluates or replaces accepted music.
 
 ## Verification and Change Impact
-[Mac tests](../../../Tests/MusicPlaygourndCoreTests) exercise real model/editor/FX behavior and waveform interpolation. [iPad tests](../../../MusicPlayground/UITests/PlaybackUITests.swift) exercise actual selection, sidebar toggle and playback through the integrated shared UI. Changing slots/layout requires inspecting both native apps; changing waveform or pad mapping requires focused behavioral regression.
+[SharedSourceAnalysisTests](../../../Tests/MusicPlaygourndCoreTests/SharedSourceAnalysisTests.swift) verifies grammar categories, Unicode, raw strings/interpolation/nested comments, actual edits, formatting and failures/cancellation. [SourceEditingTests](../../../MusicPlayground/Tests/SourceEditingTests.swift) hosts the real UIKit view and verifies attributes, edits, selection, undo and IME. [CompletionEditorTests](../../../Tests/MusicPlaygourndCoreTests/CompletionEditorTests.swift) owns Mac semantic-color regressions. Document retention integration belongs to native document tests. Palette/parser/native storage changes require these focused tests and actual editor inspection on both apps.

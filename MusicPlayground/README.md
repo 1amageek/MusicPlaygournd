@@ -1,6 +1,6 @@
 # Native iPad audio prototype
 
-This Xcode project plays a bundled four-track SwiftMusic composition on iPad without a Mac connection. The UI uses the shared MusicPlaygroundUI module: a native sidebar, A/master/B deck rack, read-only Swift source, real prepared-PCM waveform, Play/Stop controls and output evidence. Deck B and live FX explicitly remain unavailable. Editing and compiling arbitrary Swift on-device is not implemented.
+This Xcode project plays a bundled four-track SwiftMusic composition on iPad without a Mac connection. The UI uses the shared MusicPlaygroundUI module: a native sidebar, A/master/B deck rack, native editable Swift source with grammar highlighting, undo and syntax formatting, real prepared-PCM waveform, Play/Stop controls and output evidence. Deck B and live FX explicitly remain unavailable. Arbitrary Swift compilation on-device is a separate task. Editing does not replace the accepted bundled music.
 
 Requirements: Xcode 27 / Swift 6.4, iPadOS 27+, and a development signing identity for the project's existing Stamp Inc. team. The app's bundle ID is `team.stamp.MusicPlayground`. No background audio entitlement or microphone access is needed.
 

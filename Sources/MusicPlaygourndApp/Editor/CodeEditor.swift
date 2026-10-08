@@ -2,6 +2,7 @@ import AppKit
 import MusicPlayground
 import MusicPlaygourndCore
 import SwiftUI
+import MusicPlaygroundUI
 
 struct EditorDocumentState: Equatable {
     var selection = NSRange(location: 0, length: 0)
@@ -755,7 +756,7 @@ struct CodeEditor: NSViewRepresentable {
             storage.beginEditing()
             storage.addAttribute(.foregroundColor, value: parent.theme.palette.foreground, range: NSRange(location: 0, length: length))
             for token in highlightedTokens where token.range.location >= 0 && NSMaxRange(token.range) <= length {
-                storage.addAttribute(.foregroundColor, value: parent.theme.palette.color(for: token), range: token.range)
+                storage.addAttribute(.foregroundColor, value: parent.theme.palette.color(for: token.kind), range: token.range)
             }
             storage.endEditing()
         }

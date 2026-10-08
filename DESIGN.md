@@ -52,3 +52,5 @@ Verification owners: Playback verifies native mixed PCM, exact endpoints, indepe
 ## Shared SwiftUI presentation
 
 [MusicPlaygroundUI](Sources/MusicPlaygroundUI/DESIGN.md) owns platform-independent Workspace, Sidebar, Deck, Editor, Effect and Wave components. Mac and iPad adapters supply native models, editors and capabilities; audio, files and compiler authority remain in their existing owners.
+
+The corrected [shared interface parity contract](docs/UI-PARITY.md) owns the required Mac/iPad behavior. UI/editing/audio parity is in scope; arbitrary on-device Swift compilation is a separate task. Previous prototype evidence proves only its documented subset.

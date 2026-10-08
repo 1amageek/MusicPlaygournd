@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import MusicPlaygourndCore
 
 /// Native press/release delivery avoids SwiftUI long-press cancellation gaps.
 struct TransportCueButton: NSViewRepresentable {

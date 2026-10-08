@@ -1,7 +1,7 @@
 # iPad App Module
 
 ## Purpose and Scope
-Native SwiftUI executable module. Parent: [project](../DESIGN.md). Children: [Prototype](Prototype/DESIGN.md), [Documents](Documents/DESIGN.md). Entry point is MyApp.swift.
+Native SwiftUI executable module. Parent: [project](../DESIGN.md). Children: [Prototype](Prototype/DESIGN.md), [Documents](Documents/DESIGN.md), [Audio](Audio/DESIGN.md). Entry point is MyApp.swift.
 
 ## Responsibilities and Boundaries
 Composes the temporary view and its playback model. Consumes shared renderer source under its existing contract; owns no alternate DSP.

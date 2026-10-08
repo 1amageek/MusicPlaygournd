@@ -19,6 +19,8 @@
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin PBXBuildFile section */
+        A80000000000000000000003 = {isa = PBXBuildFile; fileRef = A80000000000000000000001;};
+        A80000000000000000000004 = {isa = PBXBuildFile; fileRef = A80000000000000000000002;};
         A60000000000000000000004 = {isa = PBXBuildFile; productRef = A60000000000000000000002;};
         A60000000000000000000005 = {isa = PBXBuildFile; productRef = A60000000000000000000003;};
         A50000000000000000000003 = {isa = PBXBuildFile; productRef = A50000000000000000000002;};
@@ -46,25 +48,33 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+        A70000000000000000000002 = {isa = PBXFileSystemSynchronizedBuildFileExceptionSet; membershipExceptions = (DESIGN.md,); target = 000000000000000100000000;};
+        A70000000000000000000004 = {isa = PBXFileSystemSynchronizedBuildFileExceptionSet; membershipExceptions = (DESIGN.md,); target = 000000000000000100000000;};
+        A70000000000000000000006 = {isa = PBXFileSystemSynchronizedBuildFileExceptionSet; membershipExceptions = (DESIGN.md,); target = 000000000000000100000000;};
         A10000000000000000000002 = {
             isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-            membershipExceptions = (DESIGN.md, PCMFileTransport.swift, LoopRenderSession.swift,);
+            membershipExceptions = (DESIGN.md, PCMFileTransport.swift,);
             target = 000000000000000100000000;
         };
         A10000000000000000000004 = {
             isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-            membershipExceptions = (DESIGN.md, Prototype/DESIGN.md, Documents/DESIGN.md, Documents/Storage/DESIGN.md,);
+            membershipExceptions = (DESIGN.md, Prototype/DESIGN.md, Documents/DESIGN.md, Documents/Storage/DESIGN.md, Audio/DESIGN.md, Audio/Host/DESIGN.md, Info.plist,);
             target = 000000000000000100000000;
         };
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileReference section */
+        A80000000000000000000001 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MIDISessionRoute.swift; path = ../Sources/MusicPlaygourndApp/Editor/MIDISessionRoute.swift; sourceTree = "<group>";};
+        A80000000000000000000002 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DocumentHostStateStore.swift; path = ../Sources/MusicPlaygourndApp/Editor/DocumentHostStateStore.swift; sourceTree = "<group>";};
 		000000000000000000000120 /* MusicPlayground.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MusicPlayground.app; sourceTree = BUILT_PRODUCTS_DIR; };
         A20000000000000000000001 = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = MusicPlaygroundTests.xctest; sourceTree = BUILT_PRODUCTS_DIR;};
         A40000000000000000000002 = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = MusicPlaygroundUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR;};
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+        A70000000000000000000001 = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (A70000000000000000000002,); name = "Shared Playback"; path = ../Sources/MusicPlaygourndCore/Playback; sourceTree = "<group>";};
+        A70000000000000000000003 = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (A70000000000000000000004,); name = "Shared AudioUnits"; path = ../Sources/MusicPlaygourndCore/AudioUnits; sourceTree = "<group>";};
+        A70000000000000000000005 = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (A70000000000000000000006,); name = "Shared MIDI"; path = ../Sources/MusicPlaygourndCore/MIDI; sourceTree = "<group>";};
 		000000000000000000000010 /* MusicPlayground */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (A10000000000000000000004,);
@@ -105,8 +115,10 @@
 			isa = PBXGroup;
 			children = (
 				000000000000000000000010 /* MusicPlayground */,
+                A80000000000000000000001, A80000000000000000000002,
 				000000000000000000000020 /* Products */,
                 A10000000000000000000001 /* Shared Rendering */,
+                A70000000000000000000001, A70000000000000000000003, A70000000000000000000005,
                 A10000000000000000000003 /* Tests */,
                 A40000000000000000000001 /* UI Tests */,
 			);
@@ -139,6 +151,7 @@
 			fileSystemSynchronizedGroups = (
 				000000000000000000000010 /* MusicPlayground */,
                 A10000000000000000000001 /* Shared Rendering */,
+                A70000000000000000000001, A70000000000000000000003, A70000000000000000000005,
 			);
 			packageProductDependencies = (A30000000000000000000002, A50000000000000000000002, A60000000000000000000002, A60000000000000000000003,);
 			name = MusicPlaygroundApp;
@@ -235,7 +248,7 @@
 /* Begin PBXSourcesBuildPhase section */
 		000000000000000120000000 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
-			files = (
+			files = (A80000000000000000000003, A80000000000000000000004,
 			);
 		};
         A20000000000000000000004 = {isa = PBXSourcesBuildPhase; files = ();};
@@ -386,6 +399,7 @@
 				ENABLE_USER_SELECTED_FILES = readwrite;
                 ENABLE_USER_SCRIPT_SANDBOXING = NO;
                 INFOPLIST_KEY_UIFileSharingEnabled = YES;
+                INFOPLIST_FILE = MusicPlayground/Info.plist;
                 INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
@@ -428,6 +442,7 @@
 				ENABLE_USER_SELECTED_FILES = readwrite;
                 ENABLE_USER_SCRIPT_SANDBOXING = NO;
                 INFOPLIST_KEY_UIFileSharingEnabled = YES;
+                INFOPLIST_FILE = MusicPlayground/Info.plist;
                 INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;

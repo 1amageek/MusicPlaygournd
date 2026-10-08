@@ -1,4 +1,6 @@
+#if os(macOS)
 import MusicPlaygourndCore
+#endif
 
 struct MIDISessionRoute: Codable, Sendable, Equatable {
     var input: MIDIEndpointID?

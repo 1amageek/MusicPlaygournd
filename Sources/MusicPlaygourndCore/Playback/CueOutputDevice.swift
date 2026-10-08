@@ -1,3 +1,4 @@
+#if os(macOS)
 import CoreAudio
 import Foundation
 
@@ -58,3 +59,5 @@ public struct CueOutputDevice: Identifiable, Sendable, Equatable {
         guard status == noErr else { throw PlaybackError.audioSetupFailed("Headphone output failed (CoreAudio \(status)).") }
     }
 }
+
+#endif

@@ -1,11 +1,13 @@
 import Foundation
 
 /// A bounded monotonic tap estimator, independent for each deck.
-struct TapTempo {
+public struct TapTempo {
     private var previous: TimeInterval?
     private var intervals: [TimeInterval] = []
 
-    mutating func tap(at time: TimeInterval = ProcessInfo.processInfo.systemUptime) -> Double? {
+    public init() {}
+
+    public mutating func tap(at time: TimeInterval = ProcessInfo.processInfo.systemUptime) -> Double? {
         guard time.isFinite else { return nil }
         defer { previous = time }
         guard let previous, time > previous, time - previous <= 2 else {

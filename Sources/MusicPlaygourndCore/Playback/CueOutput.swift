@@ -1,3 +1,4 @@
+#if os(macOS)
 import AVFoundation
 import CoreAudio
 
@@ -95,3 +96,5 @@ final class CueOutput {
         buffer.reset(enabled: false)
     }
 }
+
+#endif

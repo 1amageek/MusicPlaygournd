@@ -1,21 +1,20 @@
-import MusicPlaygourndCore
 import Observation
 
 /// Owns transport cue position and a bounded hold gesture for one deck.
 @MainActor @Observable
-final class TransportCue {
+public final class TransportCue {
     private let engine: AudioLoopEngine
-    private(set) var cueBeat = 0.0
-    private(set) var isPressed = false
-    private(set) var isPreviewing = false
-    var onError: ((Error) -> Void)?
-    var onChange: (() -> Void)?
+    public private(set) var cueBeat = 0.0
+    public private(set) var isPressed = false
+    public private(set) var isPreviewing = false
+    public var onError: ((Error) -> Void)?
+    public var onChange: (() -> Void)?
     private var hold: Task<Void, Never>?
     private var returnBeat = 0.0
 
-    init(engine: AudioLoopEngine) { self.engine = engine }
+    public init(engine: AudioLoopEngine) { self.engine = engine }
 
-    func press(shift: Bool = false) {
+    public func press(shift: Bool = false) {
         guard !isPressed, engine.snapshot().loop != nil else { return }
         let wasPlaying = engine.snapshot().isPlaying
         engine.stop()
@@ -46,7 +45,7 @@ final class TransportCue {
         onChange?()
     }
 
-    func release() {
+    public func release() {
         hold?.cancel()
         hold = nil
         guard isPressed else { return }
@@ -59,7 +58,7 @@ final class TransportCue {
         onChange?()
     }
 
-    func reset() { release(); cueBeat = 0 }
+    public func reset() { release(); cueBeat = 0 }
 
     private func seek(to beat: Double) throws {
         let snapshot = engine.snapshot()

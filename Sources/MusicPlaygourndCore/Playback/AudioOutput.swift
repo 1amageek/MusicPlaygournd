@@ -135,9 +135,13 @@ public final class AudioOutput: MasterRecording {
         let wasRunning = audioEngine.isRunning
         audioEngine.stop()
         func bind(_ device: UInt32) throws {
+            #if os(macOS)
             var device = device
             try CueOutputDevice.check(AudioUnitSetProperty(unit, kAudioOutputUnitProperty_CurrentDevice,
                 kAudioUnitScope_Global, 0, &device, UInt32(MemoryLayout<UInt32>.size)))
+            #else
+            try CueOutput.bind(device, to: audioEngine)
+            #endif
             if wasRunning { try audioEngine.start() }
             guard try mainOutputDeviceID() == device else { throw PlaybackError.audioSetupFailed("Main output changed during setup.") }
         }
@@ -158,7 +162,19 @@ public final class AudioOutput: MasterRecording {
 
     public func selectCueDevice(_ id: UInt32?) throws {
         guard id != nil else { cueOutput.stop(); return }
-        try cueOutput.select(id, main: CueOutput.device(of: audioEngine))
+        let main = try CueOutput.device(of: audioEngine)
+        #if os(iOS)
+        let previousMap = audioEngine.outputNode.auAudioUnit.channelMap
+        do {
+            try CueOutput.bind(main, to: audioEngine)
+            try cueOutput.select(id, main: main)
+        } catch {
+            audioEngine.outputNode.auAudioUnit.channelMap = previousMap
+            throw error
+        }
+        #else
+        try cueOutput.select(id, main: main)
+        #endif
     }
 
     public func validateCueDevice() throws {

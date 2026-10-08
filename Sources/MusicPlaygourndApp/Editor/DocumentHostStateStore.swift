@@ -1,6 +1,8 @@
 import CryptoKit
 import Foundation
+#if os(macOS)
 import MusicPlaygourndCore
+#endif
 
 /// Persists host settings separately from the Swift document and all audio assets.
 struct DocumentHostStateStore: Sendable {

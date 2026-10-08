@@ -107,4 +107,3 @@ public struct RhythmView<Score: RhythmScore>: View {
             .background(Color(red: 0.075, green: 0.09, blue: 0.105))
     }
 }
-

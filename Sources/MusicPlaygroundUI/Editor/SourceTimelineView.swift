@@ -106,4 +106,3 @@ public struct SourceTimelineView<Score: RhythmScore>: View {
         }.background(Color(red: 0.055, green: 0.075, blue: 0.085))
     }
 }
-

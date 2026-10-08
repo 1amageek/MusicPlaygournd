@@ -4,7 +4,7 @@
 SwiftPM UI module, public library product. Parent: [system/package](../../DESIGN.md). Children are indexed below. macOS 15+ and iPadOS 27+ use the same SwiftUI source.
 
 ## Responsibilities and Boundaries
-Owns shared presentation and gestures; has no Core, SwiftMusic, process, audio engine or file-system dependency; shared Editor uses pinned native SwiftSyntax grammar libraries. macOS owns SessionModel/DeckWorkspace and AppKit text editing. iPad owns PlaybackModel/NativeAudioPlayer and bundled-score evaluation. SwiftUI.View is the public view protocol; the EffectSettings protocol adapts existing settings without changing their owner.
+Owns shared presentation and gestures; has no Core, SwiftMusic, process, audio engine or file-system dependency; shared Editor uses pinned native SwiftSyntax grammar libraries. macOS owns SessionModel/DeckWorkspace and AppKit text editing. iPad owns AudioWorkspace/AudioDeck, DocumentWorkspace and bundled-score evaluation. SwiftUI.View is the public view protocol; the EffectSettings protocol adapts existing settings without changing their owner.
 
 ## Related Designs
 | Design | Relationship | Contract Used | Summary | Cautions |
@@ -20,7 +20,7 @@ Owns shared presentation and gestures; has no Core, SwiftMusic, process, audio e
 
 ## Architecture
 ```text
-Mac SessionModel / DeckWorkspace -> MusicPlaygroundUI <- iPad PlaybackModel
+Mac SessionModel / DeckWorkspace -> MusicPlaygroundUI <- iPad AudioWorkspace / DocumentWorkspace
      AppKit editor adapter           |                native audio adapter
                       Workspace + Sidebar
                        Deck + Effect + Wave

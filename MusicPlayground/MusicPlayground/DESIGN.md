@@ -1,7 +1,7 @@
 # iPad App Module
 
 ## Purpose and Scope
-Native SwiftUI executable module. Parent: [project](../DESIGN.md). Child: [Prototype](Prototype/DESIGN.md). Entry point is MyApp.swift.
+Native SwiftUI executable module. Parent: [project](../DESIGN.md). Children: [Prototype](Prototype/DESIGN.md), [Documents](Documents/DESIGN.md). Entry point is MyApp.swift.
 
 ## Responsibilities and Boundaries
 Composes the temporary view and its playback model. Consumes shared renderer source under its existing contract; owns no alternate DSP.
@@ -19,3 +19,5 @@ UI state is MainActor isolated. App backgrounding stops playback and cancels pen
 
 ## Verification and Change Impact
 App-hosted behavioral tests use the same model and playback implementation as the UI. Normal launches present an idle Play button; no editable-source execution is advertised.
+
+[Documents](Documents/DESIGN.md) owns real project files, shared A/B buffers, saving and dirty-close decisions. Source selection and edits preserve the accepted audio owned by Prototype. The parity task replaces the prototype presentation incrementally; incomplete audio/host branches remain explicit until verified.

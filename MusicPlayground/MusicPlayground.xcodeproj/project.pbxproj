@@ -19,11 +19,15 @@
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin PBXBuildFile section */
+        A60000000000000000000004 = {isa = PBXBuildFile; productRef = A60000000000000000000002;};
+        A60000000000000000000005 = {isa = PBXBuildFile; productRef = A60000000000000000000003;};
         A50000000000000000000003 = {isa = PBXBuildFile; productRef = A50000000000000000000002;};
         A30000000000000000000003 = {isa = PBXBuildFile; productRef = A30000000000000000000002;};
 /* End PBXBuildFile section */
 
 /* Begin XCSwiftPackageProductDependency section */
+        A60000000000000000000002 = {isa = XCSwiftPackageProductDependency; package = A60000000000000000000001; productName = SwiftParser;};
+        A60000000000000000000003 = {isa = XCSwiftPackageProductDependency; package = A60000000000000000000001; productName = SwiftSyntax;};
         A50000000000000000000002 = {isa = XCSwiftPackageProductDependency; package = A50000000000000000000001; productName = MusicPlaygroundUI;};
         A30000000000000000000002 = {
             isa = XCSwiftPackageProductDependency;
@@ -33,6 +37,7 @@
 /* End XCSwiftPackageProductDependency section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+        A60000000000000000000001 = {isa = XCRemoteSwiftPackageReference; repositoryURL = "https://github.com/swiftlang/swift-syntax.git"; requirement = {kind = exactVersion; version = 604.0.0;};};
         A30000000000000000000001 = {
             isa = XCRemoteSwiftPackageReference;
             repositoryURL = "https://github.com/1amageek/SwiftMusic.git";
@@ -48,7 +53,7 @@
         };
         A10000000000000000000004 = {
             isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-            membershipExceptions = (DESIGN.md, Prototype/DESIGN.md,);
+            membershipExceptions = (DESIGN.md, Prototype/DESIGN.md, Documents/DESIGN.md, Documents/Storage/DESIGN.md,);
             target = 000000000000000100000000;
         };
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -87,6 +92,8 @@
 			files = (
                 A30000000000000000000003,
                 A50000000000000000000003,
+                A60000000000000000000004,
+                A60000000000000000000005,
 			);
 		};
         A20000000000000000000005 = {isa = PBXFrameworksBuildPhase; files = ();};
@@ -125,6 +132,7 @@
 				000000000000000120000000 /* Sources */,
 				000000000000000130000000 /* Frameworks */,
 				000000000000000140000000 /* Resources */,
+                A60000000000000000000006 /* Bundle package source */,
 			);
 			buildRules = (
 			);
@@ -132,7 +140,7 @@
 				000000000000000000000010 /* MusicPlayground */,
                 A10000000000000000000001 /* Shared Rendering */,
 			);
-			packageProductDependencies = (A30000000000000000000002, A50000000000000000000002,);
+			packageProductDependencies = (A30000000000000000000002, A50000000000000000000002, A60000000000000000000002, A60000000000000000000003,);
 			name = MusicPlaygroundApp;
 			productName = MusicPlayground;
 			productReference = 000000000000000000000120 /* MusicPlayground.app */;
@@ -186,7 +194,7 @@
 			);
 			mainGroup = 000000000000000000000001;
 			minimizedProjectReferenceProxies = 1;
-            packageReferences = (A30000000000000000000001, A50000000000000000000001,);
+            packageReferences = (A30000000000000000000001, A50000000000000000000001, A60000000000000000000001,);
 			preferredProjectObjectVersion = 90;
 			productRefGroup = 000000000000000000000020 /* Products */;
 			projectDirPath = "";
@@ -208,6 +216,21 @@
         A20000000000000000000006 = {isa = PBXResourcesBuildPhase; files = ();};
         A40000000000000000000007 = {isa = PBXResourcesBuildPhase; files = ();};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+        A60000000000000000000006 = {
+            isa = PBXShellScriptBuildPhase;
+            alwaysOutOfDate = 1;
+            buildActionMask = 2147483647;
+            files = ();
+            inputPaths = ();
+            name = "Bundle resolved SwiftMusic source";
+            outputPaths = ();
+            runOnlyForDeploymentPostprocessing = 0;
+            shellPath = /bin/sh;
+            shellScript = "set -eu\npackage_checkout=\"${BUILD_DIR%/Build/Products}/SourcePackages/checkouts/SwiftMusic\"\nif [ ! -f \"$package_checkout/Package.swift\" ]; then\n    echo \"error: Resolved SwiftMusic source is missing; resolve packages before building.\"\n    exit 1\nfi\nsource_revision=\"$(git -C \"$package_checkout\" rev-parse HEAD)\"\nif [ \"$source_revision\" != \"bffb25eed959906df81cbfb38f701e8b384ab476\" ]; then\n    echo \"error: Bundled dependency source must match SwiftMusic 0.5.1.\"\n    exit 1\nfi\nbundle_source=\"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/PackageSources/SwiftMusic\"\nmkdir -p \"$bundle_source\"\ncp -f \"$package_checkout/Package.swift\" \"$bundle_source/Package.swift\"\nrsync -a --chmod=Du+rwx,Fu+rw --delete \"$package_checkout/Sources/\" \"$bundle_source/Sources/\"\n";
+        };
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		000000000000000120000000 /* Sources */ = {
@@ -360,7 +383,10 @@
 				DEVELOPMENT_TEAM = WWCKBW8CKN;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_PREVIEWS = YES;
-				ENABLE_USER_SELECTED_FILES = readonly;
+				ENABLE_USER_SELECTED_FILES = readwrite;
+                ENABLE_USER_SCRIPT_SANDBOXING = NO;
+                INFOPLIST_KEY_UIFileSharingEnabled = YES;
+                INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
@@ -399,7 +425,10 @@
 				DEVELOPMENT_TEAM = WWCKBW8CKN;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_PREVIEWS = YES;
-				ENABLE_USER_SELECTED_FILES = readonly;
+				ENABLE_USER_SELECTED_FILES = readwrite;
+                ENABLE_USER_SCRIPT_SANDBOXING = NO;
+                INFOPLIST_KEY_UIFileSharingEnabled = YES;
+                INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;

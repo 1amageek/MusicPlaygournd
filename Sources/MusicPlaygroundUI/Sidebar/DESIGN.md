@@ -4,7 +4,7 @@
 Shared SwiftUI component. Parent: [UI module](../DESIGN.md). Children: none.
 
 ## Responsibilities and Boundaries
-Native selectable List, caller-supplied rows and footer, explicit error presentation. File discovery, persistence, selection handling and filters stay in each app.
+Native selectable List, caller-supplied rows and footer, explicit error presentation. FileTreeItemRow owns the canonical expandable folder/file/dirty/context-load presentation; callers supply actual URLs, expansion binding, children and actions. File discovery, persistence, selection handling and filters stay in each app.
 
 ## Related Designs
 [Mac adapter](../../MusicPlaygourndApp/Editor/DESIGN.md) and [iPad adapter](../../../MusicPlayground/MusicPlayground/Prototype/DESIGN.md) consume this component. Both retain their runtime ownership.

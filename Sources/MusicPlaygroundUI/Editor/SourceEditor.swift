@@ -11,6 +11,9 @@ public struct SourceEditor: UIViewRepresentable {
     public var isReadOnly: Bool
     public var formatRequest: Int
     public var completionRequest: Int
+    public var isSyntaxEnabled: Bool
+    public var revealRequest: Int
+    public var revealRange: NSRange?
     public var analyzer: any SwiftSourceAnalyzing
     public var onEdit: (UUID, String) -> Void
     public var onAnalysis: (UUID, SourceAnalysis) -> Void
@@ -18,6 +21,7 @@ public struct SourceEditor: UIViewRepresentable {
 
     public init(documentID: UUID, source: String, retainedDocuments: Set<UUID>? = nil,
                 isReadOnly: Bool = false, formatRequest: Int = 0, completionRequest: Int = 0,
+                isSyntaxEnabled: Bool = true, revealRequest: Int = 0, revealRange: NSRange? = nil,
                 analyzer: any SwiftSourceAnalyzing = SwiftSourceAnalyzer(),
                 onEdit: @escaping (UUID, String) -> Void,
                 onAnalysis: @escaping (UUID, SourceAnalysis) -> Void = { _, _ in },
@@ -25,6 +29,7 @@ public struct SourceEditor: UIViewRepresentable {
         self.documentID = documentID; self.source = source
         self.retainedDocuments = retainedDocuments ?? [documentID]
         self.isReadOnly = isReadOnly; self.formatRequest = formatRequest; self.completionRequest = completionRequest; self.analyzer = analyzer
+        self.isSyntaxEnabled = isSyntaxEnabled; self.revealRequest = revealRequest; self.revealRange = revealRange
         self.onEdit = onEdit; self.onAnalysis = onAnalysis; self.onFailure = onFailure
     }
 
@@ -49,10 +54,19 @@ public struct SourceEditor: UIViewRepresentable {
         private var tokenSnapshot = SourceAnalysis(tokens: [], diagnostics: [])
         private var lastFormatRequest = 0
         private var lastCompletionRequest = 0
+        private var lastRevealRequest = 0
         private var appearanceKey = ""
-        init(_ parent: SourceEditor) { self.parent = parent }
+        private var updating = false
+        init(_ parent: SourceEditor) {
+            self.parent = parent
+            lastFormatRequest = parent.formatRequest; lastCompletionRequest = parent.completionRequest
+            lastRevealRequest = parent.revealRequest
+        }
 
         func update(_ parent: SourceEditor) {
+            guard !updating else { return }
+            updating = true
+            defer { updating = false }
             self.parent = parent
             guard let host, active?.markedTextRange == nil else { return }
             for id in editors.keys where !parent.retainedDocuments.contains(id) {
@@ -78,10 +92,11 @@ public struct SourceEditor: UIViewRepresentable {
                 editor.selectedRange = Self.bounded(selection, length: editor.textStorage.length)
                 editor.contentOffset = offset; tokenSource = nil; editor.refreshLines()
             }
-            let key = "\(parent.theme.rawValue):\(parent.fontSize)"
+            let key = "\(parent.theme.rawValue):\(parent.fontSize):\(parent.isSyntaxEnabled)"
             if appearanceKey != key {
                 editor.appearance(theme: parent.theme, size: parent.fontSize)
                 appearanceKey = key
+                if !parent.isSyntaxEnabled { tokenSource = nil }
                 if tokenSource == editor.text {
                     do { try apply(tokenSnapshot, to: editor) }
                     catch { parent.onFailure(error.localizedDescription) }
@@ -91,6 +106,14 @@ public struct SourceEditor: UIViewRepresentable {
                 lastCompletionRequest = parent.completionRequest
                 editor.showCompletions()
             }
+            if lastRevealRequest != parent.revealRequest, let range = parent.revealRange {
+                lastRevealRequest = parent.revealRequest
+                guard range.location >= 0, range.location <= editor.textStorage.length, range.length >= 0,
+                      range.length <= editor.textStorage.length - range.location else {
+                    parent.onFailure(SourceAnalysisError.invalidParserRange.localizedDescription); return
+                }
+                editor.selectedRange = range; editor.scrollRangeToVisible(range)
+            }
             if lastFormatRequest != parent.formatRequest {
                 lastFormatRequest = parent.formatRequest
                 format(editor)
@@ -98,7 +121,7 @@ public struct SourceEditor: UIViewRepresentable {
         }
 
         public func textViewDidChange(_ textView: UITextView) {
-            guard let editor = textView as? SourceTextView, editor.markedTextRange == nil else { return }
+            guard !updating, let editor = textView as? SourceTextView, editor.markedTextRange == nil else { return }
             parent.onEdit(editor.documentID, editor.text)
             editor.analyzedSource = nil; editor.symbols = []
             editor.refreshLines(); tokenSource = nil
@@ -106,18 +129,18 @@ public struct SourceEditor: UIViewRepresentable {
             if editor.documentID != parent.documentID { update(parent) }
         }
         public func textViewDidChangeSelection(_ textView: UITextView) {
-            if textView.markedTextRange == nil, active?.documentID != parent.documentID { update(parent) }
+            if !updating, textView.markedTextRange == nil, active?.documentID != parent.documentID { update(parent) }
         }
         public func scrollViewDidScroll(_ scrollView: UIScrollView) { active?.gutter.setNeedsDisplay() }
 
         private func analyze(_ editor: SourceTextView) {
             task?.cancel(); generation += 1
             let snapshot = editor.text ?? "", id = editor.documentID, revision = generation
-            let analyzer = parent.analyzer
+            let analyzer = parent.analyzer, syntaxEnabled = parent.isSyntaxEnabled
             task = Task { [weak self, weak editor] in
                 do {
                     try await Task.sleep(for: .milliseconds(100))
-                    let result = try await analyzer.analyze(source: snapshot)
+                    let result = syntaxEnabled ? try await analyzer.analyze(source: snapshot) : SourceAnalysis(tokens: [], diagnostics: [])
                     try Task.checkCancellation()
                     guard let self, let editor, revision == self.generation,
                           editor === self.active, id == self.parent.documentID,
@@ -150,7 +173,7 @@ public struct SourceEditor: UIViewRepresentable {
         }
 
         private func format(_ editor: SourceTextView) {
-            guard !parent.isReadOnly, editor.markedTextRange == nil else { return }
+            guard !parent.isReadOnly, parent.isSyntaxEnabled, editor.markedTextRange == nil else { return }
             task?.cancel(); generation += 1
             let snapshot = editor.text ?? "", revision = generation, selection = editor.selectedRange
             let analyzer = parent.analyzer

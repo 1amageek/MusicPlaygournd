@@ -7,91 +7,27 @@ struct PrototypeView: View {
     @Environment(\.scenePhase) private var scenePhase
 
     @State private var visibility: NavigationSplitViewVisibility = .all
-    @State private var selection: String? = "Session.swift"
     @State private var effectInfo = false
-    @State private var editorID = UUID()
-    @State private var source = DemoMusic.source
-    @State private var syntaxFailure = ""
-    @State private var sourceAnalysis = SourceAnalysis(tokens: [], diagnostics: [])
-    @State private var formatRequest = 0
-    @State private var completionRequest = 0
-    @State private var editorSettings = false
+    @State private var documents = DocumentWorkspace(files: ProjectFiles(
+        projectsDirectory: FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appending(path: "Projects"),
+        dependencyRoot: Bundle.main.resourceURL?.appending(path: "PackageSources/SwiftMusic")))
+    @State private var acceptedDocumentID: UUID?
 
     var body: some View {
         WorkspaceSplitView(visibility: $visibility) {
-            ProjectSidebar(selection: $selection) {
-                Section("Bundled Music") {
-                    Label("Session.swift", systemImage: "swift").tag("Session.swift")
-                        .accessibilityIdentifier("bundled-source-file")
+            DocumentSidebar(workspace: documents, template: DemoMusic.source) { url, deck in
+                Task {
+                    await documents.openFile(url, deck: deck)
+                    if let document = documents.activeDocument, document.url == url { load(document, into: deck) }
                 }
-                Section("Monitor") {
-                    Label("Audio Output", systemImage: "speaker.wave.2").tag("Audio Output")
-                        .accessibilityIdentifier("audio-output-item")
-                }
-                Section("Package Dependencies") {
-                    Label("SwiftMusic 0.5.1", systemImage: "shippingbox")
-                        .foregroundStyle(.secondary)
-                }
-            } footer: {
-                Label("Bundled score · editable source", systemImage: "text.cursor")
-                    .font(.system(size: 11)).foregroundStyle(.secondary)
-                    .padding(.horizontal, 8).frame(height: 36)
             }
-            .navigationTitle("MusicPlayground")
         } detail: {
             VStack(spacing: 0) {
                 DeckRack { deckA } master: { master } b: { deckB }
                 Divider()
-                EditorPane {
-                    HStack(spacing: 8) {
-                        SidebarToggle(visibility: $visibility)
-                        Divider()
-                        Text("A").fontWeight(.bold).foregroundStyle(.mint)
-                        Label(selection ?? "No Selection", systemImage: selection == "Session.swift" ? "swift" : "speaker.wave.2")
-                        Spacer()
-                        Menu {
-                            Button("Format Source") { formatRequest += 1 }
-                            Button("Syntax Symbols") { completionRequest += 1 }
-                            Button("Themes & Fonts") { editorSettings = true }
-                        } label: { Image(systemName: "text.alignleft").frame(width: 28, height: 28).contentShape(Rectangle()) }
-                        .accessibilityLabel("Editor actions").padding(.trailing, 8)
-                    }.font(.system(size: 11))
-                } content: {
-                    if selection == "Session.swift" {
-                        SourceEditor(documentID: editorID, source: source, formatRequest: formatRequest, completionRequest: completionRequest,
-                            analyzer: SwiftSourceAnalyzer(importedTypes: ["Music", "Sound", "Track", "Sample", "Synthesizer"]),
-                            onEdit: { _, text in source = text },
-                            onAnalysis: { _, result in sourceAnalysis = result },
-                            onFailure: { syntaxFailure = $0 })
-                    } else if selection == "Audio Output" {
-                        VStack(alignment: .leading, spacing: 16) {
-                            Label("Audio Output", systemImage: "speaker.wave.2").font(.headline)
-                            Text(model.route)
-                            Text("44100 Hz · Stereo · Native AVAudioEngine")
-                            Text("Output evidence measures the audio graph before speaker volume.")
-                                .foregroundStyle(.secondary)
-                        }.padding(24).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                            .accessibilityIdentifier("audio-output-detail")
-                    } else {
-                        Text("No Selection").frame(maxWidth: .infinity, maxHeight: .infinity)
-                    }
-                }
-                if !syntaxFailure.isEmpty || !sourceAnalysis.diagnostics.isEmpty {
-                    VStack(alignment: .leading, spacing: 4) {
-                        if !syntaxFailure.isEmpty { Text(syntaxFailure) }
-                        ForEach(sourceAnalysis.diagnostics) { issue in
-                            Text("Parsing \(issue.line):\(issue.column): \(issue.message)")
-                        }
-                    }.font(.system(size: 11, design: .monospaced)).foregroundStyle(.orange)
-                        .frame(maxWidth: .infinity, alignment: .leading).padding(8)
-                }
-                Divider()
-                HStack(spacing: 12) {
-                    Text(status).accessibilityIdentifier("playbackStatus")
-                    Spacer()
-                    Text("\(model.eventCount) events · \(model.callbackCount) audio callbacks · peak \(model.peak, format: .number.precision(.fractionLength(3)))")
-                        .accessibilityIdentifier("outputEvidence")
-                }.font(.system(size: 11, design: .monospaced)).padding(.horizontal, 12).frame(height: 36)
+                DocumentEditor(workspace: documents,
+                    audibleIDs: [model.state == .playing ? acceptedDocumentID : nil, nil],
+                    colors: [.mint, .orange], load: { load($0, into: $1) }, visibility: $visibility)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .navigationTitle("")
@@ -99,14 +35,6 @@ struct PrototypeView: View {
             .toolbarVisibility(.hidden, for: .navigationBar)
         }
         .preferredColorScheme(.dark)
-        .sheet(isPresented: $editorSettings) {
-            NavigationStack {
-                EditorAppearanceControls().padding(24).navigationTitle("Themes & Fonts")
-                    .toolbar { ToolbarItem(placement: .confirmationAction) {
-                        Button("Done") { editorSettings = false }.contentShape(Rectangle())
-                    } }
-            }.presentationDetents([.medium])
-        }
         .tint(.mint)
         .onChange(of: scenePhase) { _, phase in
             if phase != .active { Task { await model.stop() } }
@@ -117,6 +45,10 @@ struct PrototypeView: View {
         .onReceive(NotificationCenter.default.publisher(for: AVAudioSession.routeChangeNotification)) { notification in
             if let reason = notification.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt,
                reason == AVAudioSession.RouteChangeReason.oldDeviceUnavailable.rawValue { Task { await model.stop() } }
+        }
+        .task {
+            await documents.start(template: DemoMusic.source)
+            if documents.activeDocument?.source == DemoMusic.source { acceptedDocumentID = documents.activeDocument?.id }
         }
         .task {
             while !Task.isCancelled {
@@ -136,7 +68,7 @@ struct PrototypeView: View {
                 Spacer(minLength: 0)
                 TransportButton(symbol: "play.fill", label: "Play", enabled: model.state != .preparing && model.state != .playing && model.state != .stopping) {
                     Task { await model.play() }
-                }.accessibilityIdentifier("play")
+                }.accessibilityIdentifier("play").accessibilityValue(status)
                 TransportButton(symbol: "stop.fill", label: "Stop") { Task { await model.stop() } }
                     .accessibilityIdentifier("stop")
             }
@@ -175,6 +107,9 @@ struct PrototypeView: View {
             ProgressView(value: min(1, Double(model.peak))).tint(.mint)
             Text(model.route).font(.system(size: 10)).foregroundStyle(.secondary).lineLimit(3)
         }.padding(12)
+            .accessibilityElement(children: .ignore).accessibilityLabel("Master output")
+            .accessibilityValue("\(status) · \(model.eventCount) events · \(model.callbackCount) audio callbacks · peak \(String(format: "%.3f", model.peak))")
+            .accessibilityIdentifier("outputEvidence")
     }
 
     // FIXME(INCOMPLETE_IMPLEMENTATION): The iPad composition currently owns one audio player.
@@ -195,6 +130,20 @@ struct PrototypeView: View {
         } wave: {
             Text("No prepared audio").font(.system(size: 10)).foregroundStyle(.tertiary)
                 .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    // FIXME(INCOMPLETE_IMPLEMENTATION): The prototype adapter currently loads only its build-time score.
+    // DocumentEditor and DocumentSidebar invoke this path; independent Deck B transport belongs
+    // to the current audio sprint, while arbitrary edited-source compilation is a separate task.
+    private func load(_ document: SourceDocument, into deck: Int) {
+        if deck == 0, document.source == DemoMusic.source {
+            acceptedDocumentID = document.id
+            documents.errorMessage = nil
+        } else if document.source != DemoMusic.source {
+            documents.errorMessage = DocumentFailure.compilerRequired("Loading this edited Swift entry").localizedDescription
+        } else {
+            documents.errorMessage = "Independent Deck B playback is not connected yet."
         }
     }
 

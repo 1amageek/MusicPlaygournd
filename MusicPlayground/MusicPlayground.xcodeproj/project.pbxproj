@@ -7,18 +7,24 @@
 	objects = {
 
 /* Begin PBXContainerItemProxy section */
-        A20000000000000000000008 = {isa = PBXContainerItemProxy; containerPortal = 000000000000000000000000; proxyType = 1; remoteGlobalIDString = 000000000000000100000000; remoteInfo = MusicPlayground;};
+        A20000000000000000000008 = {isa = PBXContainerItemProxy; containerPortal = 000000000000000000000000; proxyType = 1; remoteGlobalIDString = 000000000000000100000000; remoteInfo = MusicPlaygroundApp;};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXTargetDependency section */
         A20000000000000000000007 = {isa = PBXTargetDependency; target = 000000000000000100000000; targetProxy = A20000000000000000000008;};
 /* End PBXTargetDependency section */
 
+/* Begin XCLocalSwiftPackageReference section */
+        A50000000000000000000001 = {isa = XCLocalSwiftPackageReference; relativePath = ..;};
+/* End XCLocalSwiftPackageReference section */
+
 /* Begin PBXBuildFile section */
+        A50000000000000000000003 = {isa = PBXBuildFile; productRef = A50000000000000000000002;};
         A30000000000000000000003 = {isa = PBXBuildFile; productRef = A30000000000000000000002;};
 /* End PBXBuildFile section */
 
 /* Begin XCSwiftPackageProductDependency section */
+        A50000000000000000000002 = {isa = XCSwiftPackageProductDependency; package = A50000000000000000000001; productName = MusicPlaygroundUI;};
         A30000000000000000000002 = {
             isa = XCSwiftPackageProductDependency;
             package = A30000000000000000000001;
@@ -80,6 +86,7 @@
 			isa = PBXFrameworksBuildPhase;
 			files = (
                 A30000000000000000000003,
+                A50000000000000000000003,
 			);
 		};
         A20000000000000000000005 = {isa = PBXFrameworksBuildPhase; files = ();};
@@ -113,7 +120,7 @@
 /* Begin PBXNativeTarget section */
 		000000000000000100000000 /* MusicPlayground */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 000000000000000110000000 /* Build configuration list for PBXNativeTarget "MusicPlayground" */;
+			buildConfigurationList = 000000000000000110000000 /* Build configuration list for PBXNativeTarget "MusicPlaygroundApp" */;
 			buildPhases = (
 				000000000000000120000000 /* Sources */,
 				000000000000000130000000 /* Frameworks */,
@@ -125,9 +132,9 @@
 				000000000000000000000010 /* MusicPlayground */,
                 A10000000000000000000001 /* Shared Rendering */,
 			);
-			packageProductDependencies = (A30000000000000000000002,);
-			name = MusicPlayground;
-			productName = MyApp;
+			packageProductDependencies = (A30000000000000000000002, A50000000000000000000002,);
+			name = MusicPlaygroundApp;
+			productName = MusicPlayground;
 			productReference = 000000000000000000000120 /* MusicPlayground.app */;
 			productType = "com.apple.product-type.application";
 		};
@@ -179,7 +186,7 @@
 			);
 			mainGroup = 000000000000000000000001;
 			minimizedProjectReferenceProxies = 1;
-            packageReferences = (A30000000000000000000001,);
+            packageReferences = (A30000000000000000000001, A50000000000000000000001,);
 			preferredProjectObjectVersion = 90;
 			productRefGroup = 000000000000000000000020 /* Products */;
 			projectDirPath = "";
@@ -345,7 +352,7 @@
 			};
 			name = Release;
 		};
-		000000000000000111000000 /* Debug configuration for PBXNativeTarget "MusicPlayground" */ = {
+		000000000000000111000000 /* Debug configuration for PBXNativeTarget "MusicPlaygroundApp" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
@@ -369,7 +376,8 @@
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = team.stamp.MusicPlayground;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = MusicPlayground;
+				PRODUCT_MODULE_NAME = MusicPlayground;
 				REGISTER_APP_GROUPS = YES;
 				SDKROOT = iphoneos;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -383,7 +391,7 @@
 			};
 			name = Debug;
 		};
-		000000000000000112000000 /* Release configuration for PBXNativeTarget "MusicPlayground" */ = {
+		000000000000000112000000 /* Release configuration for PBXNativeTarget "MusicPlaygroundApp" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
@@ -407,7 +415,8 @@
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = team.stamp.MusicPlayground;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = MusicPlayground;
+				PRODUCT_MODULE_NAME = MusicPlayground;
 				REGISTER_APP_GROUPS = YES;
 				SDKROOT = iphoneos;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -468,7 +477,7 @@
             SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
             SWIFT_VERSION = 6.0;
             TARGETED_DEVICE_FAMILY = 2;
-            TEST_TARGET_NAME = MusicPlayground;
+            TEST_TARGET_NAME = MusicPlaygroundApp;
         };};
         A40000000000000000000009 = {isa = XCBuildConfiguration; name = Release; buildSettings = {
             CODE_SIGN_STYLE = Automatic;
@@ -481,7 +490,7 @@
             SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
             SWIFT_VERSION = 6.0;
             TARGETED_DEVICE_FAMILY = 2;
-            TEST_TARGET_NAME = MusicPlayground;
+            TEST_TARGET_NAME = MusicPlaygroundApp;
         };};
 /* End XCBuildConfiguration section */
 
@@ -494,11 +503,11 @@
 			);
 			defaultConfigurationName = Release;
 		};
-		000000000000000110000000 /* Build configuration list for PBXNativeTarget "MusicPlayground" */ = {
+		000000000000000110000000 /* Build configuration list for PBXNativeTarget "MusicPlaygroundApp" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				000000000000000111000000 /* Debug configuration for PBXNativeTarget "MusicPlayground" */,
-				000000000000000112000000 /* Release configuration for PBXNativeTarget "MusicPlayground" */,
+				000000000000000111000000 /* Debug configuration for PBXNativeTarget "MusicPlaygroundApp" */,
+				000000000000000112000000 /* Release configuration for PBXNativeTarget "MusicPlaygroundApp" */,
 			);
 			defaultConfigurationName = Release;
 		};

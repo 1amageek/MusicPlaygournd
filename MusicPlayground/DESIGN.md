@@ -11,6 +11,7 @@ Owns native target membership, signing and integration evidence. Uses public Swi
 |---|---|---|---|---|
 | [System](../DESIGN.md) | parent | platform boundaries | standalone native prototype | no Mac runtime dependency |
 | [App](MusicPlayground/DESIGN.md) | child | UI and audio lifecycle | native application | foreground playback only |
+| [UI](../Sources/MusicPlaygroundUI/DESIGN.md) | depends on | public SwiftUI views | shared presentation | local product has no Mac Core dependency |
 | [Rendering](../Sources/MusicPlaygourndCore/Rendering/DESIGN.md) | depends on | LoopRenderer and PreparedLoop | shared source, no DSP copy | Xcode source references compile in the app module; Mac-only worker transport and retained control session are excluded |
 
 ## Architecture
@@ -19,7 +20,7 @@ SwiftMusic 0.5.1 -> shared Rendering source -> native iPad app -> AVAudioEngine 
 ```
 
 ## Contracts and Invariants
-Signed bundle prefix team.stamp uses the existing Stamp Inc. developer team, independently verified from existing profile/certificate metadata. Xcode target references shared files instead of copying implementations. PreparedLoop standalone serialization remains portable; Mac worker-only range decoding explicitly fails on iPad. No process spawn, interpreter placeholder or synthetic success response is included.
+The native app target is named `MusicPlaygroundApp` to keep UI-test app resolution distinct from the root package library target `MusicPlayground`. Its product, executable and Swift module remain `MusicPlayground`; the scheme remains `MusicPlayground`. Signed bundle prefix team.stamp uses the existing Stamp Inc. developer team, independently verified from existing profile/certificate metadata. Xcode target references shared files instead of copying implementations. PreparedLoop standalone serialization remains portable; Mac worker-only range decoding explicitly fails on iPad. No process spawn, interpreter placeholder or synthetic success response is included.
 
 ## Verification and Change Impact
 Xcode tests execute actual score evaluation, native DSP, planar PCM conversion and AVAudioEngine output. Physical-device evidence identifies the device, route, running engine and nonzero mixer callbacks; those callbacks establish output before hardware volume, not acoustic recording. Focused Mac renderer tests own regression. Opening this project in Xcode supports normal development; existing wildcard development provisioning supports the connected iPad without new credentials.

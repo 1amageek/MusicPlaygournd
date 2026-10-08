@@ -13,6 +13,7 @@ final class PlaybackModel {
     }
 
     private(set) var state: State = .idle
+    private(set) var loopPeaks: [Float] = []
     private(set) var eventCount = 0
     private(set) var callbackCount: UInt64 = 0
     private(set) var peak: Float = 0
@@ -48,6 +49,18 @@ final class PlaybackModel {
             pending = nil
             try await audio.start(loop)
             guard token == generation else { return }
+            if prepared == nil {
+                // One bounded overview from accepted PCM; UI refreshes reuse these bins.
+                let frames = loop.pcm.count / 2
+                let count = min(512, frames)
+                loopPeaks = (0..<count).map { bin in
+                    var peak: Float = 0
+                    for frame in (bin * frames / count)..<((bin + 1) * frames / count) {
+                        peak = max(peak, abs(loop.pcm[frame * 2]), abs(loop.pcm[frame * 2 + 1]))
+                    }
+                    return peak
+                }
+            }
             prepared = loop
             eventCount = loop.events.count
             state = .playing

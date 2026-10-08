@@ -101,6 +101,10 @@ final class NativePlaybackTests: XCTestCase {
         XCTAssertFalse(audio.isPlaying)
         await model.play()
         XCTAssertEqual(model.state, .playing)
+        XCTAssertEqual(model.loopPeaks.count, 512)
+        XCTAssertTrue(model.loopPeaks.allSatisfy { $0.isFinite && $0 >= 0 })
+        XCTAssertGreaterThan(model.loopPeaks.max() ?? 0, 0.01)
+        let overview = model.loopPeaks
         try await Task.sleep(for: .milliseconds(500))
         model.refreshOutput()
         XCTAssertGreaterThan(model.peak, 0.01)
@@ -109,6 +113,7 @@ final class NativePlaybackTests: XCTestCase {
         XCTAssertFalse(audio.isPlaying)
         await model.play()
         XCTAssertEqual(model.state, .playing)
+        XCTAssertEqual(model.loopPeaks, overview)
         await model.stop()
     }
 }

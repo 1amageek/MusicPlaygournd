@@ -7,7 +7,7 @@ Native SwiftUI executable module. Parent: [project](../DESIGN.md). Child: [Proto
 Composes the temporary view and its playback model. Consumes shared renderer source under its existing contract; owns no alternate DSP.
 
 ## Related Designs
-[Prototype](Prototype/DESIGN.md) owns score/playback state and failures. [Rendering](../../Sources/MusicPlaygourndCore/Rendering/DESIGN.md) owns synthesis and prepared PCM. Parent owns dependency and target membership.
+[Prototype](Prototype/DESIGN.md) owns score/playback state and failures. [Rendering](../../Sources/MusicPlaygourndCore/Rendering/DESIGN.md) owns synthesis and prepared PCM. [MusicPlaygroundUI](../../Sources/MusicPlaygroundUI/DESIGN.md) supplies the same workspace, sidebar, deck, effect and waveform presentation as Mac. Parent owns dependency and target membership.
 
 ## Architecture
 ```text

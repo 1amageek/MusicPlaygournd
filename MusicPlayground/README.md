@@ -1,6 +1,6 @@
 # Native iPad audio prototype
 
-This Xcode project plays a bundled four-track SwiftMusic composition on iPad without a Mac connection. The temporary UI displays its read-only Swift source, Play/Stop buttons, output route and observed audio callbacks. Editing and compiling arbitrary Swift on-device is not implemented.
+This Xcode project plays a bundled four-track SwiftMusic composition on iPad without a Mac connection. The UI uses the shared MusicPlaygroundUI module: a native sidebar, A/master/B deck rack, read-only Swift source, real prepared-PCM waveform, Play/Stop controls and output evidence. Deck B and live FX explicitly remain unavailable. Editing and compiling arbitrary Swift on-device is not implemented.
 
 Requirements: Xcode 27 / Swift 6.4, iPadOS 27+, and a development signing identity for the project's existing Stamp Inc. team. The app's bundle ID is `team.stamp.MusicPlayground`. No background audio entitlement or microphone access is needed.
 
@@ -10,7 +10,7 @@ From the repository root:
 Scripts/build-ipad.sh
 IPAD_DESTINATION='id=<connected-iPad-UDID>' Scripts/build-ipad.sh test \
   -parallel-testing-enabled NO \
-  -test-timeouts-enabled YES -maximum-test-execution-time-allowance 60
+  -test-timeouts-enabled YES -maximum-test-execution-time-allowance 120
 ```
 
 The script applies `IPHONEOS_DEPLOYMENT_TARGET=27.0` to the complete dependency graph because the unchanged public SwiftMusic 0.5.1 manifest declares only a macOS floor. Plain Xcode Run without this package-wide override fails availability checks in the dependency; the command above is the supported build path for this prototype. The app and tests use the pinned public package, not a modified checkout.

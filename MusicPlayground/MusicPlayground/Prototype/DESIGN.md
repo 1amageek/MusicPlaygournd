@@ -48,3 +48,5 @@ The iPad prototype is a native target only. It introduces no WASM/Embedded backe
 ## Shared UI adapter
 
 [MusicPlaygroundUI](../../../Sources/MusicPlaygroundUI/DESIGN.md) owns the same sidebar, deck rack, source shell and wave presentation as Mac. This adapter exposes the actual bundled source and its prepared-loop peaks through existing PlaybackModel. Sidebar selection is read-only bundled content; toggling columns does not affect playback. Deck B, arbitrary source editing/compilation and live FX are explicitly unavailable in this milestone. The shared Effect component provides the unavailability presentation; it does not imply DSP support. Physical UI tests own sidebar selection/toggle and retained audio lifecycle.
+
+The adapter owns up to 512 peak bins, derived once from the accepted two-second demo PCM and retained with the prepared loop. Waveform is a static prepared-loop overview, not an inferred hardware playhead. Sidebar selection switches between the actual bundled declaration and current audio output information without changing audio state.
